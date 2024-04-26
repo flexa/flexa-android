@@ -1,0 +1,4 @@
+<resources>
+    <string name="scan_any_code">Scan Any Code</string>
+    <string name="send_pay_connect">Send, pay, or connect to a desktop website</string>
+</resources>

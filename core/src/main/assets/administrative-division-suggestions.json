@@ -1,0 +1,1145 @@
+[
+  {
+    "key": "ab",
+    "is_abbreviation": true,
+    "suggestion": "AB",
+    "administrative_division": "Alberta",
+    "administrative_division_code": "AB",
+    "region": "Canada",
+    "region_code": "CA"
+  },
+  {
+    "key": "ak",
+    "is_abbreviation": true,
+    "suggestion": "AK",
+    "administrative_division": "Alaska",
+    "administrative_division_code": "AK",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "alabama",
+    "is_abbreviation": false,
+    "suggestion": "Alabama",
+    "administrative_division": "Alabama",
+    "administrative_division_code": "AL",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "alaska",
+    "is_abbreviation": false,
+    "suggestion": "Alaska",
+    "administrative_division": "Alaska",
+    "administrative_division_code": "AK",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "alberta",
+    "is_abbreviation": false,
+    "suggestion": "Alberta",
+    "administrative_division": "Alberta",
+    "administrative_division_code": "AB",
+    "region": "Canada",
+    "region_code": "CA"
+  },
+  {
+    "key": "american samoa",
+    "is_abbreviation": false,
+    "suggestion": "American Samoa",
+    "administrative_division": "American Samoa",
+    "administrative_division_code": "AS",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "ar",
+    "is_abbreviation": false,
+    "suggestion": "Arkansas",
+    "administrative_division": "Arkansas",
+    "administrative_division_code": "AR",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "arizona",
+    "is_abbreviation": false,
+    "suggestion": "Arizona",
+    "administrative_division": "Arizona",
+    "administrative_division_code": "AZ",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "arkansas",
+    "is_abbreviation": false,
+    "suggestion": "Arkansas",
+    "administrative_division": "Arkansas",
+    "administrative_division_code": "AR",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "as",
+    "is_abbreviation": true,
+    "suggestion": "AS",
+    "administrative_division": "American Samoa",
+    "administrative_division_code": "AS",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "az",
+    "is_abbreviation": true,
+    "suggestion": "AZ",
+    "administrative_division": "Arizona",
+    "administrative_division_code": "AZ",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "bc",
+    "is_abbreviation": true,
+    "suggestion": "BC",
+    "administrative_division": "British Columbia",
+    "administrative_division_code": "BC",
+    "region": "Canada",
+    "region_code": "CA"
+  },
+  {
+    "key": "british columbia",
+    "is_abbreviation": false,
+    "suggestion": "British Columbia",
+    "administrative_division": "British Columbia",
+    "administrative_division_code": "BC",
+    "region": "Canada",
+    "region_code": "CA"
+  },
+  {
+    "key": "california",
+    "is_abbreviation": false,
+    "suggestion": "California",
+    "administrative_division": "California",
+    "administrative_division_code": "CA",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "colorado",
+    "is_abbreviation": false,
+    "suggestion": "Colorado",
+    "administrative_division": "Colorado",
+    "administrative_division_code": "CO",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "connecticut",
+    "is_abbreviation": false,
+    "suggestion": "Connecticut",
+    "administrative_division": "Connecticut",
+    "administrative_division_code": "CT",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "ct",
+    "is_abbreviation": true,
+    "suggestion": "CT",
+    "administrative_division": "Connecticut",
+    "administrative_division_code": "CT",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "dc",
+    "is_abbreviation": true,
+    "suggestion": "DC",
+    "administrative_division": "District of Columbia",
+    "administrative_division_code": "DC",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "delaware",
+    "is_abbreviation": false,
+    "suggestion": "Delaware",
+    "administrative_division": "Delaware",
+    "administrative_division_code": "DE",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "district of columbia",
+    "is_abbreviation": false,
+    "suggestion": "District of Columbia",
+    "administrative_division": "District of Columbia",
+    "administrative_division_code": "DC",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "florida",
+    "is_abbreviation": false,
+    "suggestion": "Florida",
+    "administrative_division": "Florida",
+    "administrative_division_code": "FL",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "ga",
+    "is_abbreviation": true,
+    "suggestion": "GA",
+    "administrative_division": "Georgia",
+    "administrative_division_code": "GA",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "georgia",
+    "is_abbreviation": false,
+    "suggestion": "Georgia",
+    "administrative_division": "Georgia",
+    "administrative_division_code": "GA",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "guam",
+    "is_abbreviation": false,
+    "suggestion": "Guam",
+    "administrative_division": "Guam",
+    "administrative_division_code": "GU",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "hawaii",
+    "is_abbreviation": false,
+    "suggestion": "Hawaii",
+    "administrative_division": "Hawaii",
+    "administrative_division_code": "HI",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "hi",
+    "is_abbreviation": true,
+    "suggestion": "HI",
+    "administrative_division": "Hawaii",
+    "administrative_division_code": "HI",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "ia",
+    "is_abbreviation": true,
+    "suggestion": "IA",
+    "administrative_division": "Iowa",
+    "administrative_division_code": "IA",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "idaho",
+    "is_abbreviation": false,
+    "suggestion": "Idaho",
+    "administrative_division": "Idaho",
+    "administrative_division_code": "ID",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "illinois",
+    "is_abbreviation": false,
+    "suggestion": "Illinois",
+    "administrative_division": "Illinois",
+    "administrative_division_code": "IL",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "indiana",
+    "is_abbreviation": false,
+    "suggestion": "Indiana",
+    "administrative_division": "Indiana",
+    "administrative_division_code": "IN",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "iowa",
+    "is_abbreviation": false,
+    "suggestion": "Iowa",
+    "administrative_division": "Iowa",
+    "administrative_division_code": "IA",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "kansas",
+    "is_abbreviation": false,
+    "suggestion": "Kansas",
+    "administrative_division": "Kansas",
+    "administrative_division_code": "KS",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "kentucky",
+    "is_abbreviation": false,
+    "suggestion": "Kentucky",
+    "administrative_division": "Kentucky",
+    "administrative_division_code": "KY",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "ks",
+    "is_abbreviation": true,
+    "suggestion": "KS",
+    "administrative_division": "Kansas",
+    "administrative_division_code": "KS",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "ky",
+    "is_abbreviation": true,
+    "suggestion": "KY",
+    "administrative_division": "Kentucky",
+    "administrative_division_code": "KY",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "la",
+    "is_abbreviation": true,
+    "suggestion": "LA",
+    "administrative_division": "Louisiana",
+    "administrative_division_code": "LA",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "lb",
+    "is_abbreviation": true,
+    "suggestion": "LB",
+    "administrative_division": "Newfoundland and Labrador",
+    "administrative_division_code": "NL",
+    "region": "Canada",
+    "region_code": "CA"
+  },
+  {
+    "key": "louisiana",
+    "is_abbreviation": false,
+    "suggestion": "Louisiana",
+    "administrative_division": "Louisiana",
+    "administrative_division_code": "LA",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "ma",
+    "is_abbreviation": false,
+    "suggestion": "Massachusetts",
+    "administrative_division": "Massachusetts",
+    "administrative_division_code": "MA",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "maine",
+    "is_abbreviation": false,
+    "suggestion": "Maine",
+    "administrative_division": "Maine",
+    "administrative_division_code": "ME",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "manitoba",
+    "is_abbreviation": false,
+    "suggestion": "Manitoba",
+    "administrative_division": "Manitoba",
+    "administrative_division_code": "MB",
+    "region": "Canada",
+    "region_code": "CA"
+  },
+  {
+    "key": "maryland",
+    "is_abbreviation": false,
+    "suggestion": "Maryland",
+    "administrative_division": "Maryland",
+    "administrative_division_code": "MD",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "massachusetts",
+    "is_abbreviation": false,
+    "suggestion": "Massachusetts",
+    "administrative_division": "Massachusetts",
+    "administrative_division_code": "MA",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "mb",
+    "is_abbreviation": true,
+    "suggestion": "MB",
+    "administrative_division": "Manitoba",
+    "administrative_division_code": "MB",
+    "region": "Canada",
+    "region_code": "CA"
+  },
+  {
+    "key": "md",
+    "is_abbreviation": true,
+    "suggestion": "MD",
+    "administrative_division": "Maryland",
+    "administrative_division_code": "MD",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "me",
+    "is_abbreviation": true,
+    "suggestion": "ME",
+    "administrative_division": "Maine",
+    "administrative_division_code": "ME",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "michigan",
+    "is_abbreviation": false,
+    "suggestion": "Michigan",
+    "administrative_division": "Michigan",
+    "administrative_division_code": "MI",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "minnesota",
+    "is_abbreviation": false,
+    "suggestion": "Minnesota",
+    "administrative_division": "Minnesota",
+    "administrative_division_code": "MN",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "miss",
+    "is_abbreviation": false,
+    "suggestion": "Missouri",
+    "administrative_division": "Missouri",
+    "administrative_division_code": "MO",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "mississippi",
+    "is_abbreviation": false,
+    "suggestion": "Mississippi",
+    "administrative_division": "Mississippi",
+    "administrative_division_code": "MS",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "missouri",
+    "is_abbreviation": false,
+    "suggestion": "Missouri",
+    "administrative_division": "Missouri",
+    "administrative_division_code": "MO",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "mn",
+    "is_abbreviation": true,
+    "suggestion": "MN",
+    "administrative_division": "Minnesota",
+    "administrative_division_code": "MN",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "mo",
+    "is_abbreviation": true,
+    "suggestion": "MO",
+    "administrative_division": "Missouri",
+    "administrative_division_code": "MO",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "montana",
+    "is_abbreviation": false,
+    "suggestion": "Montana",
+    "administrative_division": "Montana",
+    "administrative_division_code": "MT",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "mp",
+    "is_abbreviation": true,
+    "suggestion": "MP",
+    "administrative_division": "Northern Mariana Islands",
+    "administrative_division_code": "MP",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "ms",
+    "is_abbreviation": true,
+    "suggestion": "MS",
+    "administrative_division": "Mississippi",
+    "administrative_division_code": "MS",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "mt",
+    "is_abbreviation": true,
+    "suggestion": "MT",
+    "administrative_division": "Montana",
+    "administrative_division_code": "MT",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "nb",
+    "is_abbreviation": true,
+    "suggestion": "NB",
+    "administrative_division": "New Brunswick",
+    "administrative_division_code": "NB",
+    "region": "Canada",
+    "region_code": "CA"
+  },
+  {
+    "key": "nc",
+    "is_abbreviation": true,
+    "suggestion": "NC",
+    "administrative_division": "North Carolina",
+    "administrative_division_code": "NC",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "nd",
+    "is_abbreviation": true,
+    "suggestion": "ND",
+    "administrative_division": "North Dakota",
+    "administrative_division_code": "ND",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "nebraska",
+    "is_abbreviation": false,
+    "suggestion": "Nebraska",
+    "administrative_division": "Nebraska",
+    "administrative_division_code": "NE",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "nevada",
+    "is_abbreviation": false,
+    "suggestion": "Nevada",
+    "administrative_division": "Nevada",
+    "administrative_division_code": "NV",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "new ",
+    "is_abbreviation": false,
+    "suggestion": "New York",
+    "administrative_division": "New York",
+    "administrative_division_code": "NY",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "new brunswick",
+    "is_abbreviation": false,
+    "suggestion": "New Brunswick",
+    "administrative_division": "New Brunswick",
+    "administrative_division_code": "NB",
+    "region": "Canada",
+    "region_code": "CA"
+  },
+  {
+    "key": "new hampshire",
+    "is_abbreviation": false,
+    "suggestion": "New Hampshire",
+    "administrative_division": "New Hampshire",
+    "administrative_division_code": "NH",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "new jersey",
+    "is_abbreviation": false,
+    "suggestion": "New Jersey",
+    "administrative_division": "New Jersey",
+    "administrative_division_code": "NJ",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "new mexico",
+    "is_abbreviation": false,
+    "suggestion": "New Mexico",
+    "administrative_division": "New Mexico",
+    "administrative_division_code": "NM",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "new york",
+    "is_abbreviation": false,
+    "suggestion": "New York",
+    "administrative_division": "New York",
+    "administrative_division_code": "NY",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "newfoundland and labrador",
+    "is_abbreviation": false,
+    "suggestion": "Newfoundland and Labrador",
+    "administrative_division": "Newfoundland and Labrador",
+    "administrative_division_code": "NL",
+    "region": "Canada",
+    "region_code": "CA"
+  },
+  {
+    "key": "nf",
+    "is_abbreviation": true,
+    "suggestion": "NF",
+    "administrative_division": "Newfoundland and Labrador",
+    "administrative_division_code": "NL",
+    "region": "Canada",
+    "region_code": "CA"
+  },
+  {
+    "key": "nh",
+    "is_abbreviation": true,
+    "suggestion": "NH",
+    "administrative_division": "New Hampshire",
+    "administrative_division_code": "NH",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "nj",
+    "is_abbreviation": true,
+    "suggestion": "NJ",
+    "administrative_division": "New Jersey",
+    "administrative_division_code": "NJ",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "nl",
+    "is_abbreviation": true,
+    "suggestion": "NL",
+    "administrative_division": "Newfoundland and Labrador",
+    "administrative_division_code": "NL",
+    "region": "Canada",
+    "region_code": "CA"
+  },
+  {
+    "key": "nm",
+    "is_abbreviation": true,
+    "suggestion": "NM",
+    "administrative_division": "New Mexico",
+    "administrative_division_code": "NM",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "nmi",
+    "is_abbreviation": true,
+    "suggestion": "NMI",
+    "administrative_division": "Northern Mariana Islands",
+    "administrative_division_code": "MP",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "north carolina",
+    "is_abbreviation": false,
+    "suggestion": "North Carolina",
+    "administrative_division": "North Carolina",
+    "administrative_division_code": "NC",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "north dakota",
+    "is_abbreviation": false,
+    "suggestion": "North Dakota",
+    "administrative_division": "North Dakota",
+    "administrative_division_code": "ND",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "northern mariana islands",
+    "is_abbreviation": false,
+    "suggestion": "Northern Mariana Islands",
+    "administrative_division": "Northern Mariana Islands",
+    "administrative_division_code": "MP",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "northwest territories",
+    "is_abbreviation": false,
+    "suggestion": "Northwest Territories",
+    "administrative_division": "Northwest Territories",
+    "administrative_division_code": "NT",
+    "region": "Canada",
+    "region_code": "CA"
+  },
+  {
+    "key": "nova scotia",
+    "is_abbreviation": false,
+    "suggestion": "Nova Scotia",
+    "administrative_division": "Nova Scotia",
+    "administrative_division_code": "NS",
+    "region": "Canada",
+    "region_code": "CA"
+  },
+  {
+    "key": "ns",
+    "is_abbreviation": true,
+    "suggestion": "NS",
+    "administrative_division": "Nova Scotia",
+    "administrative_division_code": "NS",
+    "region": "Canada",
+    "region_code": "CA"
+  },
+  {
+    "key": "nt",
+    "is_abbreviation": true,
+    "suggestion": "NT",
+    "administrative_division": "Northwest Territories",
+    "administrative_division_code": "NT",
+    "region": "Canada",
+    "region_code": "CA"
+  },
+  {
+    "key": "nunavut",
+    "is_abbreviation": false,
+    "suggestion": "Nunavut",
+    "administrative_division": "Nunavut",
+    "administrative_division_code": "NU",
+    "region": "Canada",
+    "region_code": "CA"
+  },
+  {
+    "key": "nv",
+    "is_abbreviation": true,
+    "suggestion": "NV",
+    "administrative_division": "Nevada",
+    "administrative_division_code": "NV",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "nwt",
+    "is_abbreviation": true,
+    "suggestion": "NWT",
+    "administrative_division": "Northwest Territories",
+    "administrative_division_code": "NT",
+    "region": "Canada",
+    "region_code": "CA"
+  },
+  {
+    "key": "ny",
+    "is_abbreviation": true,
+    "suggestion": "NY",
+    "administrative_division": "New York",
+    "administrative_division_code": "NY",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "ohio",
+    "is_abbreviation": false,
+    "suggestion": "Ohio",
+    "administrative_division": "Ohio",
+    "administrative_division_code": "OH",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "oklahoma",
+    "is_abbreviation": false,
+    "suggestion": "Oklahoma",
+    "administrative_division": "Oklahoma",
+    "administrative_division_code": "OK",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "ontario",
+    "is_abbreviation": false,
+    "suggestion": "Ontario",
+    "administrative_division": "Ontario",
+    "administrative_division_code": "ON",
+    "region": "Canada",
+    "region_code": "CA"
+  },
+  {
+    "key": "oregon",
+    "is_abbreviation": false,
+    "suggestion": "Oregon",
+    "administrative_division": "Oregon",
+    "administrative_division_code": "OR",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "pa",
+    "is_abbreviation": true,
+    "suggestion": "PA",
+    "administrative_division": "Pennsylvania",
+    "administrative_division_code": "PA",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "pe",
+    "is_abbreviation": true,
+    "suggestion": "PE",
+    "administrative_division": "Prince Edward Island",
+    "administrative_division_code": "PE",
+    "region": "Canada",
+    "region_code": "CA"
+  },
+  {
+    "key": "pei",
+    "is_abbreviation": true,
+    "suggestion": "PEI",
+    "administrative_division": "Prince Edward Island",
+    "administrative_division_code": "PE",
+    "region": "Canada",
+    "region_code": "CA"
+  },
+  {
+    "key": "pennsylvania",
+    "is_abbreviation": false,
+    "suggestion": "Pennsylvania",
+    "administrative_division": "Pennsylvania",
+    "administrative_division_code": "PA",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "pr",
+    "is_abbreviation": true,
+    "suggestion": "PR",
+    "administrative_division": "Puerto Rico",
+    "administrative_division_code": "PR",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "prince edward island",
+    "is_abbreviation": false,
+    "suggestion": "Prince Edward Island",
+    "administrative_division": "Prince Edward Island",
+    "administrative_division_code": "PE",
+    "region": "Canada",
+    "region_code": "CA"
+  },
+  {
+    "key": "puerto rico",
+    "is_abbreviation": false,
+    "suggestion": "Puerto Rico",
+    "administrative_division": "Puerto Rico",
+    "administrative_division_code": "PR",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "qc",
+    "is_abbreviation": true,
+    "suggestion": "QC",
+    "administrative_division": "Quebec",
+    "administrative_division_code": "QC",
+    "region": "Canada",
+    "region_code": "CA"
+  },
+  {
+    "key": "quebec",
+    "is_abbreviation": false,
+    "suggestion": "Quebec",
+    "administrative_division": "Quebec",
+    "administrative_division_code": "QC",
+    "region": "Canada",
+    "region_code": "CA"
+  },
+  {
+    "key": "rhode island",
+    "is_abbreviation": false,
+    "suggestion": "Rhode Island",
+    "administrative_division": "Rhode Island",
+    "administrative_division_code": "RI",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "ri",
+    "is_abbreviation": true,
+    "suggestion": "RI",
+    "administrative_division": "Rhode Island",
+    "administrative_division_code": "RI",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "saskatchewan",
+    "is_abbreviation": false,
+    "suggestion": "Saskatchewan",
+    "administrative_division": "Saskatchewan",
+    "administrative_division_code": "SK",
+    "region": "Canada",
+    "region_code": "CA"
+  },
+  {
+    "key": "sc",
+    "is_abbreviation": true,
+    "suggestion": "SC",
+    "administrative_division": "South Carolina",
+    "administrative_division_code": "SC",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "sd",
+    "is_abbreviation": true,
+    "suggestion": "SD",
+    "administrative_division": "South Dakota",
+    "administrative_division_code": "SD",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "sk",
+    "is_abbreviation": true,
+    "suggestion": "SK",
+    "administrative_division": "Saskatchewan",
+    "administrative_division_code": "SK",
+    "region": "Canada",
+    "region_code": "CA"
+  },
+  {
+    "key": "south carolina",
+    "is_abbreviation": false,
+    "suggestion": "South Carolina",
+    "administrative_division": "South Carolina",
+    "administrative_division_code": "SC",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "south dakota",
+    "is_abbreviation": false,
+    "suggestion": "South Dakota",
+    "administrative_division": "South Dakota",
+    "administrative_division_code": "SD",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "te",
+    "is_abbreviation": false,
+    "suggestion": "Texas",
+    "administrative_division": "Texas",
+    "administrative_division_code": "TX",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "tennessee",
+    "is_abbreviation": false,
+    "suggestion": "Tennessee",
+    "administrative_division": "Tennessee",
+    "administrative_division_code": "TN",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "texas",
+    "is_abbreviation": false,
+    "suggestion": "Texas",
+    "administrative_division": "Texas",
+    "administrative_division_code": "TX",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "tn",
+    "is_abbreviation": true,
+    "suggestion": "TN",
+    "administrative_division": "Tennessee",
+    "administrative_division_code": "TN",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "tx",
+    "is_abbreviation": true,
+    "suggestion": "TX",
+    "administrative_division": "Texas",
+    "administrative_division_code": "TX",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "us virgin islands",
+    "is_abbreviation": false,
+    "suggestion": "US Virgin Islands",
+    "administrative_division": "US Virgin Islands",
+    "administrative_division_code": "VI",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "usvi",
+    "is_abbreviation": true,
+    "suggestion": "USVI",
+    "administrative_division": "US Virgin Islands",
+    "administrative_division_code": "VI",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "utah",
+    "is_abbreviation": false,
+    "suggestion": "Utah",
+    "administrative_division": "Utah",
+    "administrative_division_code": "UT",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "va",
+    "is_abbreviation": true,
+    "suggestion": "VA",
+    "administrative_division": "Virginia",
+    "administrative_division_code": "VA",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "vermont",
+    "is_abbreviation": false,
+    "suggestion": "Vermont",
+    "administrative_division": "Vermont",
+    "administrative_division_code": "VT",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "vi",
+    "is_abbreviation": false,
+    "suggestion": "Virgin Islands (US)",
+    "administrative_division": "US Virgin Islands",
+    "administrative_division_code": "VI",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "virginia",
+    "is_abbreviation": false,
+    "suggestion": "Virginia",
+    "administrative_division": "Virginia",
+    "administrative_division_code": "VA",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "vt",
+    "is_abbreviation": true,
+    "suggestion": "VT",
+    "administrative_division": "Vermont",
+    "administrative_division_code": "VT",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "washington",
+    "is_abbreviation": false,
+    "suggestion": "Washington",
+    "administrative_division": "Washington",
+    "administrative_division_code": "WA",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "west virginia",
+    "is_abbreviation": false,
+    "suggestion": "West Virginia",
+    "administrative_division": "West Virginia",
+    "administrative_division_code": "WV",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "wisconsin",
+    "is_abbreviation": false,
+    "suggestion": "Wisconsin",
+    "administrative_division": "Wisconsin",
+    "administrative_division_code": "WI",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "wv",
+    "is_abbreviation": true,
+    "suggestion": "WV",
+    "administrative_division": "West Virginia",
+    "administrative_division_code": "WV",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "wyoming",
+    "is_abbreviation": false,
+    "suggestion": "Wyoming",
+    "administrative_division": "Wyoming",
+    "administrative_division_code": "WY",
+    "region": "USA",
+    "region_code": "US"
+  },
+  {
+    "key": "yt",
+    "is_abbreviation": true,
+    "suggestion": "YT",
+    "administrative_division": "Yukon",
+    "administrative_division_code": "YT",
+    "region": "Canada",
+    "region_code": "CA"
+  },
+  {
+    "key": "yukon",
+    "is_abbreviation": false,
+    "suggestion": "Yukon",
+    "administrative_division": "Yukon",
+    "administrative_division_code": "YT",
+    "region": "Canada",
+    "region_code": "CA"
+  }
+]

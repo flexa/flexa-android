@@ -1,0 +1,95 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    compileSdk rootProject.compileSdk
+
+    defaultConfig {
+        applicationId "com.flexa.spend.example"
+        minSdk rootProject.minSdk
+        targetSdk rootProject.targetSdk
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        vectorDrawables {
+            useSupportLibrary true
+        }
+    }
+    signingConfigs {
+        release {
+            storeFile file('test_release_key')
+            storePassword 'testte'
+            keyAlias 'test'
+            keyPassword 'testte'
+            v1SigningEnabled true
+        }
+    }
+    buildTypes {
+        debug {
+            debuggable true
+        }
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    def propertiesFile = rootProject.file("local.properties")
+    def localProperties = new Properties()
+    localProperties.load(new FileInputStream(propertiesFile))
+    buildTypes.each {
+        it.buildConfigField 'String', 'PUBLISHABLE_KEY', "\"${localProperties['publishable.key']?:""}\""
+        it.resValue 'string', 'app_link_url', "\"${localProperties['app.link.url']?:""}\""
+    }
+    compileOptions {
+        sourceCompatibility rootProject.sourceCompatibility
+        targetCompatibility rootProject.targetCompatibility
+        coreLibraryDesugaringEnabled true
+    }
+    kotlinOptions {
+        jvmTarget = rootProject.jvmTarget
+    }
+    buildFeatures {
+        compose true
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion kotlin_compiler_version
+    }
+    packagingOptions {
+        resources {
+            excludes += '/META-INF/{AL2.0,LGPL2.1}'
+        }
+    }
+    namespace 'com.flexa.spend.example'
+}
+
+dependencies {
+
+    implementation "com.flexa:spend:$spend_version"
+    implementation "com.flexa:scan:$scan_version"
+
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
+
+    /*Compose*/
+    implementation "androidx.compose.ui:ui:$compose_version"
+    implementation "androidx.compose.ui:ui-tooling-preview:$compose_version"
+    implementation "androidx.compose.material:material-icons-extended:$material_version"
+    implementation 'androidx.compose.material3:material3:1.2.1'
+    implementation "androidx.activity:activity-compose:$activity_compose_version"
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.8.4'
+    implementation "androidx.navigation:navigation-compose:$navigation_compose_version"
+    debugImplementation 'androidx.customview:customview-poolingcontainer:1.0.0'
+    debugImplementation 'androidx.customview:customview:1.1.0'
+    debugImplementation "androidx.compose.ui:ui-tooling:$compose_version"
+    debugImplementation "androidx.compose.ui:ui-test-manifest:$compose_version"
+
+
+    /*Tests*/
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
+    androidTestImplementation "androidx.compose.ui:ui-test-junit4:$compose_version"
+}

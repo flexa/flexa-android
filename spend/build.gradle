@@ -1,0 +1,198 @@
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+    id 'maven-publish'
+}
+
+android {
+    namespace 'com.flexa.spend'
+    compileSdk rootProject.compileSdk
+
+    defaultConfig {
+        minSdk rootProject.minSdk
+        targetSdk rootProject.targetSdk
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles 'r8-rules.pro', 'kotlin-serializer-rules.pro', 'joda-rules.pro'
+    }
+    buildTypes {
+        release {
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android.txt'),
+                    'r8-rules.pro', 'kotlin-serializer-rules.pro', 'joda-rules.pro'
+        }
+    }
+    buildTypes.each {
+        it.buildConfigField 'String', 'SPEND_VERSION', "\"${rootProject.spend_version}\""
+    }
+    compileOptions {
+        sourceCompatibility rootProject.sourceCompatibility
+        targetCompatibility rootProject.targetCompatibility
+        coreLibraryDesugaringEnabled true
+    }
+    kotlinOptions {
+        jvmTarget = rootProject.jvmTarget
+    }
+    buildFeatures {
+        compose true
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion kotlin_compiler_version
+    }
+
+    gradle.taskGraph.whenReady {
+        def task = it.getAllTasks().find { t -> t.name.contains('bundle') }
+        if (task && task.name && (
+                task.name.contains('Release') ||
+                        task.name.contains('Debug')
+        )) {
+            def propertiesFile = file('build_type.properties')
+            if (!propertiesFile.canRead()) {
+                throw new FileNotFoundException("Could not read " + propertiesFile.name)
+            }
+            Properties properties = new Properties()
+            properties.load(new FileInputStream(propertiesFile))
+            def type = properties['BUILD_TYPE']
+            def currentType
+            if (task.name.contains('Release')) {
+                currentType = 'release'
+            } else if (task.name.contains('Debug')) {
+                currentType = 'debug'
+            }
+            if (currentType && type != currentType) {
+                properties['BUILD_TYPE'] = currentType
+                properties.store(propertiesFile.newWriter(), null)
+                println "Recorded Build Type --->>> $currentType"
+            }
+        }
+    }
+}
+
+dependencies {
+
+    implementation "androidx.core:core-ktx:$core_ktx"
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
+
+    /*Flexa Core*/
+    api "com.flexa:core:$core_version"
+
+    /*Compose*/
+    implementation "androidx.compose.ui:ui:$compose_version"
+    implementation "androidx.compose.ui:ui-util:$compose_version"
+    implementation "androidx.compose.ui:ui-tooling-preview:$compose_version"
+    implementation "androidx.compose.material:material-icons-extended:$material_version"
+    implementation "androidx.compose.material:material:$material_version"
+    implementation "androidx.compose.material3:material3:$material3_version"
+    implementation "androidx.activity:activity-compose:$activity_compose_version"
+    implementation "androidx.lifecycle:lifecycle-viewmodel-compose:$lifecycle_version"
+    implementation "androidx.navigation:navigation-compose:$navigation_compose_version"
+    implementation "androidx.compose.runtime:runtime-livedata:$compose_version"
+    implementation 'androidx.webkit:webkit:1.11.0'
+    debugImplementation "androidx.customview:customview-poolingcontainer:$customview_poolingcontainer_version"
+    debugImplementation "androidx.customview:customview:$customview_version"
+    debugImplementation "androidx.compose.ui:ui-tooling:$compose_version"
+    debugImplementation "androidx.compose.ui:ui-test-manifest:$compose_version"
+
+    /*Image*/
+    def coil_version = '2.7.0'
+    implementation "io.coil-kt:coil-compose:$coil_version"
+    implementation "io.coil-kt:coil-svg:$coil_version"
+
+    /*QR Codes*/
+    implementation 'com.caverock:androidsvg-aar:1.4'
+    implementation 'com.google.zxing:core:3.5.3'
+
+    /*TOTP*/
+    implementation 'commons-codec:commons-codec:1.17.1'
+
+    /*Worker*/
+    implementation "androidx.work:work-runtime-ktx:2.9.1"
+
+    testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1'
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+    androidTestImplementation "androidx.compose.ui:ui-test-junit4:$compose_version"
+}
+
+project.afterEvaluate {
+    publishing {
+        publications {
+            def artifactName = project.name
+            library(MavenPublication) {
+                groupId rootProject.groupId
+                artifactId artifactName
+                version rootProject.spend_version
+                def propertiesFile = file('build_type.properties')
+                if (!propertiesFile.canRead()) {
+                    throw new FileNotFoundException("Could not read " + propertiesFile.name)
+                }
+                Properties properties = new Properties()
+                properties.load(new FileInputStream(propertiesFile))
+                def type = properties['BUILD_TYPE']
+                println '<<<--- Building library --->>> ' + type
+                artifact "$buildDir/outputs/aar/${artifactName}-${type}.aar"
+                pom.withXml {
+                    def dependenciesNode = asNode().appendNode("dependencies")
+                    configurations.each {
+                        if (it.name == 'api' || it.name == 'implementation') {
+                            configurations[it.name].allDependencies.forEach {
+                                if (it.group != null && (it.name != null || "unspecified" == it.name)
+                                        && it.version != null && "unspecified" != it.version) {
+                                    println 'dep -->>> ' + it.group + ':' + it.name + ':' + it.version
+                                    def dependencyNode = dependenciesNode.appendNode("dependency")
+                                    dependencyNode.appendNode("groupId", it.group)
+                                    dependencyNode.appendNode("artifactId", it.name)
+                                    dependencyNode.appendNode("version", it.version)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            bar(MavenPublication) {
+                groupId rootProject.groupId
+                artifactId artifactName
+                version rootProject.core_version
+                def propertiesFile = file('build_type.properties')
+                if (!propertiesFile.canRead()) {
+                    throw new FileNotFoundException("Could not read " + propertiesFile.name)
+                }
+                Properties properties = new Properties()
+                properties.load(new FileInputStream(propertiesFile))
+                def type = properties['BUILD_TYPE']
+                println '<<<--- Building library --->>> ' + type
+                artifact "$buildDir/outputs/aar/${artifactName}-${type}.aar"
+                pom.withXml {
+                    def dependenciesNode = asNode().appendNode("dependencies")
+                    configurations.each {
+                        if (it.name == 'api' || it.name == 'implementation') {
+                            configurations[it.name].allDependencies.forEach {
+                                if (it.group != null && (it.name != null || "unspecified" == it.name)
+                                        && it.version != null && "unspecified" != it.version) {
+                                    println 'dep -->>> ' + it.group + ':' + it.name + ':' + it.version
+                                    def dependencyNode = dependenciesNode.appendNode("dependency")
+                                    dependencyNode.appendNode("groupId", it.group)
+                                    dependencyNode.appendNode("artifactId", it.name)
+                                    dependencyNode.appendNode("version", it.version)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        repositories {
+            maven {
+                name = "GitHubPackages"
+                url = uri("https://maven.pkg.github.com/flexa/flexa-android")
+                credentials {
+                    def propertiesFile = rootProject.file("local.properties")
+                    def localProperties = new Properties()
+                    localProperties.load(new FileInputStream(propertiesFile))
+                    username = localProperties['gpr.user'] ?: ""
+                    password = localProperties['gpr.key'] ?: ""
+                }
+            }
+        }
+    }
+}

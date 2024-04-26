@@ -1,0 +1,64 @@
+package com.flexa.core.data.data
+
+import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
+
+internal class AppInfoProvider {
+    companion object {
+
+        fun getAppName(application: Context): String =
+            try {
+                val packageInfo = when {
+                    Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ->
+                        application.packageManager
+                            .getPackageInfo(application.packageName, 0)
+
+                    else -> application.packageManager
+                        .getPackageInfo(
+                            application.packageName,
+                            PackageManager.PackageInfoFlags.of(0)
+                        )
+                }
+                application.getString(packageInfo.applicationInfo.labelRes)
+            } catch (e: Exception) {
+                "Inaccessible"
+            }
+
+        fun getAppVersion(application: Context): String =
+            try {
+                val packageInfo = when {
+                    Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ->
+                        application.packageManager
+                            .getPackageInfo(application.packageName, 0)
+
+                    else -> application.packageManager
+                        .getPackageInfo(
+                            application.packageName,
+                            PackageManager.PackageInfoFlags.of(0)
+                        )
+                }
+                packageInfo.versionName
+            } catch (e: Exception) {
+                "Inaccessible"
+            }
+
+        fun getAppPackageName(context: Context): String =
+            try {
+                val packageInfo = when {
+                    Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ->
+                        context.packageManager
+                            .getPackageInfo(context.packageName, 0)
+
+                    else -> context.packageManager
+                        .getPackageInfo(
+                            context.packageName,
+                            PackageManager.PackageInfoFlags.of(0)
+                        )
+                }
+                packageInfo.applicationInfo.packageName
+            } catch (e: Exception) {
+                "Inaccessible"
+            }
+    }
+}

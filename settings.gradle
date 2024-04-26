@@ -1,0 +1,32 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        google()
+        mavenCentral()
+    }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+        maven { url "https://jitpack.io" }
+        mavenLocal()
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/flexa/layers-android")
+            credentials {
+                def propertiesFile = file("local.properties")
+                def localProperties = new Properties()
+                localProperties.load(new FileInputStream(propertiesFile))
+                username = localProperties['gpr.user'] ?: ""
+                password = localProperties['gpr.key'] ?: ""
+            }
+        }
+    }
+}
+rootProject.name = "Flexa"
+include ':example'
+include ':core'
+include ':scan'
+include ':spend'
