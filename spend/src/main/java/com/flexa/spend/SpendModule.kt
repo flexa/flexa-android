@@ -29,4 +29,11 @@ class SpendConfig private constructor() {
     }
 }
 
+class SpendConstants {
+    companion object {
+        const val COMMERCE_SESSION_KEY = "commerce.session.key"
+        const val PINNED_BRANDS = "pinned.brands"
+    }
+}
+
 fun Flexa.buildSpend() = SpendConfig.Builder()

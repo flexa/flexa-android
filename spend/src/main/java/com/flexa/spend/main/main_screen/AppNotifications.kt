@@ -93,7 +93,7 @@ fun AppNotification(
             IconButton(
                 modifier = Modifier.offset(x = 12.dp, y = (-12).dp),
                 content = {
-                    androidx.compose.material.Icon(
+                    Icon(
                         imageVector = Icons.Rounded.Close,
                         tint = MaterialTheme.colorScheme.onPrimaryContainer,
                         contentDescription = null

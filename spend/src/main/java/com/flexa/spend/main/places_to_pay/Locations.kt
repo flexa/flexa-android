@@ -1,6 +1,5 @@
 package com.flexa.spend.main.places_to_pay
 
-import android.util.Log
 import android.webkit.WebView
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.fillMaxSize
@@ -8,12 +7,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.ModalBottomSheetState
-import androidx.compose.material.ModalBottomSheetValue
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ChevronLeft
-import androidx.compose.material.rememberModalBottomSheetState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -33,19 +28,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.flexa.spend.domain.FakeInteractor
 import com.flexa.spend.main.main_screen.SheetScreen
 import com.flexa.spend.main.main_screen.SpendViewModel
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Locations(
     modifier: Modifier = Modifier,
     spendViewModel: SpendViewModel,
     viewModel: PlacesToPayViewModel,
-    sheetState: ModalBottomSheetState,
     toBack: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
@@ -69,14 +62,12 @@ fun Locations(
         }
         if (isFirstPage) {
             scope.launch {
-                Log.d("TAG", "PlacesToPayV2: webViewScrollState.value: ${webViewScrollState.value}")
                 webViewScrollState.scrollTo(scrollPosition)
             }
         }
     }
     val bottomSheetScreen = spendViewModel.sheetScreen
-    fun shouldHandleBackPress() = sheetState.isVisible &&
-            bottomSheetScreen is SheetScreen.PlacesToPay
+    fun shouldHandleBackPress() = bottomSheetScreen is SheetScreen.PlacesToPay
 
     BackHandler(shouldHandleBackPress()) { goBack() }
 
@@ -126,18 +117,12 @@ fun Locations(
     }
 }
 
-@OptIn(ExperimentalMaterialApi::class)
 @Preview
 @Composable
 private fun LocationsPreview() {
     Locations(
         modifier = Modifier.fillMaxWidth(),
-        spendViewModel = viewModel(initializer = {
-            SpendViewModel(FakeInteractor())
-        }),
-        viewModel = viewModel(),
-        sheetState = rememberModalBottomSheetState(
-            initialValue = ModalBottomSheetValue.Expanded
-        ),
+        spendViewModel = SpendViewModel(FakeInteractor()),
+        viewModel = PlacesToPayViewModel("", FakeInteractor()),
         toBack = {})
 }

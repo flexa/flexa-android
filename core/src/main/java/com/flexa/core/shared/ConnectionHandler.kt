@@ -17,9 +17,9 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.callbackFlow
 
-sealed class ConnectionState(val isConnected: Boolean) {
-    object Available : ConnectionState(true)
-    object Unavailable : ConnectionState(false)
+sealed class ConnectionState {
+    data object Available : ConnectionState()
+    data object Unavailable : ConnectionState()
 }
 
 val Context.currentConnectivityState: ConnectionState
@@ -38,6 +38,7 @@ private fun getCurrentConnectionState(
             val actNetwork = runCatching { connectivityManager.getNetworkCapabilities(network) }
             actNetwork.getOrNull()?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
         } else {
+            @Suppress("DEPRECATION")
             connectivityManager.allNetworks.any { network ->
                 connectivityManager.getNetworkCapabilities(network)
                     ?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true

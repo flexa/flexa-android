@@ -130,4 +130,14 @@ class ExtensionsKtTest {
         val res = appAccounts.getKey(selectedAsset)
         assertEquals("131", res?.secret)
     }
+
+    @Test
+    fun `double from string`() {
+        val str1 = "\$1201.17 available"
+        val str2 = "\$1201 available"
+        val res1 = str1.getAmount()
+        val res2 = str2.getAmount()
+        assertEquals(1201.17, res1, 0.0)
+        assertEquals(1201.0, res2, 0.0)
+    }
 }

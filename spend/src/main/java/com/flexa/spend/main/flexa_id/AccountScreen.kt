@@ -103,6 +103,10 @@ fun ManageAccount(
     val signOut by viewModel.signOut.collectAsStateWithLifecycle()
     val progress by viewModel.progress.collectAsStateWithLifecycle()
 
+    LaunchedEffect(Unit) {
+        spendViewModel.getAccount()
+    }
+
     LaunchedEffect(signOut) {
         if (signOut) onSignOut()
     }

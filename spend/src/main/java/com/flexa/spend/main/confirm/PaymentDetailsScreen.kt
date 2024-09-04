@@ -12,13 +12,14 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.SwapHoriz
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -29,7 +30,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -44,16 +44,16 @@ import com.flexa.spend.MockFactory
 import com.flexa.spend.R
 import com.flexa.spend.label
 import com.flexa.spend.main.assets.AssetInfoFooter
-import com.flexa.spend.main.assets.NavigationDrawer
 import com.flexa.spend.transaction
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PaymentDetailsScreen(
     modifier: Modifier = Modifier,
     sessionFlow: SharedFlow<CommerceSession?>,
-    color: Color = MaterialTheme.colorScheme.secondaryContainer,
+    color: Color = BottomSheetDefaults.ContainerColor,
     toBack: () -> Unit,
     toLearnMore: () -> Unit,
 ) {
@@ -202,10 +202,8 @@ fun ConfirmDetailContentPreview() {
             modifier = Modifier
                 .fillMaxWidth()
                 .statusBarsPadding()
-                .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
                 .background(color = MaterialTheme.colorScheme.secondaryContainer)
         ) {
-            NavigationDrawer()
             PaymentDetailsScreen(
                 sessionFlow = MutableStateFlow(MockFactory.getMockCommerceSession()),
                 toBack = {},

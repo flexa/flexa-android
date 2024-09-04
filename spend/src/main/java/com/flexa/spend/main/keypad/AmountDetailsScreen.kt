@@ -21,12 +21,13 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material.icons.rounded.WarningAmber
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
@@ -44,7 +45,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -61,8 +61,8 @@ import com.flexa.spend.R
 import com.flexa.spend.domain.FakeInteractor
 import com.flexa.spend.main.assets.AssetInfoFooter
 import com.flexa.spend.main.assets.AssetsViewModel
-import com.flexa.spend.main.assets.NavigationDrawer
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun AmountDetailsScreen(
     modifier: Modifier = Modifier,
@@ -70,11 +70,10 @@ internal fun AmountDetailsScreen(
     amount: String,
     viewModel: AmountDetailViewModel,
     assetsViewModel: AssetsViewModel,
-    toLearnMore: () -> Unit
+    toLearnMore: () -> Unit,
 ) {
-    Column(
-        modifier = modifier
-    ) {
+    val color = BottomSheetDefaults.ContainerColor
+    Column(modifier = modifier.background(color)) {
         val asset by remember {
             derivedStateOf {
                 assetsViewModel.assets.firstOrNull {
@@ -82,7 +81,6 @@ internal fun AmountDetailsScreen(
                 }
             }
         }
-        val color = MaterialTheme.colorScheme.background
         val palette = MaterialTheme.colorScheme
         val quote by viewModel.quote.collectAsStateWithLifecycle()
         val progress by viewModel.progress.collectAsStateWithLifecycle()
@@ -100,8 +98,7 @@ internal fun AmountDetailsScreen(
                 viewModel.percentJob?.cancel()
             }
         }
-        NavigationDrawer()
-        androidx.compose.material.Text(
+        Text(
             modifier = Modifier
                 .padding(start = 16.dp),
             text = assetBundle.asset.assetData?.displayName ?: "",
@@ -135,6 +132,9 @@ internal fun AmountDetailsScreen(
                     }
                 ) {
                     ListItem(
+                        colors = ListItemDefaults.colors(
+                            containerColor = color
+                        ),
                         leadingContent = {
                             Icon(
                                 modifier = Modifier.size(24.dp),
@@ -144,7 +144,7 @@ internal fun AmountDetailsScreen(
                         },
                         headlineContent = {
                             AnimatedContent(
-                                targetState = asset?.asset?.value?.labelTitlecase,
+                                targetState = quote?.value?.label,
                                 transitionSpec = {
                                     if ((targetState?.length ?: 0) < (initialState?.length ?: 0)) {
                                         (slideInVertically { width -> width } +
@@ -157,9 +157,8 @@ internal fun AmountDetailsScreen(
                                     }.using(SizeTransform(clip = false))
                                 }, label = ""
                             ) { state ->
-                                state
                                 Text(
-                                    text = quote?.value?.label ?: "",
+                                    text = state ?: "",
                                     style = TextStyle(
                                         fontSize = 18.sp,
                                         fontWeight = FontWeight.W400,
@@ -242,9 +241,8 @@ internal fun AmountDetailsScreen(
                                     }.using(SizeTransform(clip = false))
                                 }, label = ""
                             ) { state ->
-                                state
                                 Text(
-                                    text = quote?.fee?.equivalent ?: "",
+                                    text = state ?: "",
                                     style = TextStyle(
                                         fontSize = 18.sp,
                                         fontWeight = FontWeight.W400,
@@ -322,7 +320,6 @@ private fun AmountDetailsPreview() {
             modifier = Modifier
                 .fillMaxWidth()
                 .statusBarsPadding()
-                .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
                 .background(color = MaterialTheme.colorScheme.background),
             assetBundle = MockFactory.getMockSelectedAsset(),
             viewModel = AmountDetailViewModel(FakeInteractor()).apply {
@@ -330,7 +327,7 @@ private fun AmountDetailsPreview() {
             },
             assetsViewModel = AssetsViewModel(FakeInteractor()),
             amount = "5.23",
-            toLearnMore = {}
+            toLearnMore = {},
         )
     }
 }

@@ -91,25 +91,129 @@ class MockFactory {
                 )
             )
 
+        fun getLegacyCommerceSession(): CommerceSession {
+            return json.decodeFromString<CommerceSession>(
+                """{
+    "id": "id",
+    "api_version": "2024-06-11",
+    "data": {
+        "account": "acc",
+        "amount": "5",
+        "asset": "iso4217/USD",
+        "brand": {
+            "category_name": "",
+            "color": "#8043FF",
+            "created": 1672409955,
+            "id": "id",
+            "legacy_flexcodes": [
+                {
+                    "amount": {
+                        "maximum": "100.00",
+                        "minimum": "5.00"
+                    },
+                    "asset": "iso4217/USD"
+                }
+            ],
+            "logo_url": "",
+            "name": "Flexa",
+            "slug": "flexa",
+            "status": "active",
+            "updated": 1716498844
+        },
+        "created": 1725375422,
+        "debits": [
+            {
+                "amount": "5",
+                "asset": "iso4217/USD",
+                "created": 1725375422,
+                "id": "id",
+                "intent": "intent",
+                "kind": "total",
+                "label": "${'$'}5.00",
+                "session": "session",
+                "test_mode": true,
+                "updated": 1725375422
+            }
+        ],
+        "detected_location": {},
+        "id": "id",
+        "intent": "intent",
+        "preferences": {
+            "app": "flexa",
+            "payment_asset": "eip155:11155111/slip44:60"
+        },
+        "rate": {
+            "expires_at": 1725376322,
+            "label": "1 ETH = ${'$'}2,460.63"
+        },
+        "status": "requires_transaction",
+        "test_mode": true,
+        "transactions": [
+            {
+                "amount": "0.002032",
+                "asset": "eip155:11155111/slip44:60",
+                "created": 1725375422,
+                "destination": {
+                    "address": "address",
+                    "label": "label"
+                },
+                "expires_at": 1725379022,
+                "fee": {
+                    "amount": "0.0021",
+                    "asset": "eip155:11155111/slip44:60",
+                    "equivalent": "${'$'}5.17",
+                    "label": "0.0021 ETH",
+                    "price": {
+                        "amount": "0.0000001",
+                        "label": "100 gwei",
+                        "priority": "0.000000001"
+                    },
+                    "zone": "very_high"
+                },
+                "id": "id",
+                "label": "0.002032 ETH",
+                "session": "session",
+                "size": "21000",
+                "status": "approved",
+                "test_mode": true,
+                "updated": 1725375428
+            }
+        ],
+        "updated": 1725375422
+    },
+    "created": 1725375429,
+    "type": "commerce_session.updated"
+}""".trimIndent()
+            )
+
+        }
+
+        fun getLegacyCommerceSessionCompleted(): CommerceSession {
+            val cs = getLegacyCommerceSession()
+            return cs.copy(
+                data = cs.data?.copy(authorization = CommerceSession.Data.Authorization(
+                    details = "", instructions = "Test Data", number = "12345"
+                ))
+            )
+        }
+
         fun getMockCommerceSession(): CommerceSession {
             return json.decodeFromString<CommerceSession>(
                 """
                 {
-    "id": "event_vXJG4w8cFmV2QGh5GR2f4",
-    "object": "event",
+    "id": "event_id",
     "api_version": "2024-06-11",
     "data": {
-        "account": "acct_9jqfmxR4c8rPfGjHC4Vgg",
+        "account": "acc",
         "amount": "0.1",
         "asset": "iso4217/USD",
         "brand": {
             "category_name": "",
             "color": "#8043FF",
             "created": 1672411062,
-            "id": "brand_MQPXwmr56gcVwqh94Pjmc",
+            "id": "id",
             "logo_url": "https://flexa.network/img/merchants/flexa-demo-store.png",
             "name": "Flexa Demo Store",
-            "object": "brand",
             "slug": "flexa-demo-store",
             "status": "active",
             "updated": 1716496094
@@ -120,21 +224,19 @@ class MockFactory {
                 "amount": "0.1",
                 "asset": "iso4217/USD",
                 "created": 1721215290,
-                "id": "debit_4MM883rW6H23rmqXwQmWm",
-                "intent_id": "ci_mwJQ8GvHFMvrV3FVM3C6P",
+                "id": "id",
+                "intent_id": "intent_id",
                 "kind": "total",
                 "label": "${'$'}0.10",
-                "object": "debit",
-                "session_id": "cs_GQVvQmxWQvjMPp2wcJpgm",
+                "session_id": "session_id",
                 "test_mode": true,
                 "updated": 1721215290
             }
         ],
-        "id": "cs_GQVvQmxWQvjMPp2wcJpgm",
-        "intent": "ci_mwJQ8GvHFMvrV3FVM3C6P",
-        "object": "commerce_session",
+        "id": "id",
+        "intent": "intent",
         "preferences": {
-            "app": "flexa-playground",
+            "app": "flexa",
             "payment_asset": "eip155:1/erc20:0xe7ae9b78373d0D54BAC81a85525826Fd50a1E2d3"
         },
         "rate": {
@@ -149,8 +251,8 @@ class MockFactory {
                 "asset": "eip155:1/erc20:0xe7ae9b78373d0D54BAC81a85525826Fd50a1E2d3",
                 "created": 1721215290,
                 "destination": {
-                    "address": "eip155:1:0xaD12Eeb636086C446C5626320F6e001b92eB255d",
-                    "label": "0xaD12Eeb636086C446C5626320F6e001b92eB255d"
+                    "address": "address",
+                    "label": "label"
                 },
                 "expires_at": 1721218890,
                 "fee": {
@@ -165,10 +267,9 @@ class MockFactory {
                     },
                     "zone": "medium"
                 },
-                "id": "tx_R58PVfr6h7gvq3hfjPg4R",
+                "id": "id",
                 "label": "0.1 CR",
-                "object": "transaction",
-                "session": "cs_GQVvQmxWQvjMPp2wcJpgm",
+                "session": "session",
                 "size": "200000",
                 "status": "requested",
                 "test_mode": true,
@@ -188,28 +289,26 @@ class MockFactory {
             return json.decodeFromString<CommerceSession>(
                 """
                 {
-    "id": "event_vXJG4w8cFmV2QGh5GR2f4",
-    "object": "event",
+    "id": "id",
     "api_version": "2024-06-11",
     "data": {
-        "account": "acct_9jqfmxR4c8rPfGjHC4Vgg",
+        "account": "acc",
         "amount": "0.1",
         "asset": "iso4217/USD",
         "brand": {
             "category_name": "",
             "color": "#8043FF",
             "created": 1672411062,
-            "id": "brand_MQPXwmr56gcVwqh94Pjmc",
-            "logo_url": "https://flexa.network/img/merchants/flexa-demo-store.png",
-            "name": "Flexa Demo Store",
-            "object": "brand",
-            "slug": "flexa-demo-store",
+            "id": "id",
+            "logo_url": "",
+            "name": "Flexa",
+            "slug": "flexa",
             "status": "active",
             "updated": 1716496094
         },
         "authorization": {
             "instructions": "Scan as **Gift** or **Store Credit**",
-            "number": "6012345678901234",
+            "number": "number",
             "details": "PIN: 1234"
         },
         "created": 1721215290,
@@ -218,21 +317,19 @@ class MockFactory {
                 "amount": "0.1",
                 "asset": "iso4217/USD",
                 "created": 1721215290,
-                "id": "debit_4MM883rW6H23rmqXwQmWm",
-                "intent_id": "ci_mwJQ8GvHFMvrV3FVM3C6P",
+                "id": "id",
+                "intent_id": "intent_id",
                 "kind": "total",
                 "label": "${'$'}0.10",
-                "object": "debit",
-                "session_id": "cs_GQVvQmxWQvjMPp2wcJpgm",
+                "session_id": "session_id",
                 "test_mode": true,
                 "updated": 1721215290
             }
         ],
-        "id": "cs_GQVvQmxWQvjMPp2wcJpgm",
-        "intent": "ci_mwJQ8GvHFMvrV3FVM3C6P",
-        "object": "commerce_session",
+        "id": "id",
+        "intent": "intent",
         "preferences": {
-            "app": "flexa-playground",
+            "app": "flexa",
             "payment_asset": "eip155:1/erc20:0xe7ae9b78373d0D54BAC81a85525826Fd50a1E2d3"
         },
         "rate": {
@@ -247,8 +344,8 @@ class MockFactory {
                 "asset": "eip155:1/erc20:0xe7ae9b78373d0D54BAC81a85525826Fd50a1E2d3",
                 "created": 1721215290,
                 "destination": {
-                    "address": "eip155:1:0xaD12Eeb636086C446C5626320F6e001b92eB255d",
-                    "label": "0xaD12Eeb636086C446C5626320F6e001b92eB255d"
+                    "address": "address",
+                    "label": "label"
                 },
                 "expires_at": 1721218890,
                 "fee": {
@@ -263,10 +360,9 @@ class MockFactory {
                     },
                     "zone": "medium"
                 },
-                "id": "tx_R58PVfr6h7gvq3hfjPg4R",
+                "id": "id",
                 "label": "0.1 CR",
-                "object": "transaction",
-                "session": "cs_GQVvQmxWQvjMPp2wcJpgm",
+                "session": "session",
                 "size": "200000",
                 "status": "requested",
                 "test_mode": true,
@@ -289,10 +385,9 @@ class MockFactory {
                             "category_name": "",
                             "color": "#8043FF",
                             "created": 1672411062,
-                            "id": "brand_MQPXwmr56gcVwqh94Pjmc",
+                            "id": "id",
                             "logo_url": "https://flexa.network/img/merchants/flexa-demo-store.png",
                             "name": "Flexa Demo Store",
-                            "object": "brand",
                             "slug": "flexa-demo-store",
                             "status": "active",
                             "updated": 1716496094
@@ -308,8 +403,7 @@ class MockFactory {
             ),
             body = "Pay your favorite places directly from your wallet—no card required.",
             iconUrl = "https://flexa.media/icons/flexa.svg",
-            id = "appnotif_mPJJfPmc33xXhQ4G9Wgj2",
-            objectX = "app_notification",
+            id = "id",
             title = "Get started with Flexa"
         )
     }

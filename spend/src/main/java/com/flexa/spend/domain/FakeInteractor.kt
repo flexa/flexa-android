@@ -1,5 +1,6 @@
 package com.flexa.spend.domain
 
+import com.flexa.core.data.db.TransactionBundle
 import com.flexa.core.entity.Account
 import com.flexa.core.entity.AppAccount
 import com.flexa.core.entity.AvailableAsset
@@ -57,6 +58,22 @@ internal class FakeInteractor : ISpendInteractor {
         TODO("Not yet implemented")
     }
 
+    override suspend fun getTransactionBySessionId(sessionId: String): TransactionBundle? {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun deleteTransaction(sessionId: String) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun deleteOutdatedTransactions() {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun saveTransaction(transactionBundle: TransactionBundle) {
+        TODO("Not yet implemented")
+    }
+
     override suspend fun putAccounts(account: List<com.flexa.core.shared.AppAccount>): PutAppAccountsResponse {
         TODO("Not yet implemented")
     }
@@ -86,6 +103,10 @@ internal class FakeInteractor : ISpendInteractor {
 
     override suspend fun getEmail(): String? {
         return "satoshi.n@gmail.com"
+    }
+
+    override suspend fun getPublishableKey(): String {
+        TODO("Not yet implemented")
     }
 
     override suspend fun getPlacesToPayTheme(): String {

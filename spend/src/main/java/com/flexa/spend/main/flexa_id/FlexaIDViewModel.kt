@@ -2,17 +2,10 @@ package com.flexa.spend.main.flexa_id
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.flexa.core.entity.Account
 import com.flexa.core.shared.ApiErrorHandler
 import com.flexa.spend.domain.ISpendInteractor
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.launch
 import java.net.HttpURLConnection
 
@@ -31,12 +24,10 @@ class FlexaIDViewModel(
     private val _deleteAccount = MutableStateFlow(false)
     val deleteAccount: StateFlow<Boolean> = _deleteAccount
     val email = MutableStateFlow("")
-    val account = MutableStateFlow<Account?>(null)
     val errorHandler = ApiErrorHandler()
 
     init {
         getUserEmail()
-        getAccount()
     }
 
     internal fun deleteToken() {
@@ -80,21 +71,6 @@ class FlexaIDViewModel(
             emailValue?.let {
                 email.emit(it)
             }
-        }
-    }
-
-    private fun getAccount() {
-        viewModelScope.launch {
-            flow { emit(interactor.getAccount()) }
-                .retryWhen { _, attempt ->
-                    delay(RETRY_DELAY)
-                    attempt < RETRY_COUNT
-                }.flowOn(Dispatchers.IO)
-                .catch { ex ->
-                    errorHandler.setError(ex)
-                }.collect {
-                    account.emit(it)
-                }
         }
     }
 }

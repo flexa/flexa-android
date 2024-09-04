@@ -4,17 +4,21 @@ import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.EaseOutBack
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkHorizontally
-import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -28,6 +32,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -36,8 +41,6 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.ModalBottomSheetState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.outlined.Info
@@ -46,19 +49,23 @@ import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.WatchLater
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AlertDialogDefaults
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -72,7 +79,6 @@ import androidx.compose.ui.graphics.painter.BrushPainter
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -80,57 +86,89 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.flexa.core.shared.Brand
-import com.flexa.core.shared.SelectedAsset
 import com.flexa.core.theme.FlexaTheme
 import com.flexa.core.view.AutoSizeText
 import com.flexa.core.view.FlexaProgress
 import com.flexa.spend.MockFactory
 import com.flexa.spend.R
+import com.flexa.spend.Spend
+import com.flexa.spend.containsAuthorization
 import com.flexa.spend.domain.FakeInteractor
-import com.flexa.spend.main.main_screen.SheetScreen
+import com.flexa.spend.getAmount
+import com.flexa.spend.isLegacy
+import com.flexa.spend.main.assets.AssetsBottomSheet
+import com.flexa.spend.main.assets.AssetsViewModel
+import com.flexa.spend.main.main_screen.SpendDragHandler
 import com.flexa.spend.main.main_screen.SpendViewModel
 import com.flexa.spend.rememberSelectedAsset
 import com.flexa.spend.toColor
-import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 
-@OptIn(ExperimentalMaterialApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun InputAmountScreen(
     modifier: Modifier = Modifier,
-    brand: Brand,
     viewModel: InputAmountViewModel,
     spendViewModel: SpendViewModel,
-    sheetState: ModalBottomSheetState? = null,
+    assetsViewModel: AssetsViewModel,
+    toUrl: ((@ParameterName("url") String) -> Unit),
     toBack: (() -> Unit),
-    toAmountDetails: ((SelectedAsset, String) -> Unit),
-    toAssets: (() -> Unit),
 ) {
-
-    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     val palette = MaterialTheme.colorScheme
+
+    val sheetState = rememberModalBottomSheetState()
+    var showBottomSheet by remember { mutableStateOf(false) }
+    var sheetType by remember { mutableStateOf(SheetType.ASSETS) }
+
     val selectedAsset by rememberSelectedAsset()
+    val brand by spendViewModel.brand.collectAsStateWithLifecycle()
     val amount by viewModel.formatter.dataAsFlow.collectAsStateWithLifecycle()
     val progress by spendViewModel.progress.collectAsStateWithLifecycle()
     val timeout by spendViewModel.timeout.collectAsStateWithLifecycle()
-    val inputState by viewModel.amountBoundaries.collectAsStateWithLifecycle(
+    val inputState by viewModel.inputState.collectAsStateWithLifecycle(
         initialValue = InputState.Unspecified
     )
+    val inputStateDelayed by viewModel.inputStateDelayed.collectAsStateWithLifecycle(
+        initialValue = InputState.Unspecified
+    )
+    val commerceSession by spendViewModel.commerceSession.collectAsStateWithLifecycle()
+
     val returnBack = {
-        toBack()
         spendViewModel.stopProgress()
+        spendViewModel.cancelTimeout()
+        if (commerceSession?.containsAuthorization() == false) {
+            commerceSession?.data?.id?.let { id ->
+                spendViewModel.closeCommerceSession(context, id)
+            }
+        }
+        toBack()
+    }
+
+    BackHandler {
+        returnBack()
+    }
+
+    LaunchedEffect(commerceSession) {
+        val legacy = commerceSession?.isLegacy() ?: false
+        val containsAuthorization = commerceSession?.containsAuthorization() ?: false
+        if (legacy && containsAuthorization) {
+            returnBack()
+        }
     }
 
     val density = LocalDensity.current
     val shake = remember { Animatable(0f) }
-    var shakeTrigger by remember { mutableStateOf(0L) }
+    var shakeTrigger by remember { mutableLongStateOf(0L) }
     LaunchedEffect(shakeTrigger) {
         if (shakeTrigger != 0L) {
             for (i in 0..5) {
@@ -155,16 +193,11 @@ internal fun InputAmountScreen(
     LaunchedEffect(inputState) {
         when {
             inputState == InputState.Unspecified -> {}
-            inputState != InputState.Fine ->
-                shakeTrigger = System.currentTimeMillis()
-        }
-    }
-
-    BackHandler {
-        if (sheetState?.isVisible == true)
-            scope.launch { sheetState.hide() }
-        else {
-            returnBack.invoke()
+            inputState != InputState.Fine -> {
+                if (inputState is InputState.Max) {
+                    shakeTrigger = System.currentTimeMillis()
+                }
+            }
         }
     }
 
@@ -188,7 +221,7 @@ internal fun InputAmountScreen(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             IconButton(
-                onClick = { toBack() }) {
+                onClick = { returnBack() }) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
                     contentDescription = null,
@@ -207,9 +240,8 @@ internal fun InputAmountScreen(
                         )
                     },
                     onClick = {
-                        selectedAsset?.let { asset ->
-                            amount?.let { toAmountDetails.invoke(asset, it) }
-                        }
+                        sheetType = SheetType.AMOUNT
+                        showBottomSheet = true
                     }
                 )
             }
@@ -230,7 +262,7 @@ internal fun InputAmountScreen(
                         SolidColor(Color.White.copy(.3F))
                     ),
                     model = ImageRequest.Builder(LocalContext.current)
-                        .data(brand.logoUrl)
+                        .data(brand?.logoUrl)
                         .crossfade(true)
                         .crossfade(500)
                         .build(),
@@ -247,39 +279,81 @@ internal fun InputAmountScreen(
         AmountText(
             modifier = Modifier
                 .fillMaxWidth()
-                .offset(x = with(density) { shake.value.toDp() }, y = 0.dp)
+                .offset { IntOffset(x = shake.value.roundToInt(), y = 0) }
                 .padding(horizontal = 32.dp),
             formatter = viewModel.formatter,
-            colors = listOf(brand.color.toColor(), palette.primary)
+            colors = listOf(brand?.color?.toColor() ?: palette.tertiary, palette.primary)
         )
         if (!smallScreen) Spacer(modifier = Modifier.height(16.dp))
         val buttonVisible by remember {
-            derivedStateOf { inputState is InputState.Fine || inputState is InputState.Unspecified }
-        }
-        val warningVisible by remember {
-            derivedStateOf { inputState is InputState.Min || inputState is InputState.Max }
+            derivedStateOf {
+                inputStateDelayed is InputState.Fine ||
+                        inputStateDelayed is InputState.Unspecified
+            }
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            androidx.compose.animation.AnimatedVisibility(
-                visible = buttonVisible,
-                enter = expandVertically() + fadeIn(),
-                exit = shrinkVertically() + fadeOut()
+            val btnColor by animateColorAsState(
+                if (buttonVisible) palette.secondaryContainer else palette.surface,
+                animationSpec = tween(700),
+                label = "button color"
+            )
+            FilledTonalButton(
+                modifier = Modifier.animateContentSize(),
+                contentPadding = PaddingValues(horizontal = 8.dp),
+                colors = ButtonDefaults.filledTonalButtonColors(
+                    containerColor = btnColor,
+                    disabledContainerColor = btnColor,
+                    disabledContentColor = palette.onSecondaryContainer
+                ),
+                enabled = buttonVisible,
+                onClick = {
+                    sheetType = SheetType.ASSETS
+                    showBottomSheet = true
+                }
             ) {
-                FilledTonalButton(
-                    contentPadding = PaddingValues(horizontal = 8.dp),
-                    onClick = toAssets
-                ) {
-                    val angle by animateFloatAsState(
-                        targetValue = if ((sheetState?.isVisible == true)
-                            && spendViewModel.sheetScreen is SheetScreen.Assets
-                        ) -180F else 0F, label = "assets button angle"
-                    )
+                val text by remember {
+                    derivedStateOf {
+                        when (inputStateDelayed) {
+                            is InputState.Min ->
+                                "${context.getString(R.string.minimum_amount)}: \$${brand?.legacyFlexcodes?.firstOrNull()?.amount?.minimum ?: ""}"
+
+                            is InputState.Max ->
+                                "${context.getString(R.string.maximum_amount)}: \$${brand?.legacyFlexcodes?.firstOrNull()?.amount?.maximum ?: ""}"
+
+                            else -> "${context.getString(R.string.using)} ${selectedAsset?.asset?.assetData?.displayName}"
+                        }
+                    }
+                }
+                val angle by animateFloatAsState(
+                    targetValue = if (showBottomSheet &&
+                        sheetType == SheetType.ASSETS
+                    ) -180F
+                    else 0F, label = "assets button angle"
+                )
+                if (buttonVisible)
                     Spacer(modifier = Modifier.width(4.dp))
+                AnimatedContent(
+                    targetState = text, label = "button text",
+                    transitionSpec = {
+                        expandHorizontally() + fadeIn() togetherWith
+                                shrinkHorizontally()
+                    }
+                ) { t ->
                     Text(
-                        text = "${stringResource(R.string.using)} ${selectedAsset?.asset?.assetData?.displayName}",
+                        modifier = Modifier.animateContentSize(),
+                        text = t,
                         style = MaterialTheme.typography.titleMedium,
                     )
+                }
+                if (buttonVisible)
                     Spacer(modifier = Modifier.width(4.dp))
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = buttonVisible,
+                    enter = slideInVertically(
+                        animationSpec = tween(300, delayMillis = 300, easing = EaseOutBack)
+                    ) + fadeIn(animationSpec = tween(300, delayMillis = 300)),
+                    exit = slideOutVertically(tween(100))
+                ) {
                     Icon(
                         modifier = Modifier
                             .size(20.dp)
@@ -290,30 +364,6 @@ internal fun InputAmountScreen(
                 }
             }
 
-            androidx.compose.animation.AnimatedVisibility(
-                visible = warningVisible,
-                enter = expandVertically() + fadeIn(),
-                exit = shrinkVertically() + fadeOut()
-            ) {
-                val context = LocalContext.current
-                val text by remember {
-                    derivedStateOf {
-                        when(inputState) {
-                            is InputState.Min ->
-                                "${context.getString(R.string.minimum_amount)}: \$${brand.legacyFlexcodes?.firstOrNull()?.amount?.minimum ?: ""}"
-                            is InputState.Max ->
-                                "${context.getString(R.string.maximum_amount)}: \$${brand.legacyFlexcodes?.firstOrNull()?.amount?.maximum ?: ""}"
-                            else -> ""
-                        }
-                    }
-                }
-                Text(
-                    modifier = Modifier.height(48.dp),
-                    text = text,
-                    color = palette.onSurface,
-                    textAlign = TextAlign.Center
-                )
-            }
             if (!smallScreen) Spacer(modifier = Modifier.height(16.dp))
             Keypad(
                 modifier = Modifier
@@ -337,21 +387,32 @@ internal fun InputAmountScreen(
                     .padding(horizontal = 32.dp)
                     .systemBarsPadding()
                     .height(54.dp),
+                viewModel = viewModel,
                 inputState = inputState,
                 progress = progress,
-                colors = listOf(brand.color.toColor(), palette.primary),
+                colors = listOf(brand?.color.toColor(), palette.primary),
                 onClick = {
-                    selectedAsset?.let { asset ->
-                        spendViewModel.createCommerceSession(
-                            brandId = brand.id,
-                            amount = amount ?: "",
-                            assetId = asset.asset.value?.asset ?: "",
-                            paymentAssetId = asset.asset.assetId
-                        )
+                    val enabled =
+                        (inputState is InputState.Fine || inputState is InputState.Max) && !progress
+                    if (enabled) {
+                        selectedAsset?.let { asset ->
+                            spendViewModel.createCommerceSession(
+                                brandId = brand?.id ?: "",
+                                amount = amount ?: "",
+                                assetId = asset.asset.value?.asset ?: "",
+                                paymentAssetId = asset.asset.assetId
+                            )
+                        }
+                    } else {
+                        shakeTrigger = System.currentTimeMillis()
                     }
                 }
             )
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(
+                modifier = Modifier
+                    .height(20.dp)
+                    .navigationBarsPadding()
+            )
         }
     }
     AnimatedVisibility(progress, enter = fadeIn(), exit = fadeOut()) {
@@ -423,17 +484,73 @@ internal fun InputAmountScreen(
             }
         )
     }
+
+    if (showBottomSheet) {
+        ModalBottomSheet(
+            modifier = Modifier
+                .fillMaxWidth()
+                .statusBarsPadding(),
+            dragHandle = { SpendDragHandler() },
+            onDismissRequest = { showBottomSheet = false },
+            sheetState = sheetState,
+        ) {
+            when (sheetType) {
+                SheetType.ASSETS -> {
+                    AssetsBottomSheet(
+                        viewModel = assetsViewModel,
+                        toUrl = { toUrl(it) },
+                        toBack = { showBottomSheet = false }
+                    )
+                }
+
+                SheetType.AMOUNT -> {
+                    selectedAsset?.let { asset ->
+                        AmountDetailsScreen(
+                            modifier = Modifier.fillMaxWidth(),
+                            viewModel = viewModel(
+                                initializer = {
+                                    AmountDetailViewModel(Spend.interactor)
+                                }),
+                            assetsViewModel = assetsViewModel,
+                            assetBundle = asset,
+                            amount = amount ?: "",
+                            toLearnMore = { toUrl(context.getString(R.string.learn_more_link)) },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private enum class SheetType {
+    ASSETS, AMOUNT
 }
 
 @Composable
 fun PayButton(
     modifier: Modifier = Modifier,
+    viewModel: InputAmountViewModel,
     inputState: InputState,
     progress: Boolean,
     colors: List<Color> = listOf(Color.Red, Color.Yellow),
     onClick: () -> Unit = {},
 ) {
-    val enabled = (inputState is InputState.Fine || inputState is InputState.Max) && !progress
+    val asset by rememberSelectedAsset()
+    val amount by viewModel.formatter.dataAsFlow.collectAsStateWithLifecycle()
+    val enough by remember {
+        derivedStateOf {
+            val assetAmount = asset?.asset?.value?.label?.getAmount() ?: 0.0
+            val inputAmount = amount.getAmount()
+            assetAmount >= inputAmount
+        }
+    }
+    val enabled by remember(inputState, progress) {
+        derivedStateOf {
+            enough && (inputState is InputState.Fine || inputState is InputState.Max) && !progress
+        }
+    }
+
     TextButton(
         modifier = modifier
             .fillMaxWidth()
@@ -443,9 +560,8 @@ fun PayButton(
                 else SolidColor(MaterialTheme.colorScheme.outline)
             ),
         contentPadding = PaddingValues(0.dp),
-        enabled = enabled,
         shape = RoundedCornerShape(14.dp),
-        onClick = { onClick.invoke() }) {
+        onClick = { if (enough) onClick.invoke() }) {
         AnimatedContent(
             targetState = !progress,
             transitionSpec = {
@@ -454,11 +570,10 @@ fun PayButton(
                         shrinkHorizontally { it / 2 } + fadeOut() + scaleOut(targetScale = .7F))
             }, label = "Pay Now"
         ) { state ->
-            state
             val context = LocalContext.current
             val text by remember {
                 derivedStateOf {
-                    if (!progress) context.getString(R.string.confirm)
+                    if (state) context.getString(R.string.confirm)
                     else "${context.getString(R.string.processing)}..."
                 }
             }
@@ -517,7 +632,6 @@ fun AmountText(
     )
 }
 
-@OptIn(ExperimentalMaterialApi::class)
 @Preview
 @Preview(
     uiMode = Configuration.UI_MODE_NIGHT_YES or Configuration.UI_MODE_TYPE_NORMAL,
@@ -529,14 +643,15 @@ private fun KeypadScreenPreview() {
     FlexaTheme {
         InputAmountScreen(
             modifier = Modifier.fillMaxSize(),
-            brand = MockFactory.getMockBrand(),
             viewModel = InputAmountViewModel().apply {
                 formatter.append(Symbol("53.13"))
             },
-            spendViewModel = SpendViewModel(FakeInteractor()),
+            spendViewModel = SpendViewModel(FakeInteractor()).apply {
+                brand.value = MockFactory.getMockBrand()
+            },
+            assetsViewModel = AssetsViewModel(FakeInteractor()),
+            toUrl = {},
             toBack = {},
-            toAssets = {},
-            toAmountDetails = { _, _ -> },
         )
     }
 }

@@ -2,7 +2,6 @@ package com.flexa.spend.main.assets
 
 import android.content.res.Configuration
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
@@ -11,21 +10,20 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.Divider
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,7 +46,6 @@ import com.flexa.core.theme.FlexaTheme
 import com.flexa.spend.MockFactory
 import com.flexa.spend.logo
 
-@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun AssetItemCompose(
     modifier: Modifier = Modifier,
@@ -113,9 +110,9 @@ fun AssetItemCompose(
                                 fadeIn()).togetherWith(slideOutVertically()
                         { width -> width } + fadeOut())
                     }.using(SizeTransform(clip = false))
-                }
+                }, label = ""
             ) { state ->
-                state
+                state.isFinite()
                 Text(
                     modifier = Modifier.animateContentSize(),
                     text = "${asset.value?.labelTitlecase} ",
@@ -131,8 +128,9 @@ fun AssetItemCompose(
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Divider(
+                VerticalDivider(
                     modifier = Modifier
+                        .offset(x = 4.dp)
                         .height(25.dp)
                         .width(1.dp),
                     color = palette.outline
@@ -152,20 +150,15 @@ fun AssetItemCompose(
     )
 }
 
-@Composable
-fun AssetItemDivider(modifier: Modifier = Modifier, color: Color) {
-    Divider(modifier = modifier, thickness = 2.dp, color = color)
-}
-
-@Preview(showBackground = true)
-@Preview(showBackground = false,
+@Preview
+@Preview(
     uiMode = Configuration.UI_MODE_NIGHT_YES or Configuration.UI_MODE_TYPE_NORMAL
 )
 @Composable
 private fun AssetItemPreview() {
     FlexaTheme {
         AssetItemCompose(
-            modifier = Modifier.background(color = MaterialTheme.colorScheme.onPrimary),
+            modifier = Modifier,
             asset = MockFactory.getMockSelectedAsset().asset,
             toDetails = {}
         )

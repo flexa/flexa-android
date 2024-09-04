@@ -56,6 +56,7 @@ fun DataAndPrivacy(
     modifier: Modifier = Modifier,
     viewModel: FlexaIDViewModel,
     toDeleteAccount: () -> Unit,
+    toLearnMore: () -> Unit,
     toBack: () -> Unit,
 ) {
     val scrollBehavior =
@@ -105,7 +106,7 @@ fun DataAndPrivacy(
                     containerColor = palette.tertiary.copy(.3F),
                     contentColor = palette.onSurface
                 ),
-                onClick = {}
+                onClick = { toLearnMore() }
             ) {
                 Text(
                     text = stringResource(R.string.learn_more),
@@ -253,6 +254,7 @@ private fun DataAndPrivacyPreview() {
             modifier = Modifier.fillMaxSize(),
             viewModel = FlexaIDViewModel(FakeInteractor()),
             toDeleteAccount = {},
+            toLearnMore = {},
             toBack = {},
         )
     }

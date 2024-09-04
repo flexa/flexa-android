@@ -10,8 +10,8 @@ import androidx.work.OneTimeWorkRequest
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.flexa.core.Flexa
-import com.flexa.core.shared.FlexaConstants
 import com.flexa.spend.Spend
+import com.flexa.spend.SpendConstants
 
 class CommerceSessionWorker(
     appContext: Context, params: WorkerParameters
@@ -20,7 +20,7 @@ class CommerceSessionWorker(
     override suspend fun doWork(): Result {
         restoreContext(applicationContext)
 
-        inputData.getString(FlexaConstants.COMMERCE_SESSION_KEY)?.let { id ->
+        inputData.getString(SpendConstants.COMMERCE_SESSION_KEY)?.let { id ->
             return try {
                 Log.d(null, "CommerceSessionWorker doWork: Id > $id")
                 Spend.interactor.closeCommerceSession(id)
@@ -36,7 +36,7 @@ class CommerceSessionWorker(
     }
 
     private fun restoreContext(context: Context) {
-        if (Flexa.context == null) Flexa.context = applicationContext
+        if (Flexa.context == null) Flexa.context = context
     }
 
     companion object {
@@ -45,7 +45,7 @@ class CommerceSessionWorker(
             commerceSessionId: String
         ) {
             val data = Data.Builder()
-            data.putString(FlexaConstants.COMMERCE_SESSION_KEY, commerceSessionId)
+            data.putString(SpendConstants.COMMERCE_SESSION_KEY, commerceSessionId)
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()

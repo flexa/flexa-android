@@ -10,10 +10,12 @@ import com.flexa.core.shared.observeConnectionAsFlow
 import com.flexa.spend.data.SecuredPreferences
 import com.flexa.spend.domain.FakeInteractor
 import com.flexa.spend.domain.SpendInteractor
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.json.Json
 
 internal object Spend {
+    val tokenState = MutableStateFlow<TokenState>(TokenState.Fine)
     val selectedAsset: StateFlow<SelectedAsset?> = Flexa.selectedAsset
     var onTransactionRequest: ((Result<Transaction>) -> Unit)? = null
     internal var transactionSent: ((
@@ -40,6 +42,11 @@ internal object Spend {
     fun selectedAsset(value: SelectedAsset) {
         Flexa.selectedAsset(value.accountId, value.asset.assetId)
     }
+}
+
+sealed class TokenState {
+    data object Fine: TokenState()
+    data object Error: TokenState()
 }
 
 data class Transaction(

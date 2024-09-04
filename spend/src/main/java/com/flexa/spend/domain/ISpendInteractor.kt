@@ -1,5 +1,6 @@
 package com.flexa.spend.domain
 
+import com.flexa.core.data.db.TransactionBundle
 import com.flexa.core.entity.Account
 import com.flexa.core.entity.AppAccount
 import com.flexa.core.entity.AvailableAsset
@@ -22,10 +23,15 @@ interface ISpendInteractor {
     suspend fun getAssetWithKey(livemode: Boolean): AvailableAsset?
     suspend fun getAssets(pageSize: Int, nextPageToken: String? = null): AssetsResponse
     suspend fun getAssetById(assetId: String): Asset
+    suspend fun getTransactionBySessionId(sessionId: String): TransactionBundle?
+    suspend fun deleteTransaction(sessionId: String)
+    suspend fun deleteOutdatedTransactions()
+    suspend fun saveTransaction(transactionBundle: TransactionBundle)
     suspend fun putAccounts(account: List<com.flexa.core.shared.AppAccount>): PutAppAccountsResponse
     suspend fun getAccount(): Account
     suspend fun deleteNotification(id: String)
     suspend fun getEmail(): String?
+    suspend fun getPublishableKey(): String
     suspend fun getPlacesToPayTheme(): String?
     suspend fun getDbAssets(): List<Asset>
     suspend fun getDbAssetsById(vararg ids: String): List<Asset>

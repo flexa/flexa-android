@@ -30,6 +30,7 @@ import com.flexa.spend.main.flexa_id.ConfirmDeleteAccount
 import com.flexa.spend.main.flexa_id.DataAndPrivacy
 import com.flexa.spend.main.flexa_id.DeleteAccount
 import com.flexa.spend.main.flexa_id.ManageAccount
+import com.flexa.spend.main.keypad.InputAmountScreen
 import com.flexa.spend.main.main_screen.SpendScreen
 import com.flexa.spend.main.main_screen.SpendViewModel
 import com.flexa.spend.main.web_view.WebView
@@ -40,14 +41,15 @@ import com.flexa.spend.welcome.Welcome
 const val PAY_ROUTE = "com.flexa.spend"
 
 sealed class Route(val name: String) {
-    object Entrance : Route("$PAY_ROUTE.entrance")
-    object Welcome : Route("$PAY_ROUTE.welcome")
-    object Pay : Route("$PAY_ROUTE.pay")
-    object Brands : Route("$PAY_ROUTE.brands")
-    object Account : Route("$PAY_ROUTE.account")
-    object DataAndPrivacy : Route("$PAY_ROUTE.data_and_privacy")
-    object DeleteAccount : Route("$PAY_ROUTE.delete_account")
-    object ConfirmDeleteAccount : Route("$PAY_ROUTE.confirm_delete_account")
+    data object Entrance : Route("$PAY_ROUTE.entrance")
+    data object Welcome : Route("$PAY_ROUTE.welcome")
+    data object Pay : Route("$PAY_ROUTE.pay")
+    data object Brands : Route("$PAY_ROUTE.brands")
+    data object InputAmount : Route("$PAY_ROUTE.input_amount")
+    data object Account : Route("$PAY_ROUTE.account")
+    data object DataAndPrivacy : Route("$PAY_ROUTE.data_and_privacy")
+    data object DeleteAccount : Route("$PAY_ROUTE.delete_account")
+    data object ConfirmDeleteAccount : Route("$PAY_ROUTE.confirm_delete_account")
     data object WebView : Route("$PAY_ROUTE.web_view?url={url}") {
         const val KEY = "url"
         val arguments = listOf(navArgument(KEY) {
@@ -177,7 +179,7 @@ fun NavGraphBuilder.spendNavGraph(
                         interactor = Spend.interactor,
                         selectedAsset = Spend.selectedAsset
                     )
-                }),
+                }, viewModelStoreOwner = context.getActivity() ?: it),
                 brandsViewModel = viewModel(
                     initializer = { BrandsViewModel(Spend.interactor) },
                     viewModelStoreOwner = context.getActivity() ?: it
@@ -187,6 +189,13 @@ fun NavGraphBuilder.spendNavGraph(
                 toManageAccount = { navController.navigate(Route.Account.name) },
                 toUrl = { url ->
                     navController.navigate(Route.WebView.createRoute(url))
+                },
+                toInputAmount = {
+                    navController.navigate(Route.InputAmount.name)
+                },
+                toLogin = {
+                    if (context is Activity)
+                        Flexa.buildIdentity().build().open(context)
                 }
             )
         }
@@ -205,6 +214,23 @@ fun NavGraphBuilder.spendNavGraph(
                     viewModelStoreOwner = context.getActivity() ?: it
                 )
             ) { navController.navigateUp() }
+        }
+        composable(
+            Route.InputAmount.name,
+            enterTransition = { enterTransition },
+            exitTransition = { exitTransition },
+            popEnterTransition = { enterTransition },
+            popExitTransition = { exitTransition }
+        ) {
+            val context = LocalContext.current
+            InputAmountScreen(
+                modifier = modifier,
+                viewModel = viewModel(),
+                spendViewModel =viewModel(context.getActivity() ?: it),
+                assetsViewModel = viewModel(context.getActivity() ?: it),
+                toUrl = { url -> navController.navigate(Route.WebView.createRoute(url)) },
+                toBack = { navController.navigateUp() }
+            )
         }
         composable(
             Route.Account.name,
@@ -245,6 +271,9 @@ fun NavGraphBuilder.spendNavGraph(
                 modifier = modifier,
                 viewModel = viewModel(context.getActivity() ?: it),
                 toDeleteAccount = { navController.navigate(Route.DeleteAccount.name) },
+                toLearnMore = {
+                    navController.navigate(Route.WebView.createRoute("https://flexa.co/legal/privacy"))
+                },
                 toBack = { navController.navigateUp() }
             )
         }

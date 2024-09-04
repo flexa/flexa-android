@@ -27,7 +27,6 @@ class PlacesToPayViewModel(
     internal val themeData = MutableStateFlow<String?>(null)
 
     init {
-        //Log.d("TAG", "PlacesToPayViewModel >${hashCode()}< url: $url urlsList:$urlsList")
         viewModelScope.launch { initThemeData() }
     }
 

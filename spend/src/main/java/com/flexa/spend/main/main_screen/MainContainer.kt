@@ -4,21 +4,17 @@ import android.content.res.Configuration
 import android.util.Log
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.EaseInBack
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -36,12 +32,9 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.ModalBottomSheetState
-import androidx.compose.material.ModalBottomSheetValue
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material.rememberModalBottomSheetState
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -77,7 +70,6 @@ import com.flexa.core.zeroValue
 import com.flexa.spend.MockFactory
 import com.flexa.spend.R
 import com.flexa.spend.domain.FakeInteractor
-import com.flexa.spend.main.LimitCard
 import com.flexa.spend.main.NoAssetsCard
 import com.flexa.spend.main.assets.AssetsState
 import com.flexa.spend.main.assets.AssetsViewModel
@@ -88,21 +80,18 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 import kotlin.math.absoluteValue
 
-@OptIn(
-    ExperimentalMaterialApi::class,
-    ExperimentalFoundationApi::class, ExperimentalAnimationApi::class
-)
 @Composable
 fun Spend(
     modifier: Modifier = Modifier,
     viewModel: SpendViewModel,
     assetsViewModel: AssetsViewModel,
     brandsViewModel: BrandsViewModel,
-    sheetState: ModalBottomSheetState = rememberModalBottomSheetState(initialValue = ModalBottomSheetValue.Hidden),
+    sheetStateVisible: Boolean,
     toAssets: () -> Unit,
     toAddAssets: () -> Unit,
     toAssetInfo: (SelectedAsset) -> Unit,
     toEdit: () -> Unit,
+    toInputAmount: () -> Unit,
     toUrl: (@ParameterName("url") String) -> Unit,
 ) {
 
@@ -131,7 +120,7 @@ fun Spend(
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp)
                 ) {
                     val angle by animateFloatAsState(
-                        targetValue = if ((sheetState.isVisible)
+                        targetValue = if (sheetStateVisible
                             && viewModel.sheetScreen is SheetScreen.Assets
                         ) -180F else 0F, label = "assets button angle"
                     )
@@ -227,26 +216,6 @@ fun Spend(
             )
         }
 
-        AnimatedVisibility( // Ad Card
-            visible = viewModel.limitCardVisible,
-            exit = fadeOut() + scaleOut(
-                animationSpec = tween(easing = EaseInBack),
-                targetScale = .8F
-            )
-        ) {
-            Column {
-                Spacer(modifier = Modifier.height(20.dp))
-                LimitCard(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(color = MaterialTheme.colorScheme.onPrimary),
-                    toLearnMore = {},
-                    onClose = { viewModel.limitCardVisible = false }
-                )
-            }
-        }
         val notifications = viewModel.notifications
         val showNotifications by remember {
             derivedStateOf { notifications.isNotEmpty() }
@@ -318,7 +287,7 @@ fun Spend(
                                     Canvas(
                                         modifier = Modifier
                                             .width(30.dp)
-                                            .animateItemPlacement()
+                                            .animateItem()
                                             .graphicsLayer {
                                                 val pageOffset =
                                                     (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
@@ -355,7 +324,7 @@ fun Spend(
                 toEdit = { toEdit.invoke() },
                 onClick = { brand ->
                     viewModel.brand.value = brand
-                    viewModel.openAmount.value = true
+                    toInputAmount()
                 }
             )
         }
@@ -363,7 +332,7 @@ fun Spend(
     }
 }
 
-@OptIn(ExperimentalMaterialApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Preview
 @Preview(uiMode = Configuration.UI_MODE_NIGHT_YES or Configuration.UI_MODE_TYPE_NORMAL)
 @Composable
@@ -376,6 +345,7 @@ private fun PayPreview() {
             viewModel = viewModel(initializer = {
                 SpendViewModel(FakeInteractor())
             }),
+            sheetStateVisible = false,
             brandsViewModel = viewModel(initializer = {
                 BrandsViewModel(FakeInteractor())
             }),
@@ -386,7 +356,8 @@ private fun PayPreview() {
             toAddAssets = {},
             toAssetInfo = {},
             toEdit = {},
-            toUrl = {}
+            toUrl = {},
+            toInputAmount = {}
         )
     }
 }

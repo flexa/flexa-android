@@ -3,7 +3,6 @@ package com.flexa.spend.main.confirm
 import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColor
 import androidx.compose.animation.animateContentSize
@@ -21,7 +20,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.with
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -38,9 +37,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.Icon
-import androidx.compose.material.ModalBottomSheetState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
@@ -48,11 +44,11 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
-import androidx.compose.material3.LocalMinimumInteractiveComponentEnforcement
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -61,9 +57,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -77,7 +73,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -107,10 +102,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-@OptIn(
-    ExperimentalAnimationApi::class,
-    ExperimentalMaterialApi::class, ExperimentalMaterial3Api::class, ExperimentalTextApi::class
-)
 @Composable
 fun ConfirmCard(
     modifier: Modifier = Modifier,
@@ -118,22 +109,16 @@ fun ConfirmCard(
     elevation: Dp = 0.dp,
     containerColor: Color = MaterialTheme.colorScheme.secondaryContainer,
     viewModel: ConfirmViewModel,
-    sheetState: ModalBottomSheetState? = null,
     onClose: () -> Unit,
     onTransaction: (Transaction) -> Unit = {},
     toDetails: (StateFlow<CommerceSession?>) -> Unit,
     toAssets: () -> Unit = {},
 ) {
     val palette = MaterialTheme.colorScheme
-    val scope = rememberCoroutineScope()
     val session by viewModel.session.collectAsStateWithLifecycle()
     val previewMode = LocalInspectionMode.current
 
-    BackHandler {
-        if (sheetState?.isVisible == true)
-            scope.launch { sheetState.hide() }
-        else onClose()
-    }
+    BackHandler { onClose() }
 
     LaunchedEffect(viewModel) {
         launch {
@@ -185,14 +170,14 @@ fun ConfirmCard(
                 IconButton(onClick = {
                     toDetails(viewModel.session)
                 }) {
-                    androidx.compose.material3.Icon(
+                    Icon(
                         imageVector = Icons.Filled.MoreVert,
                         contentDescription = null,
                         tint = palette.onSurface
                     )
                 }
                 IconButton(onClick = { onClose() }) {
-                    androidx.compose.material3.Icon(
+                    Icon(
                         imageVector = Icons.Filled.Close,
                         contentDescription = null,
                         tint = palette.onSurface
@@ -222,7 +207,7 @@ fun ConfirmCard(
                     modifier = Modifier.align(Alignment.Center),
                     targetState = viewModel.payProgress,
                     transitionSpec = {
-                        scaleIn(initialScale = .7F) + fadeIn() with scaleOut(targetScale = .7F) + fadeOut()
+                        scaleIn(initialScale = .7F) + fadeIn() togetherWith scaleOut(targetScale = .7F) + fadeOut()
                     }, label = "Icon"
                 ) { progressState ->
                     if (!progressState) {
@@ -281,11 +266,11 @@ fun ConfirmCard(
                     transitionSpec = {
                         if (targetState > initialState) {
                             slideInVertically { width -> width } +
-                                    fadeIn() with slideOutVertically()
+                                    fadeIn() togetherWith slideOutVertically()
                             { width -> -width } + fadeOut()
                         } else {
                             slideInVertically { width -> -width } +
-                                    fadeIn() with slideOutVertically()
+                                    fadeIn() togetherWith slideOutVertically()
                             { width -> width } + fadeOut()
                         }.using(SizeTransform(clip = false))
                     }, label = "price_animation"
@@ -357,7 +342,7 @@ fun ConfirmCard(
                     },
                     trailingContent = {
                         IconButton(onClick = { toAssets() }) {
-                            androidx.compose.material3.Icon(
+                            Icon(
                                 modifier = Modifier.size(22.dp),
                                 imageVector = Icons.Outlined.Edit,
                                 contentDescription = null,
@@ -368,7 +353,7 @@ fun ConfirmCard(
                 )
             }
             Spacer(modifier = Modifier.height(2.dp))
-            val completeButtonHeight by remember { mutableStateOf(34) }
+            val completeButtonHeight by remember { mutableIntStateOf(34) }
             val transition = updateTransition(viewModel.completed, label = "complete button state")
             val topRadius by transition.animateDp(label = "topRadius",
                 transitionSpec = { tween(500) }
@@ -408,7 +393,7 @@ fun ConfirmCard(
             }
 
             CompositionLocalProvider(
-                LocalMinimumInteractiveComponentEnforcement provides false,
+                LocalMinimumInteractiveComponentSize provides 0.dp,
             ) {
                 TextButton(
                     modifier = Modifier
@@ -465,11 +450,11 @@ fun ConfirmCard(
                         transitionSpec = {
                             if (targetState.length > initialState.length) {
                                 slideInHorizontally { width -> width } +
-                                        fadeIn() with slideOutHorizontally()
+                                        fadeIn() togetherWith slideOutHorizontally()
                                 { width -> -width } + fadeOut()
                             } else {
                                 slideInHorizontally { width -> -width } +
-                                        fadeIn() with slideOutHorizontally()
+                                        fadeIn() togetherWith slideOutHorizontally()
                                 { width -> width } + fadeOut()
                             }.using(SizeTransform(clip = false))
                         }, label = "Text"
@@ -513,7 +498,6 @@ fun ConfirmDone(
     )
 }
 
-@OptIn(ExperimentalMaterialApi::class)
 @Preview(name = "Light")
 @Preview(
     name = "Dark",

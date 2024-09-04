@@ -13,7 +13,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -36,19 +35,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -56,8 +53,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 
-class Holder(val scope: CoroutineScope) {
-    val image = MutableSharedFlow<Bitmap>()
+class Holder(private val scope: CoroutineScope) {
+    private val image = MutableSharedFlow<Bitmap>()
     val codes = MutableSharedFlow<List<String>>()
     fun setImage(img: Bitmap) {
         scope.launch { image.emit(img) }
@@ -75,37 +72,6 @@ fun KeepScreenOn() {
         currentView.keepScreenOn = true
         onDispose {
             currentView.keepScreenOn = false
-        }
-    }
-}
-
-@Composable
-fun TopContent(
-    modifier: Modifier
-) {
-    Box(
-        modifier = modifier
-    ) {
-        Column(
-            Modifier
-                .width(200.dp)
-                .align(Alignment.Center),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(
-                stringResource(id = R.string.scan_any_code),
-                color = Color.White,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Medium,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                stringResource(id = R.string.send_pay_connect),
-                color = Color.White,
-                fontSize = 17.sp,
-                fontWeight = FontWeight.Normal,
-                textAlign = TextAlign.Center
-            )
         }
     }
 }
@@ -130,7 +96,7 @@ fun Codes(
                         }
                     },
                     style = MaterialTheme.typography.headlineMedium,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
         }
@@ -142,8 +108,9 @@ fun ScannerBox(
     modifier: Modifier = Modifier,
     onGloballyPositioned: (LayoutCoordinates) -> Unit
 ) {
+    val previewMode = LocalInspectionMode.current
     var expanded by rememberSaveable {
-        mutableStateOf(false)
+        mutableStateOf(!previewMode)
     }
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
@@ -154,7 +121,7 @@ fun ScannerBox(
         } else 0f,
         animationSpec = tween(
             durationMillis = 500,
-        )
+        ), label = ""
     )
     val width by animateFloatAsState(
         targetValue = if (expanded)
@@ -162,33 +129,7 @@ fun ScannerBox(
         animationSpec = tween(
             durationMillis = 500,
             delayMillis = 200
-        )
-    )
-    val infiniteTransition = rememberInfiniteTransition()
-    val animatedOffset by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = width - (40.dp.value * 2),
-        animationSpec = infiniteRepeatable(
-            animation = tween(
-                durationMillis = 2000,
-                easing = EaseInOut,
-                delayMillis = 0
-            ),
-            repeatMode = RepeatMode.Reverse
-        )
-    )
-    val animatedColor by infiniteTransition.animateColor(
-        initialValue = Color.White,
-        targetValue = Color.White.copy(alpha = .5f),
-        animationSpec = infiniteRepeatable(
-            animation = tween(
-                durationMillis = 1000,
-                easing = EaseInOut,
-                delayMillis = 0
-            ),
-            repeatMode = RepeatMode.Reverse
-        )
-
+        ), label = ""
     )
 
     Box(
@@ -196,7 +137,7 @@ fun ScannerBox(
             .onGloballyPositioned {
                 size = it.size
                 scope.launch(Dispatchers.Main) {
-                    delay(1000)
+                    delay(300)
                     expanded = true
                 }
                 onGloballyPositioned.invoke(it)
@@ -212,14 +153,40 @@ fun ScannerBox(
                     RoundedCornerShape(36.dp)
                 )
         ) {
+            val infiniteTransition = rememberInfiniteTransition(label = "")
+            val animatedOffset by infiniteTransition.animateFloat(
+                initialValue = 0f,
+                targetValue = width - (40.dp.value * 2),
+                animationSpec = infiniteRepeatable(
+                    animation = tween(
+                        durationMillis = 2000,
+                        easing = EaseInOut,
+                        delayMillis = 0
+                    ),
+                    repeatMode = RepeatMode.Reverse
+                ), label = ""
+            )
+            val animatedColor by infiniteTransition.animateColor(
+                initialValue = Color.White,
+                targetValue = Color.White.copy(alpha = .5f),
+                animationSpec = infiniteRepeatable(
+                    animation = tween(
+                        durationMillis = 1000,
+                        easing = EaseInOut,
+                        delayMillis = 0
+                    ),
+                    repeatMode = RepeatMode.Reverse
+                ), label = ""
+            )
+            val glowHeight by remember { mutableStateOf(2.dp) }
             Canvas(
                 modifier = Modifier
-                    .padding(40.dp)
+                    .padding(32.dp)
                     .fillMaxWidth()
+                    .height(glowHeight)
                     .offset(y = animatedOffset.dp)
             ) {
                 val canvasWidth = this.size.width
-                val canvasHeight = this.size.height
                 drawLine(
                     brush = Brush.linearGradient(
                         colors = listOf(
@@ -230,7 +197,8 @@ fun ScannerBox(
                     ),
                     start = Offset(x = 0f, y = 0f),
                     end = Offset(x = canvasWidth, y = 0f),
-                    strokeWidth = 1.dp.value
+                    strokeWidth = with(density) { glowHeight.toPx() },
+                    cap = StrokeCap.Round
                 )
             }
         }

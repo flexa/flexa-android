@@ -3,7 +3,6 @@ package com.flexa.spend.main.legacy_flexcode
 import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -25,13 +24,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.ModalBottomSheetState
-import androidx.compose.material.ModalBottomSheetValue
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.rememberModalBottomSheetState
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -64,18 +59,18 @@ import com.flexa.spend.MockFactory
 import com.flexa.spend.domain.FakeInteractor
 import com.flexa.spend.getAmount
 import com.flexa.spend.getAmountLabel
-import com.flexa.spend.main.flexcode.PDF417
+import com.flexa.spend.main.flexcode.FlexcodeLayout
 import com.flexa.spend.main.main_screen.SpendViewModel
 import com.flexa.spend.main.ui_utils.MarkdownText
+import com.flexa.spend.rememberSelectedAsset
+import com.flexa.spend.toColor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-@OptIn(ExperimentalMaterialApi::class, ExperimentalAnimationApi::class)
 @Composable
 fun LegacyFlexcode(
     modifier: Modifier = Modifier,
     viewModel: SpendViewModel,
-    sheetState: ModalBottomSheetState,
     toBack: (commerceSessionId: String?) -> Unit,
     toDetails: (StateFlow<CommerceSession?>) -> Unit,
 ) {
@@ -84,7 +79,7 @@ fun LegacyFlexcode(
     val commerceSession by if (!previewMode) viewModel.commerceSession.collectAsStateWithLifecycle()
     else MutableStateFlow(MockFactory.getMockCommerceSessionCompleted()).collectAsState()
 
-    BackHandler(!sheetState.isVisible) {
+    BackHandler {
         toBack.invoke(commerceSession?.data?.id)
     }
     Card(
@@ -183,16 +178,8 @@ fun LegacyFlexcode(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(1.8F)
-                .padding(horizontal = 32.dp)
-                .clip(
-                    RoundedCornerShape(
-                        topStart = 24.dp,
-                        bottomStart = 24.dp,
-                        topEnd = 40.dp,
-                        bottomEnd = 40.dp
-                    )
-                )
+                .aspectRatio(1.4f)
+                .padding(horizontal = 31.dp)
         ) {
             val code by remember {
                 derivedStateOf {
@@ -200,13 +187,13 @@ fun LegacyFlexcode(
                         ?: BuildConfig.LIBRARY_PACKAGE_NAME
                 }
             }
-            PDF417(
+            val asset by rememberSelectedAsset()
+            FlexcodeLayout(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.White),
-                columns = 2,
-                rows = 23,
-                code = code
+                    .aspectRatio(1.14f),
+                code = code,
+                color = asset?.asset?.assetData?.color?.toColor() ?: Color.Magenta
             )
         }
         Spacer(modifier = Modifier.height(26.dp))
@@ -236,7 +223,6 @@ fun LegacyFlexcode(
     }
 }
 
-@OptIn(ExperimentalMaterialApi::class)
 @Preview(backgroundColor = 0xFFEFEFEF, showBackground = true)
 @Preview(
     name = "Dark",
@@ -255,9 +241,6 @@ fun LegacyFlexcodePreview() {
                         brand.value = MockFactory.getMockBrand()
                         amount.value = "13.9"
                     },
-                    sheetState = rememberModalBottomSheetState(
-                        initialValue = ModalBottomSheetValue.Expanded
-                    ),
                     toBack = { },
                     toDetails = { }
                 )

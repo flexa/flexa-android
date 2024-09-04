@@ -1,5 +1,6 @@
 package com.flexa.spend.domain
 
+import com.flexa.core.data.db.TransactionBundle
 import com.flexa.core.domain.db.DbInteractor
 import com.flexa.core.domain.rest.RestInteractor
 import com.flexa.core.entity.AppAccount
@@ -14,15 +15,13 @@ import com.flexa.core.shared.Brand
 import com.flexa.core.shared.ConnectionState
 import com.flexa.core.shared.FlexaConstants
 import com.flexa.spend.Spend.json
+import com.flexa.spend.SpendConstants
 import com.flexa.spend.data.SecuredPreferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-
-const val RETRY_DELAY = 500L
-const val RETRY_COUNT = 3
 
 internal class SpendInteractor(
     private val interactor: RestInteractor,
@@ -93,6 +92,23 @@ internal class SpendInteractor(
         interactor.getAssets(pageSize, nextPageToken)
 
     override suspend fun getAssetById(assetId: String): Asset = interactor.getAssetById(assetId)
+    override suspend fun getTransactionBySessionId(sessionId: String): TransactionBundle? =
+        withContext(Dispatchers.IO) {
+            dbInteractor.getTransactionBySessionId(sessionId)
+        }
+
+    override suspend fun deleteTransaction(sessionId: String) = withContext(Dispatchers.IO) {
+        dbInteractor.deleteTransaction(sessionId)
+    }
+
+    override suspend fun deleteOutdatedTransactions() = withContext(Dispatchers.IO) {
+        dbInteractor.deleteOutdatedTransactions()
+    }
+
+    override suspend fun saveTransaction(transactionBundle: TransactionBundle) =
+        withContext(Dispatchers.IO) {
+            dbInteractor.saveTransaction(transactionBundle)
+        }
 
     override suspend fun getAccount() = withContext(Dispatchers.IO) {
         interactor.getAccount()
@@ -102,8 +118,12 @@ internal class SpendInteractor(
         interactor.deleteNotification(id)
     }
 
-    override suspend fun getEmail(): String? {
-        return preferences.getString(FlexaConstants.EMAIL)
+    override suspend fun getEmail(): String? = withContext(Dispatchers.IO) {
+        preferences.getString(FlexaConstants.EMAIL)
+    }
+
+    override suspend fun getPublishableKey(): String {
+        return preferences.getString(FlexaConstants.PUBLISHABLE_KEY) ?: ""
     }
 
     override suspend fun getPlacesToPayTheme(): String? {
@@ -128,12 +148,12 @@ internal class SpendInteractor(
     override suspend fun savePinnedBrands(itemsIds: List<String>) =
         withContext(Dispatchers.IO) {
             val items = json.encodeToString(itemsIds)
-            preferences.saveString(FlexaConstants.PINNED_BRANDS, items)
+            preferences.saveString(SpendConstants.PINNED_BRANDS, items)
         }
 
     override suspend fun getPinnedBrands(): List<String> =
         withContext(Dispatchers.IO) {
-            val string = preferences.getString(FlexaConstants.PINNED_BRANDS) ?: "[]"
+            val string = preferences.getString(SpendConstants.PINNED_BRANDS) ?: "[]"
             json.decodeFromString<List<String>>(string)
         }
 
@@ -204,7 +224,7 @@ internal class SpendInteractor(
         }
 
     override suspend fun deleteToken(): Int = withContext(Dispatchers.IO) {
-        val tokenId = preferences.getString(FlexaConstants.TOKEN_ID)?:""
+        val tokenId = preferences.getString(FlexaConstants.TOKEN_ID) ?: ""
         interactor.deleteToken(tokenId)
     }
 

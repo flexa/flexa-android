@@ -35,5 +35,21 @@ class DbRepository(
     override suspend fun saveBrands(items: List<Brand>) =
         db.brandsDao().insertAll(items.map { it.toDao() })
 
+    override suspend fun getTransactionBySessionId(sessionId: String): TransactionBundle? {
+        return db.transactionDao().getBySessionId(sessionId).firstOrNull()
+    }
+
+    override suspend fun deleteTransactions(vararg sessionIds: String) {
+        db.transactionDao().deleteById(*sessionIds)
+    }
+
+    override suspend fun deleteOutdatedTransactions() {
+        db.transactionDao().deleteOutdated()
+    }
+
+    override suspend fun saveTransaction(transactionBundle: TransactionBundle) {
+        db.transactionDao().insert(transactionBundle)
+    }
+
     override suspend fun deleteBrands() = db.brandsDao().deleteAll()
 }

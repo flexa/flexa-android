@@ -2,6 +2,7 @@ package com.flexa.spend.main.assets
 
 import android.content.res.Configuration
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.EaseOut
@@ -25,22 +26,26 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -59,18 +64,16 @@ import com.flexa.spend.domain.FakeInteractor
 import com.flexa.spend.isSelected
 import com.flexa.spend.rememberSelectedAsset
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
-fun SpendBottomSheet(
+fun AssetsBottomSheet(
     viewModel: AssetsViewModel,
+    toUrl: (@ParameterName("url") String) -> Unit,
     toBack: () -> Unit
 ) {
     val previewMode = LocalInspectionMode.current
     val assetsScreen by if (!previewMode) viewModel.assetsScreen.collectAsStateWithLifecycle()
-    else remember {
-        mutableStateOf(AssetsScreen.Assets)
-    }
-    val backgroundColor = MaterialTheme.colorScheme.secondaryContainer
+    else remember { mutableStateOf(AssetsScreen.Assets) }
     val appAccounts = viewModel.appAccounts
     val listItems by remember {
         derivedStateOf {
@@ -83,14 +86,7 @@ fun SpendBottomSheet(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .statusBarsPadding()
-            .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-            .background(color = backgroundColor)
-    ) {
-        NavigationDrawer()
+    Column(modifier = Modifier.fillMaxWidth()) {
         AnimatedContent( // Header
             targetState = assetsScreen,
             transitionSpec = {
@@ -132,7 +128,7 @@ fun SpendBottomSheet(
                 }
             }
         }
-        val animDuration by remember { mutableStateOf(700) }
+        val animDuration by remember { mutableIntStateOf(700) }
         val filtered by viewModel.filtered.collectAsStateWithLifecycle()
 
         LaunchedEffect(filtered) {
@@ -156,31 +152,34 @@ fun SpendBottomSheet(
             when (screen) {
                 is AssetsScreen.Assets -> {
                     val noAssets by remember { derivedStateOf { listItems.sumOf { it.availableAssets.size } == 0 } }
-                    AnimatedContent(
-                        targetState = noAssets, label = ""
-                    ) { _noAssets ->
-                        if (!_noAssets) {
+                    Crossfade(targetState = noAssets, label = "") { na ->
+                        if (!na) {
                             val selectedAsset by rememberSelectedAsset()
                             val listState = rememberLazyListState()
                             LazyColumn(
+                                modifier = Modifier.background(BottomSheetDefaults.ContainerColor),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 state = listState
                             ) {
                                 listItems.forEach { appAccount ->
                                     val accountId = appAccount.accountId
-                                    stickyHeader(key = accountId) {
-                                        Spacer(modifier = Modifier.height(20.dp))
-                                        appAccount.displayName?.let {
-                                            AssetsSheetStickyHeader(
-                                                modifier = Modifier,
-                                                text = it,
-                                                color = backgroundColor
-                                            )
+                                    if (listItems.size > 1) { // StickyHeader
+                                        stickyHeader(key = accountId) {
+                                            appAccount.displayName?.let {
+                                                AssetsSheetStickyHeader(
+                                                    modifier = Modifier,
+                                                    text = it,
+                                                )
+                                            }
+                                        }
+                                    } else {
+                                        stickyHeader(key = accountId) {
+                                            Spacer(modifier = Modifier.height(20.dp))
                                         }
                                     }
                                     appAccount.availableAssets.forEachIndexed { index, asset ->
                                         item(key = accountId + asset.assetId) {
-                                            val size by remember { mutableStateOf(appAccount.availableAssets.size) }
+                                            val size by remember { mutableIntStateOf(appAccount.availableAssets.size) }
                                             val shape by remember {
                                                 mutableStateOf(
                                                     when {
@@ -227,8 +226,8 @@ fun SpendBottomSheet(
                                                     .padding(horizontal = 20.dp)
                                                     .clip(shape)
                                                     .background(color)
-                                                    .animateItemPlacement(
-                                                        animationSpec = tween(durationMillis = animDuration)
+                                                    .animateItem(
+                                                        placementSpec = tween(durationMillis = animDuration)
                                                     )
                                                     .clickable(enabled = !asset.zeroValue()) {
                                                         viewModel.setSelectedAsset(accountId, asset)
@@ -236,26 +235,17 @@ fun SpendBottomSheet(
                                                     },
                                                 color = color,
                                                 asset = asset,
-                                                toDetails = { _asset ->
+                                                toDetails = { ast ->
                                                     viewModel.assetsScreen.value =
                                                         AssetsScreen.AssetDetails(
-                                                            SelectedAsset(accountId, _asset)
+                                                            SelectedAsset(accountId, ast)
                                                         )
                                                 }
                                             )
                                         }
                                         if (index + 1 < appAccount.availableAssets.size) {
                                             item(key = accountId + "divider" + asset.assetId) {
-                                                AssetItemDivider(
-                                                    modifier = Modifier
-                                                        .padding(horizontal = 20.dp)
-                                                        .animateItemPlacement(
-                                                            animationSpec = tween(
-                                                                durationMillis = animDuration
-                                                            )
-                                                        ),
-                                                    color = backgroundColor
-                                                )
+                                                Spacer(modifier = Modifier.height(2.dp))
                                             }
                                         }
                                     }
@@ -264,12 +254,11 @@ fun SpendBottomSheet(
                                             modifier = Modifier
                                                 .height(24.dp)
                                                 .fillMaxWidth()
-                                                .animateItemPlacement(
-                                                    animationSpec = tween(
+                                                .animateItem(
+                                                    placementSpec = tween(
                                                         durationMillis = animDuration
                                                     )
                                                 )
-                                                .background(backgroundColor)
                                         )
                                     }
 
@@ -300,6 +289,7 @@ fun SpendBottomSheet(
                 }
 
                 is AssetsScreen.AssetDetails -> {
+                    val context = LocalContext.current
                     AssetDetailsScreen(
                         modifier = Modifier.fillMaxSize(),
                         viewModel = viewModel(
@@ -308,18 +298,19 @@ fun SpendBottomSheet(
                             }),
                         assetBundle = screen.asset,
                         assetsViewModel = viewModel,
-                        color = backgroundColor,
-                        toLearnMore = {},
+                        toLearnMore = { toUrl(context.getString(R.string.learn_more_link)) },
                     )
                 }
 
                 is AssetsScreen.Settings -> {
+                    val context = LocalContext.current
                     AssetsSettingsScreen(
-                        modifier = Modifier.fillMaxSize(),
-                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(BottomSheetDefaults.ContainerColor),
                         filtered = filtered,
                         onFiltered = { viewModel.filtered.value = it },
-                        toLearnMore = {}
+                        toLearnMore = { toUrl(context.getString(R.string.learn_more_link)) }
                     )
                 }
             }
@@ -332,6 +323,12 @@ fun SpendBottomSheet(
 @Composable
 private fun AssetsBottomSheetContentPreview() {
     FlexaTheme {
-        SpendBottomSheet(viewModel = AssetsViewModel(interactor = FakeInteractor())) {}
+        Surface {
+            AssetsBottomSheet(
+                viewModel = AssetsViewModel(interactor = FakeInteractor()),
+                toUrl = {},
+                toBack = {}
+            )
+        }
     }
 }

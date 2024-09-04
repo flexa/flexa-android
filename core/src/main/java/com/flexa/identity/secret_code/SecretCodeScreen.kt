@@ -3,7 +3,6 @@ package com.flexa.identity.secret_code
 import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -21,7 +20,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.LockReset
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -32,6 +31,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,7 +56,7 @@ import com.flexa.core.view.FlexaProgress
 import com.flexa.identity.domain.FakeInteractor
 import com.flexa.identity.mirror
 
-@OptIn(ExperimentalComposeUiApi::class, ExperimentalAnimationApi::class)
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 internal fun SecretCodeScreen(
     modifier: Modifier = Modifier,
@@ -68,12 +68,16 @@ internal fun SecretCodeScreen(
     var showDialog by remember { mutableStateOf(false) }
     val result by viewModel.result.collectAsStateWithLifecycle(initialValue = null)
 
+    LaunchedEffect(result) {
+        if (result != null) onClose(result)
+    }
+
     BackHandler { onBack() }
 
     Column(modifier = modifier) {
         IconButton(onClick = { onBack() }) {
             Icon(
-                imageVector = Icons.Default.ArrowBack,
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = null,
                 tint = palette.onBackground
             )
@@ -182,18 +186,6 @@ internal fun SecretCodeScreen(
     }
     ErrorDialog(errorHandler = viewModel.errorHandler) {
         viewModel.secretCode.value = null
-    }
-    if (result != null) {
-        AlertDialog(
-            confirmButton = {
-                TextButton(onClick = { onClose.invoke(result) }) {
-                    Text(text = stringResource(id = android.R.string.ok))
-                }
-            },
-            title = { Text(text = "Success!") },
-            text = { Text(text = "You are signed in.") },
-            onDismissRequest = { onClose.invoke(result) }
-        )
     }
 }
 

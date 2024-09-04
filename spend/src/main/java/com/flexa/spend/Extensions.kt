@@ -30,6 +30,7 @@ import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.flexa.core.data.db.TransactionBundle
 import com.flexa.core.entity.AppAccount
 import com.flexa.core.entity.AssetKey
 import com.flexa.core.entity.AvailableAsset
@@ -47,6 +48,7 @@ import kotlinx.coroutines.launch
 import org.apache.commons.codec.binary.Base32
 import java.math.BigDecimal
 import java.math.MathContext
+import java.time.Instant
 import java.util.concurrent.TimeUnit
 import kotlin.math.roundToInt
 import kotlin.math.sign
@@ -114,6 +116,11 @@ internal fun List<AppAccount>.getKey(asset: SelectedAsset?): AssetKey? {
 
 internal fun SelectedAsset.isSelected(accountId: String, assetId: String): Boolean {
     return this.accountId == accountId && this.asset.assetId == assetId
+}
+
+internal fun String?.getAmount(): Double {
+    val regex = """\d+(\.\d+)?""".toRegex()
+    return regex.find(this?:"0")?.value?.toDoubleOrNull()?:0.0
 }
 
 internal fun AvailableAsset.logo(): String? =
@@ -217,6 +224,22 @@ fun CommerceSession?.toTransaction(): Transaction? {
             brandLogo = this.data?.brand?.logoUrl ?: "",
             brandName = this.data?.brand?.name ?: "",
             brandColor = this.data?.brand?.color ?: "",
+        )
+    }
+}
+fun CommerceSession?.toTransactionBundle(): TransactionBundle? {
+    return if (this == null) {
+        null
+    } else {
+        val transaction = this.data?.transactions?.firstOrNull {
+            it?.status == "requested"
+        }
+        val sessionId = data?.id?:""
+        val transactionId = transaction?.id?:""
+        val date =
+            transaction?.expiresAt ?: (Instant.now().toEpochMilli() / 1000)
+        TransactionBundle(
+            transactionId, sessionId, date
         )
     }
 }

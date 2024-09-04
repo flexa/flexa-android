@@ -7,8 +7,9 @@
     <application>
         <activity
             android:name=".SpendActivity"
-            android:exported="false"
             android:configChanges="uiMode"
-            android:theme="@style/Theme.Flexa" />
+            android:exported="false"
+            android:theme="@style/Theme.Flexa">
+        </activity>
     </application>
 </manifest>

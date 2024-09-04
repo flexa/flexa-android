@@ -1,7 +1,9 @@
 package com.flexa.core.data.data
 
+import android.content.Intent
 import android.util.Log
 import com.flexa.BuildConfig
+import com.flexa.core.Flexa
 import com.flexa.core.data.rest.HeadersBundle
 import com.flexa.core.data.rest.RestRepository
 import com.flexa.core.data.rest.RestRepository.Companion.json
@@ -10,7 +12,6 @@ import com.flexa.core.domain.data.ITokenProvider
 import com.flexa.core.entity.TokenPatch
 import com.flexa.core.shared.FlexaConstants
 import com.flexa.core.shared.FlexaConstants.Companion.EMPTY
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import okhttp3.HttpUrl
@@ -21,6 +22,8 @@ import okhttp3.logging.HttpLoggingInterceptor
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicReference
+
+private const val TOKEN_ERROR_COUNTER = 3
 
 internal class TokenProvider(
     private val preferences: SecuredPreferences,
@@ -38,6 +41,7 @@ internal class TokenProvider(
             ).build()
     }
     private var countDownLatch = AtomicReference<CountDownLatch>()
+    private var errorCounter = 0
 
     override fun getTokenExpiration(): Long =
         preferences.getLongSynchronously(FlexaConstants.TOKEN_EXPIRATION)
@@ -91,18 +95,38 @@ internal class TokenProvider(
             val token = try {
                 val response = client.newCall(request).execute()
                 val raw = response.body?.string().toString()
-                val tokenResponse = json.decodeFromString<TokenPatch>(raw)
-
-                preferences.saveStringSynchronous(FlexaConstants.VERIFIER, newVerifier)
-                preferences.edit().putLong(FlexaConstants.TOKEN_EXPIRATION, tokenResponse.expiration).apply()
-
+                val tokenResponse = try {
+                    json.decodeFromString<TokenPatch>(raw)
+                } catch (e: Exception) {
+                    TokenPatch("", "", "", 0)
+                }
                 val token = tokenResponse.value
-                setToken(token)
+                if (token.isNotBlank()) {
+                    errorCounter = 0
+                    preferences.saveStringSynchronous(FlexaConstants.VERIFIER, newVerifier)
+                    preferences.edit()
+                        .putLong(FlexaConstants.TOKEN_EXPIRATION, tokenResponse.expiration).apply()
+                    setToken(token)
+                    Flexa.context?.let {
+                        val intent = Intent(preferences.getPublishableKey())
+                        intent.putExtra(FlexaConstants.TOKEN, true)
+                        it.sendBroadcast(intent)
+                    }
+                } else {
+                    if (++errorCounter >= TOKEN_ERROR_COUNTER) {
+                        Flexa.context?.let {
+                            val intent = Intent(preferences.getPublishableKey())
+                            intent.putExtra(FlexaConstants.TOKEN, false)
+                            it.sendBroadcast(intent)
+                        }
+                    }
+                }
                 token
             } catch (e: Exception) {
                 Log.e("TAG", "getRefreshToken: ", e)
                 ""
             }
+
             try {
                 Log.d(TokenProvider::class.java.simpleName, "refreshed token: \uD83C\uDFC1: $token")
                 return token

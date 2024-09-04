@@ -9,12 +9,10 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -31,14 +29,11 @@ fun LocationsWebView(
     onTitle: (title: String) -> Unit,
     onFirstPage: (Boolean) -> Unit,
 ) {
-    val scope = rememberCoroutineScope()
     var webView by remember { mutableStateOf<WebView?>(null) }
     var loading by remember { mutableStateOf(true) }
     val blur by animateDpAsState(
         targetValue = if (loading) 10.dp else 0.dp, label = "blur",
-//        animationSpec = tween(durationMillis = 300)
     )
-    val isSystemInDarkTheme = isSystemInDarkTheme()
 
     AndroidView(
         modifier = modifier.blur(blur),

@@ -81,6 +81,7 @@ class AssetsViewModel(
                 accounts.forEach { account ->
                     val localAccount =
                         Flexa.appAccounts.value.firstOrNull { it.accountId == account.accountId }
+                    account.displayName = localAccount?.displayName
                     val accAssets = ArrayList<AvailableAsset>(account.availableAssets.size)
                     for (availableAsset in account.availableAssets) {
                         val localAsset =

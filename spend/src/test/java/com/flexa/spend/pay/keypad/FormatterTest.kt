@@ -94,7 +94,7 @@ class FormatterTest {
         val state = formatter.getInputState(
             minAmount = 5.0,
             maxAmount = 100.0,
-            data = ".0")
+            data = "")
         assertEquals(InputState.Unspecified, state)
     }
 

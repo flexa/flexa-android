@@ -2,8 +2,10 @@ package com.flexa.spend.main.main_screen
 
 import android.content.res.Configuration
 import android.util.Log
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -51,7 +53,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import java.time.Instant
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun FlexcodePagerCard(
     pagerState: PagerState,
@@ -134,9 +135,6 @@ fun FlexcodePagerCard(
                     mutableStateOf("${assetKey?.prefix ?: ""}${totpGenerator.generate()}")
                 }
                 val codeProgress = remember { mutableStateOf(false) }
-                val blur by animateDpAsState(
-                    if (codeProgress.value) 2.dp else 0.dp, label = "blur"
-                )
                 LaunchedEffect(assetKey, duration) {
                     if (assetKey != null) {
                         while (isActive) {
@@ -167,14 +165,32 @@ fun FlexcodePagerCard(
                         }
                     }
                 }
-                FlexcodeLayout(
-                    modifier = Modifier
-                        .aspectRatio(1.14f)
-                        .fillMaxSize()
-                        .blur(blur, BlurredEdgeTreatment.Rectangle),
-                    code = code.value,
-                    color = asset?.asset?.assetData?.color?.toColor()?: Color.Magenta
-                )
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                    val blur by animateDpAsState(
+                        if (codeProgress.value) 2.dp else 0.dp, label = "blur"
+                    )
+                    FlexcodeLayout(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .aspectRatio(1.14f)
+                            .blur(blur, BlurredEdgeTreatment.Rectangle),
+                        code = code.value,
+                        color = asset?.asset?.assetData?.color?.toColor() ?: Color.Magenta
+                    )
+                } else {
+                    Crossfade(
+                        targetState = code.value, label = "Flexcode",
+                        animationSpec = tween(1000)
+                    ) { code ->
+                        FlexcodeLayout(
+                            modifier = Modifier
+                                .aspectRatio(1.14f)
+                                .fillMaxSize(),
+                            code = code,
+                            color = asset?.asset?.assetData?.color?.toColor() ?: Color.Magenta
+                        )
+                    }
+                }
             }
             Spacer(modifier = Modifier.height(20.dp))
             FlexcodeButton(

@@ -5,6 +5,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
+internal const val AMOUNT_UNSPECIFIED = Double.MIN_VALUE
+
 class Formatter(
     maxFraction: Byte = 2,
     private val prefix: String = "$",
@@ -40,7 +42,7 @@ class Formatter(
         maxAmount: Double,
         minAmount: Double, data: String
     ): InputState {
-        val amount = data.toDoubleOrNull() ?: 0.0
+        val amount = data.toDoubleOrNull() ?: AMOUNT_UNSPECIFIED
         return getInputState(
             minAmount = minAmount, maxAmount = maxAmount,
             amount = amount
@@ -54,15 +56,15 @@ class Formatter(
     ): InputState {
         return when {
             maxAmount == 0.0 -> {
-                if (amount == 0.0) InputState.Unspecified
+                if (amount == AMOUNT_UNSPECIFIED) InputState.Unspecified
                 else InputState.Fine
             }
 
-            amount == 0.0 -> InputState.Unspecified
+            amount == AMOUNT_UNSPECIFIED -> InputState.Unspecified
             amount < minAmount -> InputState.Min(System.currentTimeMillis())
             amount > maxAmount -> InputState.Max(System.currentTimeMillis())
             else -> {
-                if (amount == 0.0) InputState.Unspecified
+                if (amount == AMOUNT_UNSPECIFIED) InputState.Unspecified
                 else InputState.Fine
             }
         }
@@ -101,11 +103,6 @@ class Formatter(
             hasOneDecimalDigit() -> "0"
             else -> ""
         }
-    }
-
-    fun clear() {
-        data.clear()
-        dataAsFlow.value = null
     }
 
     private fun containsFractions(): Boolean = fractionRegex.find(data) != null

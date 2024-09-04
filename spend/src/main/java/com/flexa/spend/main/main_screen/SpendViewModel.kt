@@ -28,6 +28,7 @@ import com.flexa.spend.domain.ISpendInteractor
 import com.flexa.spend.isLegacy
 import com.flexa.spend.isValid
 import com.flexa.spend.toTransaction
+import com.flexa.spend.toTransactionBundle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -38,6 +39,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.time.Duration
@@ -69,10 +71,8 @@ class SpendViewModel(
     private val _commerceSession = MutableStateFlow<CommerceSession?>(null)
     val commerceSession: StateFlow<CommerceSession?> = _commerceSession
 
-    var sheetScreen by mutableStateOf<SheetScreen>(SheetScreen.Void)
+    var sheetScreen by mutableStateOf<SheetScreen>(SheetScreen.Assets)
     val errorHandler = ApiErrorHandler()
-    var limitCardVisible by mutableStateOf(false)
-    var openAmount = MutableStateFlow(false)
     var openLegacyCard = MutableStateFlow(false)
 
     init {
@@ -80,6 +80,7 @@ class SpendViewModel(
         listenConnection()
         listenCommerceSession()
         listenTransactionSent()
+        deleteOutdatedTransactions()
     }
 
     override fun onCleared() {
@@ -148,19 +149,7 @@ class SpendViewModel(
         }
     }
 
-    private fun listenConnection() {
-        viewModelScope.launch {
-            interactor.getConnectionListener()
-                ?.distinctUntilChanged()
-                ?.collect {
-                    getAccount()
-                    listenFlexaAppAccounts()
-                    listenEvents()
-                }
-        }
-    }
-
-    private fun getAccount() {
+    internal fun getAccount() {
         viewModelScope.launch {
             runCatching {
                 interactor.getAccount()
@@ -171,6 +160,50 @@ class SpendViewModel(
                         _notifications.clear()
                         _notifications.addAll(n)
                     }
+                }
+        }
+    }
+
+    private fun listenEvents() {
+        viewModelScope.launch {
+            interactor.listenEvents()
+                .flowOn(Dispatchers.IO)
+                .retryWhen { _, attempt ->
+                    delay(1000)
+                    attempt < 100
+                }
+                .catch { Log.e(null, "listenEvents: ", it) }
+                .collect { event ->
+                    when (event) {
+                        is CommerceSessionEvent.Created -> {
+                            if (event.session.isValid())
+                                _commerceSession.emit(event.session)
+                        }
+
+                        is CommerceSessionEvent.Updated -> {
+                            if (event.session.isValid()) {
+                                _commerceSession.emit(event.session)
+                            }
+                        }
+
+                        is CommerceSessionEvent.Canceled -> {
+                            _commerceSession.emit(null)
+                        }
+
+                        else -> {}
+                    }
+                }
+        }
+    }
+
+    private fun listenConnection() {
+        viewModelScope.launch {
+            interactor.getConnectionListener()
+                ?.distinctUntilChanged()
+                ?.collect {
+                    getAccount()
+                    listenFlexaAppAccounts()
+                    listenEvents()
                 }
         }
     }
@@ -200,44 +233,20 @@ class SpendViewModel(
         }
     }
 
-    private fun listenEvents() {
-        viewModelScope.launch {
-            interactor.listenEvents()
-                .flowOn(Dispatchers.IO)
-                .catch { Log.e("TAG", "listenEvents: ", it) }
-                .collect { event ->
-                    when (event) {
-                        is CommerceSessionEvent.Created -> {
-                            if (event.session.isValid())
-                                _commerceSession.emit(event.session)
-                        }
-
-                        is CommerceSessionEvent.Updated -> {
-                            if (event.session.isValid()) {
-                                _commerceSession.emit(event.session)
-                                getAccount()
-                            }
-                        }
-
-                        is CommerceSessionEvent.Canceled -> {
-                            _commerceSession.emit(null)
-                        }
-
-                        else -> {}
-                    }
-                }
-        }
-    }
-
     private var sentSessionId: String? = null
     private fun listenCommerceSession() {
         viewModelScope.launch {
             _commerceSession.collect { cs ->
                 val legacy = cs.isLegacy()
                 val containsAuthorization = cs.containsAuthorization()
+                if (legacy) {
+                    cs?.toTransactionBundle()?.let {
+                        interactor.saveTransaction(it)
+                    }
+                }
+
                 when {
                     legacy && containsAuthorization -> {
-                        openAmount.value = false
                         openLegacyCard.value = true
                     }
 
@@ -256,12 +265,14 @@ class SpendViewModel(
         if (Flexa.context != null) {
             Spend.transactionSent = { id, txSignature ->
                 viewModelScope.launch {
-                    runCatching {
-                        interactor.confirmTransaction(id, txSignature)
-                    }.onFailure { Log.e(null, "listenTransactionSent: ", it) }
-                        .onSuccess {
+                    interactor.getTransactionBySessionId(id)?.let { transaction ->
+                        runCatching {
+                            interactor.confirmTransaction(transaction.transactionId, txSignature)
+                        }.onFailure { Log.e(null, "listenTransactionSent: ", it) }
+                            .onSuccess {
 
-                        }
+                            }
+                    }
                 }
             }
         }
@@ -276,14 +287,17 @@ class SpendViewModel(
         Log.d("TAG", "getDuration: >${duration.toMillis()}<")
         return duration
     }
+
+    private fun deleteOutdatedTransactions() {
+        viewModelScope.launch {
+            interactor.deleteOutdatedTransactions()
+        }
+    }
 }
 
 sealed class SheetScreen {
-    data object Void : SheetScreen()
     data object Assets : SheetScreen()
     class AssetDetails(val asset: SelectedAsset) : SheetScreen()
-    class AmountDetails(val asset: SelectedAsset, val amount: String) : SheetScreen()
-    data object LimitsFeatures : SheetScreen()
     data object PlacesToPay : SheetScreen()
     data object Locations : SheetScreen()
     class PaymentDetails(val session: SharedFlow<CommerceSession?>) : SheetScreen()

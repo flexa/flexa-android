@@ -1,6 +1,7 @@
 package com.flexa.core.entity
 
 
+import com.flexa.core.shared.Brand
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -74,32 +75,6 @@ data class CommerceSession(
         )
 
         @Serializable
-        data class Brand(
-            @SerialName("category_name")
-            val categoryName: String? = null,
-            @SerialName("color")
-            val color: String? = null,
-            @SerialName("created")
-            val created: Long? = null,
-            @SerialName("id")
-            val id: String? = null,
-            @SerialName("legacy_flexcodes")
-            val legacyFlexcodes: List<String?>? = null,
-            @SerialName("logo_url")
-            val logoUrl: String? = null,
-            @SerialName("name")
-            val name: String? = null,
-            @SerialName("object")
-            val objectX: String? = null,
-            @SerialName("slug")
-            val slug: String? = null,
-            @SerialName("status")
-            val status: String? = null,
-            @SerialName("updated")
-            val updated: Long? = null
-        )
-
-        @Serializable
         data class Debit(
             @SerialName("amount")
             val amount: String? = null,
@@ -144,7 +119,7 @@ data class CommerceSession(
             @SerialName("destination")
             val destination: Destination? = null,
             @SerialName("expires_at")
-            val expiresAt: Int? = null,
+            val expiresAt: Long? = null,
             @SerialName("fee")
             val fee: Fee? = null,
             @SerialName("id")

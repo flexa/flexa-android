@@ -22,7 +22,6 @@ import com.flexa.core.Flexa
 @Composable
 fun FlexaTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
     dynamicColor: Boolean = Flexa.themeConfig.useDynamicColorScheme,
     content: @Composable () -> Unit
 ) {
@@ -33,16 +32,20 @@ fun FlexaTheme(
             else dynamicLightColorScheme(context)
         }
 
-        darkTheme ->  {
+        darkTheme -> {
             val lightColors = lightColorScheme()
             val darkColors = darkColorScheme()
-            Flexa.themeConfig.darkColorsScheme?.toComposeColorScheme(darkColors) ?:
-            Flexa.themeConfig.lightColorsScheme?.toComposeColorScheme(lightColors) ?: darkColors
+            Flexa.themeConfig.darkColorsScheme?.toComposeColorScheme(darkColors)
+                ?: Flexa.themeConfig.lightColorsScheme?.toComposeColorScheme(lightColors)
+                ?: darkColors
         }
+
         else -> {
             val lightColors = lightColorScheme()
             val darkColors = darkColorScheme()
-            Flexa.themeConfig.lightColorsScheme?.toComposeColorScheme(lightColors) ?: Flexa.themeConfig.darkColorsScheme?.toComposeColorScheme(darkColors) ?: lightColors
+            Flexa.themeConfig.lightColorsScheme?.toComposeColorScheme(lightColors)
+                ?: Flexa.themeConfig.darkColorsScheme?.toComposeColorScheme(darkColors)
+                ?: lightColors
         }
     }
 

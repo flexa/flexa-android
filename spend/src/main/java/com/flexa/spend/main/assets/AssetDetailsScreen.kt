@@ -2,7 +2,6 @@ package com.flexa.spend.main.assets
 
 import android.content.res.Configuration
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -11,7 +10,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.with
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -31,7 +30,9 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material.icons.rounded.WarningAmber
-import androidx.compose.material3.Divider
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -68,14 +69,14 @@ import com.flexa.spend.MockFactory
 import com.flexa.spend.R
 import com.flexa.spend.domain.FakeInteractor
 
-@OptIn(ExperimentalAnimationApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun AssetDetailsScreen(
     modifier: Modifier = Modifier,
     viewModel: AssetDetailViewModel,
     assetsViewModel: AssetsViewModel,
     assetBundle: SelectedAsset,
-    color: Color = MaterialTheme.colorScheme.primaryContainer,
+    color: Color = BottomSheetDefaults.ContainerColor,
     toLearnMore: () -> Unit
 ) {
 
@@ -114,7 +115,7 @@ internal fun AssetDetailsScreen(
                 scaleIn(
                     initialScale = 1.2F,
                     animationSpec = tween(700)
-                ) + fadeIn(animationSpec = tween(700)) with
+                ) + fadeIn(animationSpec = tween(700)) togetherWith
                         scaleOut(targetScale = .8F, animationSpec = tween(700)) + fadeOut(
                     animationSpec = tween(700)
                 )
@@ -132,7 +133,7 @@ internal fun AssetDetailsScreen(
                     val quote by viewModel.quote.collectAsStateWithLifecycle()
                     val progress by viewModel.progress.collectAsStateWithLifecycle()
                     ListItem(
-                        colors = ListItemDefaults.colors(containerColor = color),
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                         leadingContent = {
                             Icon(
                                 modifier = Modifier.size(24.dp),
@@ -146,11 +147,11 @@ internal fun AssetDetailsScreen(
                                 transitionSpec = {
                                     if ((targetState?.length ?: 0) < (initialState?.length ?: 0)) {
                                         slideInVertically { width -> width } +
-                                                fadeIn() with slideOutVertically()
+                                                fadeIn() togetherWith slideOutVertically()
                                         { width -> -width } + fadeOut()
                                     } else {
                                         slideInVertically { width -> -width } +
-                                                fadeIn() with slideOutVertically()
+                                                fadeIn() togetherWith slideOutVertically()
                                         { width -> width } + fadeOut()
                                     }.using(SizeTransform(clip = false))
                                 }, label = ""
@@ -178,7 +179,7 @@ internal fun AssetDetailsScreen(
                         }
                     )
                     ListItem(
-                        colors = ListItemDefaults.colors(containerColor = color),
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                         leadingContent = {
                             Icon(
                                 modifier = Modifier.size(24.dp),
@@ -192,11 +193,11 @@ internal fun AssetDetailsScreen(
                                 transitionSpec = {
                                     if ((targetState?.length ?: 0) < (initialState?.length ?: 0)) {
                                         slideInVertically { width -> width } +
-                                                fadeIn() with slideOutVertically()
+                                                fadeIn() togetherWith slideOutVertically()
                                         { width -> -width } + fadeOut()
                                     } else {
                                         slideInVertically { width -> -width } +
-                                                fadeIn() with slideOutVertically()
+                                                fadeIn() togetherWith slideOutVertically()
                                         { width -> width } + fadeOut()
                                     }.using(SizeTransform(clip = false))
                                 }, label = ""
@@ -215,7 +216,7 @@ internal fun AssetDetailsScreen(
                         }
                     )
                     ListItem(
-                        colors = ListItemDefaults.colors(containerColor = color),
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                         leadingContent = {
                             Icon(
                                 modifier = Modifier.size(24.dp),
@@ -229,11 +230,11 @@ internal fun AssetDetailsScreen(
                                 transitionSpec = {
                                     if ((targetState?.length ?: 0) < (initialState?.length ?: 0)) {
                                         slideInVertically { width -> width } +
-                                                fadeIn() with slideOutVertically()
+                                                fadeIn() togetherWith slideOutVertically()
                                         { width -> -width } + fadeOut()
                                     } else {
                                         slideInVertically { width -> -width } +
-                                                fadeIn() with slideOutVertically()
+                                                fadeIn() togetherWith slideOutVertically()
                                         { width -> width } + fadeOut()
                                     }.using(SizeTransform(clip = false))
                                 }, label = ""
@@ -291,9 +292,8 @@ internal fun AssetDetailsScreen(
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
-        Divider(
+        HorizontalDivider(
             modifier = Modifier.padding(horizontal = 16.dp),
-            color = palette.outline.copy(alpha = .5F),
             thickness = 1.dp
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -357,7 +357,7 @@ fun AssetInfoFooter(
 }
 
 @Preview
-@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES or Configuration.UI_MODE_TYPE_NORMAL)
 @Composable
 fun AssetDetailContentPreview() {
     FlexaTheme {

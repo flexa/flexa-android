@@ -90,4 +90,8 @@
     <string name="confirm">Confirm</string>
     <string name="minimum_amount">Minimum Amount</string>
     <string name="maximum_amount">Maximum Amount</string>
+    <string name="session_expired">Session Expired</string>
+    <string name="session_expired_copy">Please sign in again to continue</string>
+    <string name="sign_in">Sign in</string>
+    <string name="learn_more_link">https://docs.flexa.co/payments/overview</string>
 </resources>

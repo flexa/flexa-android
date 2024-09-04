@@ -7,14 +7,18 @@ import com.flexa.core.Flexa
 import com.flexa.core.entity.AppAccount
 import com.flexa.core.shared.ApiErrorHandler
 import com.flexa.core.shared.Asset
+import com.flexa.core.shared.FlexaConstants.Companion.RETRY_COUNT
+import com.flexa.core.shared.FlexaConstants.Companion.RETRY_DELAY
 import com.flexa.core.shared.filterAssets
 import com.flexa.identity.domain.IIdentityInteractor
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.launch
 
 private const val ASSETS_PAGE_SIZE = 100
@@ -26,9 +30,9 @@ internal class SecretCodeViewModel(
 
     var progress = MutableStateFlow(false)
     var secretCode = MutableStateFlow<String?>(null)
-    var errorMagicCode: String? = null
     val errorHandler = ApiErrorHandler()
-    val result = MutableSharedFlow< List<AppAccount>>()
+    val result = MutableSharedFlow<List<AppAccount>>()
+    private var errorMagicCode: String? = null
 
     init {
         deepLink?.let { loginWithDeepLink(it) }
@@ -51,15 +55,16 @@ internal class SecretCodeViewModel(
                 kotlin.runCatching { retrieveAndSaveBrands() }
 
                 emit(acc.accounts)
-            }
-                .onStart { progress.value = true }
+            }.retryWhen { _, attempt ->
+                delay(RETRY_DELAY)
+                attempt < RETRY_COUNT
+            }.onStart { progress.value = true }
                 .catch {
-                    Log.e("TAG", "loginWithMagicCode: ", it)
+                    Log.e(null, "loginWithMagicCode: ", it)
                     errorMagicCode = magicCode
                     progress.value = false
                     errorHandler.setError(it)
-                }
-                .collect { res -> result.emit(res) }
+                }.collect { res -> result.emit(res) }
         }
     }
 
@@ -80,14 +85,15 @@ internal class SecretCodeViewModel(
                 kotlin.runCatching { retrieveAndSaveBrands() }
 
                 emit(acc.accounts)
-            }
-                .onStart { progress.value = true }
+            }.retryWhen { _, attempt ->
+                delay(RETRY_DELAY)
+                attempt < RETRY_COUNT
+            }.onStart { progress.value = true }
                 .catch {
-                    Log.e("TAG", "loginWithDeepLink: ", it)
+                    Log.e(null, "loginWithDeepLink: ", it)
                     progress.value = false
                     errorHandler.setError(it)
-                }
-                .collect { res -> result.emit(res) }
+                }.collect { res -> result.emit(res) }
         }
     }
 

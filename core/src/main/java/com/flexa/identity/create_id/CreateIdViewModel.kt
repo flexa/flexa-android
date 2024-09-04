@@ -9,7 +9,6 @@ import androidx.lifecycle.viewModelScope
 import com.flexa.core.entity.TokensResponse
 import com.flexa.core.sendFlexaReport
 import com.flexa.identity.domain.IIdentityInteractor
-import com.flexa.identity.main.MainViewModel.State
 import com.flexa.identity.main.UserData
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -113,8 +112,8 @@ internal class CreateIdViewModel(
     }
 
     sealed class State {
-        object FlexaPrivacy : State()
-        object General : State()
+        data object FlexaPrivacy : State()
+        data object General : State()
         class Success(val data: TokensResponse.Success) : State()
         class Error(val data: TokensResponse.Error) : State()
     }

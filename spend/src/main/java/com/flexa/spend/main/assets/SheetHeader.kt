@@ -2,31 +2,34 @@ package com.flexa.spend.main.assets
 
 import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -39,31 +42,6 @@ import com.flexa.spend.MockFactory
 import com.flexa.spend.R
 
 @Composable
-fun NavigationDrawer() {
-    Column( // Bottom Sheet Navigation Drawer
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        val color = MaterialTheme.colorScheme.outline.copy(alpha = .5F)
-        Spacer(modifier = Modifier.height(8.dp))
-        Canvas(modifier = Modifier
-            .width(58.dp)
-            .height(6.dp),
-            onDraw = {
-                drawLine(
-                    start = Offset(x = 0f, y = (6.dp / 2).toPx()),
-                    end = Offset(x = 58.dp.toPx(), y = (6.dp / 2).toPx()),
-                    color = color,
-                    strokeWidth = 8.dp.toPx(),
-                    cap = StrokeCap.Round, //add this line for rounded edges
-                )
-            })
-        Spacer(modifier = Modifier.height(8.dp))
-    }
-}
-
-
-@Composable
 fun AssetsSheetHeader(
     title: String,
     toSettings: () -> Unit = {}
@@ -72,28 +50,30 @@ fun AssetsSheetHeader(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .height(48.dp)
             .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
-            modifier = Modifier.padding(start = 14.dp),
+            modifier = Modifier.offset(x = 10.dp),
             text = title,
             style = TextStyle(
                 color = palette.onBackground,
                 fontSize = 16.sp,
-                fontWeight = FontWeight.W400
+                fontWeight = FontWeight.Medium
             )
         )
-        IconButton(
-            onClick = { toSettings() }) {
-            Icon(
-                modifier = Modifier.size(21.dp),
-                imageVector = Icons.Outlined.Settings,
-                tint = palette.onSurfaceVariant,
-                contentDescription = null
-            )
-        }
+        if (false)
+            IconButton(
+                onClick = { toSettings() }) {
+                Icon(
+                    modifier = Modifier.size(21.dp),
+                    imageVector = Icons.Outlined.Settings,
+                    tint = palette.onSurfaceVariant,
+                    contentDescription = null
+                )
+            }
     }
 }
 
@@ -114,7 +94,7 @@ fun AssetsSettingsSheetHeader(
             onClick = { toBack() }) {
             Icon(
                 modifier = Modifier.size(21.dp),
-                imageVector = Icons.Outlined.ArrowBack,
+                imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                 tint = palette.onSurfaceVariant,
                 contentDescription = null
             )
@@ -146,6 +126,7 @@ fun AssetInfoSheetHeader(
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .height(48.dp)
             .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
@@ -155,7 +136,7 @@ fun AssetInfoSheetHeader(
                 onClick = { toBack() }) {
                 Icon(
                     modifier = Modifier.size(21.dp),
-                    imageVector = Icons.Outlined.ArrowBack,
+                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                     tint = palette.onSurfaceVariant,
                     contentDescription = null
                 )
@@ -165,43 +146,47 @@ fun AssetInfoSheetHeader(
             modifier = Modifier
                 .padding(start = 14.dp)
                 .weight(1F, true),
-            text = asset.assetData?.displayName?:"",
+            text = asset.assetData?.displayName ?: "",
             style = TextStyle(
                 color = palette.onBackground,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Medium
             )
         )
-        if (backNavigation) {
-            IconButton(
-                onClick = { toSettings() }) {
-                Icon(
-                    modifier = Modifier.size(21.dp),
-                    imageVector = Icons.Outlined.Settings,
-                    tint = palette.onSurfaceVariant,
-                    contentDescription = null
-                )
+        if (false)
+            if (backNavigation) {
+                IconButton(
+                    onClick = { toSettings() }) {
+                    Icon(
+                        modifier = Modifier.size(21.dp),
+                        imageVector = Icons.Outlined.Settings,
+                        tint = palette.onSurfaceVariant,
+                        contentDescription = null
+                    )
+                }
             }
-        }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AssetsSheetStickyHeader(
     modifier: Modifier = Modifier,
     text: String,
-    color: Color
+    backgroundColor: Color = BottomSheetDefaults.ContainerColor
 ) {
     val palette = MaterialTheme.colorScheme
 
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .background(backgroundColor)
             .padding(vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Spacer(modifier = Modifier.width(16.dp))
         Text(
+            modifier = Modifier.offset(x = 6.dp),
             text = text,
             style = TextStyle(
                 color = palette.onBackground,
@@ -236,8 +221,8 @@ fun HideShortBalances(
                     color = palette.onBackground
                 )
             )
-            androidx.compose.material3.Switch(
-                colors = androidx.compose.material3.SwitchDefaults.colors(),
+            Switch(
+                colors = SwitchDefaults.colors(),
                 checked = checked, onCheckedChange = {
                     onChecked.invoke(it)
                 },
@@ -254,7 +239,6 @@ private fun AssetsSheetStickyHeaderPreview() {
     FlexaTheme {
         AssetsSheetStickyHeader(
             text = "Flexa wallet",
-            color = MaterialTheme.colorScheme.background
         )
     }
 }
@@ -273,9 +257,8 @@ private fun AssetsSheetFooterPreview() {
     }
 }
 
-@Preview(
-    showBackground = true,
-)
+@Preview
+@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES or Configuration.UI_MODE_TYPE_NORMAL)
 @Composable
 private fun AssetsSheetHeaderPreview() {
     FlexaTheme {
@@ -283,9 +266,8 @@ private fun AssetsSheetHeaderPreview() {
     }
 }
 
-@Preview(
-    showBackground = true,
-)
+@Preview
+@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES or Configuration.UI_MODE_TYPE_NORMAL)
 @Composable
 private fun AssetsSettingsSheetHeaderPreview() {
     FlexaTheme {
@@ -293,7 +275,7 @@ private fun AssetsSettingsSheetHeaderPreview() {
     }
 }
 
-@Preview(showBackground = true)
+@Preview
 @Preview(
     uiMode = Configuration.UI_MODE_NIGHT_YES or Configuration.UI_MODE_TYPE_NORMAL
 )
@@ -301,20 +283,8 @@ private fun AssetsSettingsSheetHeaderPreview() {
 private fun AssetInfoSheetHeaderPreview() {
     FlexaTheme {
         AssetInfoSheetHeader(
+            backNavigation = true,
             asset = MockFactory.getMockSelectedAsset().asset
         )
     }
 }
-
-@Preview(
-    uiMode = Configuration.UI_MODE_NIGHT_NO or Configuration.UI_MODE_TYPE_NORMAL,
-    showSystemUi = false,
-    showBackground = true
-)
-@Composable
-private fun NavigationDrawerPreview() {
-    FlexaTheme {
-        NavigationDrawer()
-    }
-}
-

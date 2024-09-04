@@ -43,7 +43,6 @@ internal class HeadersInterceptor(
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val tokenExpiration = tokenProvider.getTokenExpiration()
-
         val tokenExpirationMinutes = Instant.now().minutesBetween(tokenExpiration)
         Log.d("TAG", "intercept: tokenExpiration > $tokenExpirationMinutes minutes")
         val token = if (tokenExpirationMinutes <= MINIMUM_REFRESH_MINUTES)

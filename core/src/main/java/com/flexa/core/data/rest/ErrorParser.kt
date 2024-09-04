@@ -9,7 +9,7 @@ class ErrorParser {
     companion object {
         fun parseError(error: Throwable?): ErrorBundle {
             return try {
-                val raw = error?.localizedMessage?:error?.message?:""
+                val raw = error?.localizedMessage ?: error?.message ?: ""
                 val mainObject = JSONObject(raw)
                 val code = mainObject.getInt("code")
                 val message = mainObject.getString("message")

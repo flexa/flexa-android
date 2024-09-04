@@ -1,5 +1,6 @@
 package com.flexa.scan
 
+import android.content.res.Configuration
 import android.graphics.Rect
 import android.graphics.RectF
 import androidx.compose.animation.AnimatedVisibility
@@ -13,9 +14,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -23,11 +27,17 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.graphics.toRectF
 import com.flexa.core.theme.FlexaTheme
 
@@ -37,7 +47,7 @@ fun ScanScreen(
     close: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
-    var points by remember { mutableStateOf<RectF?>(null) }
+    var points by remember { mutableStateOf(RectF(0f, 0f, 0f, 0f)) }
     val holder by remember { mutableStateOf(Holder(scope)) }
 
     Box(
@@ -50,7 +60,7 @@ fun ScanScreen(
                     .fillMaxSize(),
                 points,
                 onQrCode = {
-                    //holder.setCodes(it) // debug code
+                    holder.setCodes(it) // debug code
                 },
                 onBitmap = {
                     holder.setImage(it) // for testing points of interests
@@ -58,101 +68,61 @@ fun ScanScreen(
         } else {
             Spacer(modifier = Modifier.fillMaxSize())
         }
-/*
-        Row(// Toolbar
-            modifier = Modifier
-                .fillMaxWidth()
-                .systemBarsPadding()
-                .height(48.dp)
-                .padding(4.dp),
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val context = LocalContext.current
-            IconButton(
-                onClick = {  }) {
-                Box(
-                    modifier = Modifier
-                        .aspectRatio(1f)
-                        .fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Canvas(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(2.dp),
-                        onDraw = {
-                            drawCircle(color = Color.DarkGray.copy(alpha = .5f))
-                        })
-                    Icon(
-                        modifier = Modifier
-                            .aspectRatio(1f)
-                            .fillMaxSize()
-                            .padding(10.dp),
-                        imageVector = Icons.Rounded.MoreHoriz,
-                        tint = Color.White,
-                        contentDescription = "Settings"
-                    )
-                }
-            }
-            IconButton(
-                onClick = { close() }) {
-                Box(
-                    modifier = Modifier
-                        .aspectRatio(1f)
-                        .fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Canvas(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(2.dp),
-                        onDraw = {
-                            drawCircle(color = Color.DarkGray.copy(alpha = .5f))
-                        })
-                    Icon(
-                        modifier = Modifier
-                            .aspectRatio(1f)
-                            .fillMaxSize()
-                            .padding(10.dp),
-                        imageVector = Icons.Rounded.Clear,
-                        tint = Color.White,
-                        contentDescription = "Close"
-                    )
-                }
-
-            }
-        }
-*/
         Column(
             modifier = Modifier
                 .padding(top = 48.dp, bottom = 100.dp)
                 .fillMaxSize()
                 .systemBarsPadding()
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            val previewMode = LocalInspectionMode.current
             var visibility by remember {
-                mutableStateOf(false)
+                mutableStateOf(previewMode)
+            }
+            val firstLaunch = remember { mutableStateOf(false) }
+            LaunchedEffect(firstLaunch.value) {
+                if (!firstLaunch.value) {
+                    firstLaunch.value = true
+                    visibility = true
+                }
             }
             AnimatedVisibility(
                 visible = visibility,
                 enter = fadeIn(
                     animationSpec = tween(
-                        delayMillis = 1000, durationMillis = 300
+                        delayMillis = 300, durationMillis = 300
                     )
                 ),
             ) {
-                TopContent(
+                Column(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .weight(1.5f)
-                )
+                        .width(200.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        text = stringResource(id = R.string.scan_any_code),
+                        style = TextStyle(
+                            color = Color.White,
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Medium,
+                            textAlign = TextAlign.Center,
+                            shadow = Shadow(blurRadius = 3f)
+                        ),
+                    )
+                    Text(
+                        stringResource(id = R.string.send_pay_connect),
+                        style = TextStyle(
+                            color = Color.White,
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Normal,
+                            textAlign = TextAlign.Center,
+                            shadow = Shadow(blurRadius = 3f)
+                        ),
+                    )
+                }
+
             }
-            Box(// center
-                modifier = Modifier
-                    .fillMaxSize()
-                    .onGloballyPositioned { visibility = true }
-            )
             Box(// bottom
                 modifier = Modifier
                     .fillMaxSize()
@@ -186,7 +156,11 @@ fun ScanScreen(
     }
 }
 
-@Preview
+@Preview(showBackground = true, backgroundColor = 0xFFCECECE)
+@Preview(
+    uiMode = Configuration.UI_MODE_NIGHT_YES or Configuration.UI_MODE_TYPE_NORMAL,
+    showBackground = true, backgroundColor = 0xFF2F2F2F
+)
 @Composable
 fun ScanScreenPreview() {
     FlexaTheme {

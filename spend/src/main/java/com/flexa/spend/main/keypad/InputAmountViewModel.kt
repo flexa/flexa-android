@@ -1,6 +1,5 @@
 package com.flexa.spend.main.keypad
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flexa.core.shared.Brand
@@ -14,13 +13,16 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
-private const val INPUT_DELAY = 1_000L
+private const val MAX_AMOUNT_DELAY = 5000L
+internal const val INPUT_DELAY = 1000L
 
 class InputAmountViewModel : ViewModel() {
 
     val formatter = Formatter()
     private val _inputState = MutableSharedFlow<InputState>()
-    val amountBoundaries = _inputState.asSharedFlow()
+    val inputState = _inputState.asSharedFlow()
+    private val _inputStateDelayed = MutableSharedFlow<InputState>()
+    val inputStateDelayed = _inputStateDelayed.asSharedFlow()
     private var maxAmount = 0.0
     private var minAmount = 0.0
     private var amountVerifyJob: Job? = null
@@ -28,6 +30,11 @@ class InputAmountViewModel : ViewModel() {
 
     init {
         listenInput()
+    }
+
+    override fun onCleared() {
+        clean()
+        super.onCleared()
     }
 
     fun clean() {
@@ -38,18 +45,13 @@ class InputAmountViewModel : ViewModel() {
         }
     }
 
-    override fun onCleared() {
-        amountVerifyJob?.cancel()
-        super.onCleared()
-    }
-
-    fun setMinMaxValue(brand: Brand) {
-        maxAmount = brand.legacyFlexcodes?.firstOrNull()?.amount?.maximum?.toDoubleOrNull() ?: 0.0
-        minAmount = brand.legacyFlexcodes?.firstOrNull()?.amount?.minimum?.toDoubleOrNull() ?: 0.0
+    fun setMinMaxValue(brand: Brand?) {
+        maxAmount = brand?.legacyFlexcodes?.firstOrNull()?.amount?.maximum?.toDoubleOrNull() ?: 0.0
+        minAmount = brand?.legacyFlexcodes?.firstOrNull()?.amount?.minimum?.toDoubleOrNull() ?: 0.0
     }
 
     fun getInputState(data: String): InputState {
-        val amount = data.toDoubleOrNull() ?: 0.0
+        val amount = data.toDoubleOrNull() ?: AMOUNT_UNSPECIFIED
         return formatter.getInputState(
             minAmount = minAmount, maxAmount = maxAmount,
             amount = amount
@@ -59,30 +61,37 @@ class InputAmountViewModel : ViewModel() {
     fun setInputState(inputState: InputState) {
         stateJob?.cancel()
         stateJob = viewModelScope.launch {
-            if (isActive) _inputState.emit(inputState)
+            if (isActive) {
+                _inputState.emit(inputState)
+                _inputStateDelayed.emit(inputState)
+            }
             if (inputState is InputState.Max) {
-                delay(1000)
-                if (isActive) _inputState.emit(InputState.Fine)
+                delay(MAX_AMOUNT_DELAY)
+                if (isActive) {
+                    _inputState.emit(InputState.Fine)
+                    _inputStateDelayed.emit(InputState.Fine)
+                }
             }
         }
     }
 
-    internal fun checkMinMaxValue(amount: Double) {
-        Log.d(null, "checkMinMaxValue: >>> $amount")
+    private fun checkMinMaxValue(amount: Double) {
         amountVerifyJob = viewModelScope.launch {
-            when (val boundaries = formatter.getInputState(
+            val inputState = formatter.getInputState(
                 minAmount = minAmount, maxAmount = maxAmount,
                 amount = amount
-            )) {
+            )
+            _inputState.emit(inputState)
+
+            when (inputState) {
                 is InputState.Min -> {
                     delay(INPUT_DELAY)
                     if (isActive) {
-                        Log.d(null, "checkMinMaxValue: >>> InputState.Min")
-                        _inputState.emit(InputState.Min(System.currentTimeMillis()))
+                        _inputStateDelayed.emit(InputState.Min(System.currentTimeMillis()))
                     }
                 }
 
-                else -> _inputState.emit(boundaries)
+                else -> { _inputStateDelayed.emit(inputState)}
             }
         }
     }
@@ -91,7 +100,7 @@ class InputAmountViewModel : ViewModel() {
         viewModelScope.launch {
             formatter.dataAsFlow
                 .drop(1)
-                .map { it?.toDoubleOrNull() ?: 0.0 }
+                .map { it?.toDoubleOrNull() ?: AMOUNT_UNSPECIFIED }
                 .onEach { amountVerifyJob?.cancel() }
                 .collect { a -> checkMinMaxValue(a) }
         }

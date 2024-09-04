@@ -17,7 +17,7 @@ data class AppAccount(
     @SerialName("account_id")
     val accountId: String,
     @Transient
-    val displayName: String? = null,
+    var displayName: String? = null,
     @Transient
     val icon: String? = null,
     @SerialName("assets")

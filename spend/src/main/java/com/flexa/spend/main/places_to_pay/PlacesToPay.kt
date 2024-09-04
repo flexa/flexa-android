@@ -7,19 +7,18 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.ModalBottomSheetState
-import androidx.compose.material.ModalBottomSheetValue
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ChevronLeft
-import androidx.compose.material.rememberModalBottomSheetState
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -39,13 +38,13 @@ import com.flexa.spend.main.main_screen.SheetScreen
 import com.flexa.spend.main.main_screen.SpendViewModel
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlacesToPay(
     modifier: Modifier = Modifier,
     spendViewModel: SpendViewModel,
     viewModel: PlacesToPayViewModel,
-    sheetState: ModalBottomSheetState,
+    sheetState: SheetState,
     toBack: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
@@ -60,7 +59,7 @@ fun PlacesToPay(
         isFirstPage = if (viewModel.urlsList.isNotEmpty()) {
             if (webView?.canGoBack() == true) webView?.goBack()
             viewModel.urlsList.lastOrNull()?.let { viewModel.urlsList.remove(it) }
-            webView?.loadUrl(viewModel.urlsList.lastOrNull()?:viewModel.url.toString())
+            webView?.loadUrl(viewModel.urlsList.lastOrNull() ?: viewModel.url.toString())
             viewModel.urlsList.isEmpty()
         } else {
             viewModel.bundle.clear()
@@ -77,7 +76,7 @@ fun PlacesToPay(
     BackHandler(shouldHandleBackPress()) { goBack() }
 
     SideEffect {
-        webView?.loadUrl(viewModel.urlsList.lastOrNull()?:viewModel.url.toString())
+        webView?.loadUrl(viewModel.urlsList.lastOrNull() ?: viewModel.url.toString())
     }
 
     DisposableEffect(Unit) {
@@ -90,6 +89,10 @@ fun PlacesToPay(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             LargeTopAppBar(
+                colors = TopAppBarDefaults.largeTopAppBarColors(
+                    containerColor = BottomSheetDefaults.ContainerColor,
+                    scrolledContainerColor = BottomSheetDefaults.ContainerColor
+                ),
                 title = { Text(text = title) },
                 navigationIcon = {
                     IconButton(
@@ -126,7 +129,7 @@ fun PlacesToPay(
     }
 }
 
-@OptIn(ExperimentalMaterialApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Preview
 @Composable
 private fun PlacesToPayPreview() {
@@ -136,8 +139,6 @@ private fun PlacesToPayPreview() {
             SpendViewModel(FakeInteractor())
         }),
         viewModel = viewModel(),
-        sheetState = rememberModalBottomSheetState(
-            initialValue = ModalBottomSheetValue.Expanded
-        ),
+        sheetState = rememberModalBottomSheetState(),
         toBack = {})
 }
