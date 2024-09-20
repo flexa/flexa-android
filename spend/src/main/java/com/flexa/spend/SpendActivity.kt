@@ -16,6 +16,10 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
+import coil.ImageLoader
+import coil.ImageLoaderFactory
+import coil.disk.DiskCache
+import coil.memory.MemoryCache
 import com.flexa.core.Flexa
 import com.flexa.core.shared.FlexaConstants
 import com.flexa.core.theme.FlexaTheme
@@ -23,7 +27,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
-class SpendActivity : ComponentActivity() {
+class SpendActivity : ComponentActivity(), ImageLoaderFactory {
 
     private val broadcastReceiver = SpendBroadcastReceiver()
 
@@ -46,6 +50,22 @@ class SpendActivity : ComponentActivity() {
     override fun onDestroy() {
         runCatching { unregisterReceiver(broadcastReceiver) }
         super.onDestroy()
+    }
+
+    override fun newImageLoader(): ImageLoader {
+        return ImageLoader.Builder(this)
+            .memoryCache {
+                MemoryCache.Builder(this)
+                    .maxSizePercent(0.25)
+                    .build()
+            }
+            .diskCache {
+                DiskCache.Builder()
+                    .directory(this.cacheDir.resolve("image_cache"))
+                    .maxSizePercent(0.02)
+                    .build()
+            }
+            .build()
     }
 
     private fun restoreSDKContext() {
@@ -83,7 +103,6 @@ class SpendActivity : ComponentActivity() {
             val valid = intent.getBooleanExtra(FlexaConstants.TOKEN, false)
             updateTokenState(valid)
         }
-
         private fun updateTokenState(valid: Boolean) {
             job?.cancel()
             job = Flexa.scope.launch {
@@ -115,4 +134,3 @@ fun PayNavHost(
         )
     }
 }
-

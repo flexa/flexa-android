@@ -4,9 +4,6 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import androidx.compose.animation.ExperimentalAnimationApi
-import androidx.compose.animation.core.EaseOutBack
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -45,41 +42,23 @@ sealed class Route(val name: String) {
     data object TermsOfUse : Route("$AUTH_ROUTE.terms_of_use")
     data object SecretCode :
         Route("$AUTH_ROUTE.secret_code?deepLink={deepLink}") {
-        const val keyDeepLink = "deepLink"
-        val arguments = listOf(navArgument(keyDeepLink) {
+        const val KEY_DEEP_LINK = "deepLink"
+        val arguments = listOf(navArgument(KEY_DEEP_LINK) {
             type = NavType.StringType
             defaultValue = ""
         })
 
         fun createRoute(deepLink: String = ""): String {
-            return "$AUTH_ROUTE.secret_code?$keyDeepLink=${deepLink.toNavArgument()}"
+            return "$AUTH_ROUTE.secret_code?$KEY_DEEP_LINK=${deepLink.toNavArgument()}"
         }
     }
 }
 
-private const val duration = 300
-private const val delay = 100
+val enterTransition = fadeIn() + scaleIn(initialScale = 1.1F)
+val popEnterTransition = fadeIn() + scaleIn(initialScale = .9F)
+val exitTransition = fadeOut() + scaleOut(targetScale = .9F)
+val popExitTransition = fadeOut() + scaleOut(targetScale = 1.1F)
 
-@OptIn(ExperimentalAnimationApi::class)
-val enterTransition =
-    fadeIn(
-        animationSpec = tween(durationMillis = duration, delayMillis = delay)
-    ) + scaleIn(
-        animationSpec = tween(
-            durationMillis = duration,
-            easing = EaseOutBack, delayMillis = delay
-        ), initialScale = .9F
-    )
-
-@OptIn(ExperimentalAnimationApi::class)
-val exitTransition =
-    fadeOut(animationSpec = tween(duration)) +
-            scaleOut(
-                animationSpec = tween(durationMillis = duration / 2),
-                targetScale = .9F
-            )
-
-@OptIn(ExperimentalAnimationApi::class)
 fun NavGraphBuilder.identityNavGraph(
     modifier: Modifier = Modifier,
     navController: NavHostController,
@@ -103,8 +82,8 @@ fun NavGraphBuilder.identityNavGraph(
             Route.Main.name,
             enterTransition = { enterTransition },
             exitTransition = { exitTransition },
-            popEnterTransition = { enterTransition },
-            popExitTransition = { exitTransition }
+            popEnterTransition = { popEnterTransition },
+            popExitTransition = { popExitTransition }
         ) {
             val context = LocalContext.current
             LoginScreen(
@@ -120,8 +99,8 @@ fun NavGraphBuilder.identityNavGraph(
             Route.CreateId.name,
             enterTransition = { enterTransition },
             exitTransition = { exitTransition },
-            popEnterTransition = { enterTransition },
-            popExitTransition = { exitTransition }
+            popEnterTransition = { popEnterTransition },
+            popExitTransition = { popExitTransition }
         ) { entry ->
             val context = LocalContext.current
             CreateId(
@@ -138,8 +117,8 @@ fun NavGraphBuilder.identityNavGraph(
             route = Route.VerifyEmail.name,
             enterTransition = { enterTransition },
             exitTransition = { exitTransition },
-            popEnterTransition = { enterTransition },
-            popExitTransition = { exitTransition }
+            popEnterTransition = { popEnterTransition },
+            popExitTransition = { popExitTransition }
         ) {
             val context = LocalContext.current
             VerifyEmail(
@@ -167,8 +146,8 @@ fun NavGraphBuilder.identityNavGraph(
             route = Route.Coppa.name,
             enterTransition = { enterTransition },
             exitTransition = { exitTransition },
-            popEnterTransition = { enterTransition },
-            popExitTransition = { exitTransition }
+            popEnterTransition = { popEnterTransition },
+            popExitTransition = { popExitTransition }
         ) {
             CoppaScreen(
                 modifier = modifier.systemBarsPadding(),
@@ -181,8 +160,8 @@ fun NavGraphBuilder.identityNavGraph(
             route = Route.TermsOfUse.name,
             enterTransition = { enterTransition },
             exitTransition = { exitTransition },
-            popEnterTransition = { enterTransition },
-            popExitTransition = { exitTransition }
+            popEnterTransition = { popEnterTransition },
+            popExitTransition = { popExitTransition }
         ) {
             TermsOfUse(
                 modifier = modifier,
@@ -196,11 +175,11 @@ fun NavGraphBuilder.identityNavGraph(
             arguments = Route.SecretCode.arguments,
             enterTransition = { enterTransition },
             exitTransition = { exitTransition },
-            popEnterTransition = { enterTransition },
-            popExitTransition = { exitTransition }
+            popEnterTransition = { popEnterTransition },
+            popExitTransition = { popExitTransition }
         ) { entry ->
             val context = LocalContext.current
-            val linkParam = entry.arguments?.getString(Route.SecretCode.keyDeepLink)
+            val linkParam = entry.arguments?.getString(Route.SecretCode.KEY_DEEP_LINK)
             val link = if (linkParam?.isNotBlank() == true) linkParam else null
             SecretCodeScreen(
                 modifier = modifier.systemBarsPadding(),

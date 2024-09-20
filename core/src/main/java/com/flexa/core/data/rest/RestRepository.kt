@@ -35,6 +35,7 @@ import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import okhttp3.CacheControl
 import okhttp3.HttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
@@ -44,6 +45,7 @@ import okhttp3.internal.EMPTY_REQUEST
 import okhttp3.sse.EventSource
 import okhttp3.sse.EventSourceListener
 import okhttp3.sse.EventSources
+import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -376,73 +378,84 @@ internal class RestRepository(
             )
     }
 
-    override suspend fun listenEvents(): Flow<CommerceSessionEvent> = callbackFlow {
-        val url = HttpUrl.Builder()
-            .scheme(SCHEME).host(host)
-            .addPathSegment("events")
-            .addEncodedQueryParameter(
-                "type",
-                "commerce_session.created," +
-                        "commerce_session.completed," +
-                        "commerce_session.updated"
-            )
-            .build()
-        val sseClient = okHttpProvider.sseClient
-        val sseRequest = Request.Builder()
-            .url(url)
-            .build()
-
-        val sseEventSourceListener = object : EventSourceListener() {
-            override fun onClosed(eventSource: EventSource) {
-                Log.d("TAG", "onClosed: $eventSource")
-                close()
-            }
-
-            override fun onEvent(
-                eventSource: EventSource,
-                id: String?,
-                type: String?,
-                data: String
-            ) {
-                Log.d("TAG", "onEvent: $data eventSource: $eventSource id: $id, type: $type")
-                when (type) {
-                    "commerce_session.created" -> {
-                        val dto = json.decodeFromString<CommerceSession>(data)
-                        trySend(CommerceSessionEvent.Created(dto))
+    override suspend fun listenEvents(lastEventId: String?): Flow<CommerceSessionEvent> =
+        callbackFlow {
+            val url = HttpUrl.Builder()
+                .scheme(SCHEME).host(host)
+                .addPathSegment("events")
+                .addEncodedQueryParameter(
+                    "type",
+                    "commerce_session.created," +
+                            "commerce_session.completed," +
+                            "commerce_session.updated"
+                )
+                .build()
+            val sseClient = okHttpProvider.sseClient
+            val sseRequest = Request.Builder()
+                .apply {
+                    lastEventId?.let {
+                        addHeader("Last-Event-ID", it)
                     }
+                }
+                .url(url)
+                .build()
 
-                    "commerce_session.updated" -> {
-                        val dto = json.decodeFromString<CommerceSession>(data)
-                        trySend(CommerceSessionEvent.Updated(dto))
+            val sseEventSourceListener = object : EventSourceListener() {
+                override fun onClosed(eventSource: EventSource) {
+                    Log.d("TAG", "onClosed: $eventSource")
+                    close()
+                }
+
+                override fun onEvent(
+                    eventSource: EventSource,
+                    id: String?,
+                    type: String?,
+                    data: String
+                ) {
+                    Log.d("TAG", "onEvent: $data eventSource: $eventSource id: $id, type: $type")
+                    when (type) {
+                        "commerce_session.created" -> {
+                            val dto = json.decodeFromString<CommerceSession>(data)
+                            trySend(CommerceSessionEvent.Created(id, dto))
+                        }
+
+                        "commerce_session.updated" -> {
+                            val dto = json.decodeFromString<CommerceSession>(data)
+                            trySend(CommerceSessionEvent.Updated(id, dto))
+                        }
+
+                        "commerce_session.completed" -> {
+                            val dto = json.decodeFromString<CommerceSession>(data)
+                            trySend(CommerceSessionEvent.Completed(id, dto))
+                        }
+
+                        else -> {}
                     }
+                }
 
-                    "commerce_session.completed" -> {
-                        val dto = json.decodeFromString<CommerceSession>(data)
-                        trySend(CommerceSessionEvent.Completed(dto))
-                    }
+                override fun onFailure(
+                    eventSource: EventSource,
+                    t: Throwable?,
+                    response: Response?
+                ) {
+                    Log.e("TAG", "onFailure: ", t)
+                    cancel(message = response?.message ?: "", cause = t)
+                }
 
-                    else -> {}
+                override fun onOpen(eventSource: EventSource, response: Response) {
+                    Log.d("TAG", "onOpen: ${response.code} ${response.message}")
                 }
             }
-
-            override fun onFailure(eventSource: EventSource, t: Throwable?, response: Response?) {
-                Log.e("TAG", "onFailure: ", t)
-                cancel(message = response?.message ?: "", cause = t)
-            }
-
-            override fun onOpen(eventSource: EventSource, response: Response) {
-                Log.d("TAG", "onOpen: ${response.code} ${response.message}")
-            }
+            val eventSource = EventSources.createFactory(sseClient)
+                .newEventSource(request = sseRequest, listener = sseEventSourceListener)
+            awaitClose { eventSource.cancel() }
         }
-        val eventSource = EventSources.createFactory(sseClient)
-            .newEventSource(request = sseRequest, listener = sseEventSourceListener)
-        awaitClose { eventSource.cancel() }
-    }
 
     override suspend fun getBrands(legacyOnly: Boolean?, startingAfter: String?): BrandsResponse =
         suspendCancellableCoroutine {
             var builder = HttpUrl.Builder().scheme(SCHEME).host(host)
                 .addPathSegment("brands")
+                .addEncodedQueryParameter("limit", "100")
             when (legacyOnly) {
                 null -> {}
                 true -> {
@@ -492,7 +505,7 @@ internal class RestRepository(
         amount: String,
         assetId: String,
         paymentAssetId: String
-    ): CommerceSession = suspendCancellableCoroutine {
+    ): CommerceSession.Data = suspendCancellableCoroutine {
         val url = HttpUrl.Builder()
             .scheme(SCHEME).host(host)
             .addPathSegment("commerce_sessions")
@@ -517,7 +530,7 @@ internal class RestRepository(
                             throw NullPointerException()
                         } else {
                             val raw = response.body?.string().toString()
-                            val dto = json.decodeFromString<CommerceSession>(raw)
+                            val dto = json.decodeFromString<CommerceSession.Data>(raw)
                             dto
                         }
                     }.fold(
@@ -624,6 +637,44 @@ internal class RestRepository(
                 )
         }
 
+    override suspend fun getCommerceSession(sessionId: String): CommerceSession.Data =
+        suspendCancellableCoroutine {
+            val url = HttpUrl.Builder()
+                .scheme(SCHEME).host(host)
+                .addPathSegment("commerce_sessions")
+                .addEncodedPathSegment(sessionId)
+                .build()
+
+            val request: Request = Request.Builder().url(url).get().build()
+
+            runCatching { okHttpProvider.client.newCall(request).execute() }
+                .fold(
+                    onSuccess = { response ->
+                        runCatching {
+                            val res = response.body?.string().toString()
+                            if (response.code != 200) {
+                                Result.failure(NullPointerException())
+                            } else {
+                                val dto = json.decodeFromString<CommerceSession.Data>(res)
+                                Result.success(dto)
+                            }
+                        }.fold(
+                            onSuccess = { res ->
+                                if (res.isSuccess) {
+                                    res.getOrNull()?.let { r -> it.resume(r) }
+                                } else {
+                                    res.exceptionOrNull()?.let { e ->
+                                        it.resumeWithException(e)
+                                    }
+                                }
+                            },
+                            onFailure = { ex -> it.resumeWithException(ex) }
+                        )
+                    },
+                    onFailure = { ex -> it.resumeWithException(ex) }
+                )
+        }
+
     override suspend fun getQuote(assetId: String, amount: String, unitOfAccount: String): Quote =
         suspendCancellableCoroutine {
             val url = HttpUrl.Builder()
@@ -637,7 +688,12 @@ internal class RestRepository(
                 put("unit_of_account", unitOfAccount)
             }.run { toString().toRequestBody(mediaType) }
 
+            val cacheControl = CacheControl.Builder()
+                .maxAge(25, TimeUnit.SECONDS)
+                .build()
+
             val request: Request = Request.Builder().url(url)
+                .cacheControl(cacheControl)
                 .put(body).build()
 
             runCatching { okHttpProvider.client.newCall(request).execute() }

@@ -8,7 +8,7 @@ internal interface ITokenProvider {
 
     fun getToken(): String
 
-    fun setToken(token: String?)
+    fun saveToken(token: String)
 
     fun getRefreshToken(headersBundle: HeadersBundle): String
 }

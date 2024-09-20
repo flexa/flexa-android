@@ -32,11 +32,11 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.rounded.AccountBox
 import androidx.compose.material.icons.rounded.DragHandle
-import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -50,7 +50,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.font.FontWeight
@@ -61,13 +60,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.flexa.core.shared.Brand
 import com.flexa.core.theme.FlexaTheme
 import com.flexa.spend.MockFactory
 import com.flexa.spend.domain.FakeInteractor
 import com.flexa.spend.dragToReorder
+import com.flexa.spend.main.ui_utils.SpendAsyncImage
 
 enum class SlideState {
     NONE,
@@ -190,7 +188,7 @@ fun MerchantOrderList(
                 key(merchant.id) {
                     val slideState = slideStates[merchant] ?: SlideState.NONE
                     MerchantOrderListItem(
-                        modifier = Modifier.animateItemPlacement(),
+                        modifier = Modifier.animateItem(),
                         viewModel = viewModel,
                         merchant = merchant,
                         slideState = slideState,
@@ -224,7 +222,7 @@ fun MerchantOrderList(
             if (merchant != null) {
                 key(merchant.id) {
                     MerchantOrderListItem(
-                        modifier = Modifier.animateItemPlacement(),
+                        modifier = Modifier.animateItem(),
                         viewModel = viewModel,
                         merchant = merchant,
                         slideState = SlideState.NONE,
@@ -356,7 +354,7 @@ fun MerchantOrderListItem(
         }
         val previewMode = LocalInspectionMode.current
         if (!previewMode) {
-            AsyncImage(
+            SpendAsyncImage(
                 modifier = Modifier
                     .clickable(
                         interactionSource = interactionSource,
@@ -365,12 +363,8 @@ fun MerchantOrderListItem(
                     .padding(start = 2.dp)
                     .size(34.dp)
                     .clip(RoundedCornerShape(4.dp)),
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(merchant.brand.logoUrl)
-                    .crossfade(true)
-                    .crossfade(1000)
-                    .build(),
-                contentDescription = null,
+                imageUrl = merchant.brand.logoUrl,
+                crossfadeDuration = 1000,
             )
         } else {
             Icon(
@@ -400,7 +394,7 @@ fun MerchantOrderListItem(
                     .fillMaxWidth(.8F)
                     .align(Alignment.CenterStart)
                     .padding(end = 4.dp),
-                text = merchant.brand.name,
+                text = merchant.brand.name ?: "",
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.titleMedium.copy(
@@ -417,7 +411,7 @@ fun MerchantOrderListItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (merchant.isDraggable) {
-                Divider(
+                VerticalDivider(
                     modifier = Modifier
                         .clickable { }
                         .height(26.dp)

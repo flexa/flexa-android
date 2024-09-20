@@ -19,7 +19,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.flexa.core.theme.FlexaTheme
-import com.flexa.spend.BuildConfig
+import com.flexa.spend.main.main_screen.ZERO
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.oned.Code128Writer
@@ -40,7 +40,7 @@ fun Code128(
     var code128Size by remember { mutableStateOf(IntSize.Zero) }
 
     LaunchedEffect(code, code128Size) {
-        val _code = if (code.length > 0) code else BuildConfig.LIBRARY_PACKAGE_NAME
+        val _code = code.ifEmpty { ZERO }
         val matrix = Code128Writer().encode(
             _code, BarcodeFormat.CODE_128, code128Size.width, code128Size.height,
             Collections.singletonMap(EncodeHintType.CHARACTER_SET, "utf-8")

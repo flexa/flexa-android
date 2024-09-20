@@ -42,27 +42,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.flexa.core.entity.CommerceSession
 import com.flexa.core.theme.FlexaTheme
 import com.flexa.core.view.FlexaLogo
-import com.flexa.spend.BuildConfig
 import com.flexa.spend.MockFactory
 import com.flexa.spend.domain.FakeInteractor
 import com.flexa.spend.getAmount
 import com.flexa.spend.getAmountLabel
 import com.flexa.spend.main.flexcode.FlexcodeLayout
 import com.flexa.spend.main.main_screen.SpendViewModel
+import com.flexa.spend.main.main_screen.ZERO
 import com.flexa.spend.main.ui_utils.MarkdownText
-import com.flexa.spend.rememberSelectedAsset
+import com.flexa.spend.main.ui_utils.SpendAsyncImage
+import com.flexa.spend.main.ui_utils.rememberSelectedAsset
 import com.flexa.spend.toColor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -119,17 +117,13 @@ fun LegacyFlexcode(
         }
         Spacer(modifier = Modifier.height(40.dp))
         if (!previewMode) {
-            AsyncImage(
+            SpendAsyncImage(
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
                     .clip(RoundedCornerShape(8.dp))
                     .size(54.dp),
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(brand?.logoUrl)
-                    .crossfade(true)
-                    .crossfade(500)
-                    .build(),
-                contentDescription = null,
+                imageUrl = brand?.logoUrl,
+                crossfadeDuration = 500,
             )
         } else {
             Box(
@@ -183,8 +177,7 @@ fun LegacyFlexcode(
         ) {
             val code by remember {
                 derivedStateOf {
-                    commerceSession?.data?.authorization?.number
-                        ?: BuildConfig.LIBRARY_PACKAGE_NAME
+                    commerceSession?.data?.authorization?.number?.ifBlank { ZERO } ?: ZERO
                 }
             }
             val asset by rememberSelectedAsset()

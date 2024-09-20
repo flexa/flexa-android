@@ -52,7 +52,9 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.flexa.core.shared.Brand
 import com.flexa.core.view.FlexaProgress
+import com.flexa.spend.MockFactory
 import com.flexa.spend.R
+import com.flexa.spend.main.ui_utils.SpendAsyncImage
 import com.flexa.spend.merchants.BrandsViewModel
 
 @Composable
@@ -89,7 +91,7 @@ internal fun BrandsRow(
                     modifier = Modifier.size(22.dp),
                     imageVector = Icons.Outlined.Edit,
                     contentDescription = null,
-                    tint =  MaterialTheme.colorScheme.primary
+                    tint = MaterialTheme.colorScheme.primary
                 )
             }
         }
@@ -138,18 +140,13 @@ fun BrandRowItem(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            AsyncImage(
+            SpendAsyncImage(
                 modifier = Modifier
                     .shadow(elevation = 2.dp, shape = RoundedCornerShape(6.dp))
                     .clip(RoundedCornerShape(6.dp))
                     .size(54.dp),
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(item.logoUrl)
-                    .crossfade(true)
-                    .crossfade(500)
-                    .build(),
-                contentDescription = null,
-                error = painterResource(id = com.flexa.R.drawable.ic_flexa)
+                imageUrl = item.logoUrl,
+                crossfadeDuration = 500,
             )
             Box(
                 modifier = Modifier
@@ -158,7 +155,7 @@ fun BrandRowItem(
             ) {
                 Text(
                     modifier = Modifier.align(Center),
-                    text = item.name,
+                    text = item.name ?: "",
                     maxLines = 2,
                     style = TextStyle(
                         fontWeight = FontWeight.W600,
@@ -197,18 +194,16 @@ fun SpendDragHandler(
 
 
 @Preview
-@Preview(name = "dark",
+@Preview(
+    name = "dark",
     uiMode = Configuration.UI_MODE_NIGHT_YES or Configuration.UI_MODE_TYPE_NORMAL
 )
 @Composable
 private fun MerchantItemPreview() {
     BrandRowItem(
         modifier = Modifier.height(114.dp),
-        item = Brand(
-            "", "", "","",
-            emptyList(), "https://flexa.network/static/4bbb1733b3ef41240ca0f0675502c4f7/d8419/flexa-logo%403x.png", "Flexa", "", ""
-        ),
-        onClick = {  }
+        item = MockFactory.getMockBrand(),
+        onClick = { }
     )
 }
 

@@ -73,7 +73,7 @@ dependencies {
     implementation "androidx.activity:activity-compose:$activity_compose_version"
     implementation "androidx.navigation:navigation-compose:$navigation_compose_version"
     implementation "androidx.compose.runtime:runtime-livedata:$compose_version"
-    implementation 'com.google.accompanist:accompanist-permissions:0.34.0'
+    implementation 'com.google.accompanist:accompanist-permissions:0.36.0'
     debugImplementation "androidx.customview:customview-poolingcontainer:$customview_poolingcontainer_version"
     debugImplementation "androidx.customview:customview:$customview_version"
     debugImplementation "androidx.compose.ui:ui-tooling:$compose_version"

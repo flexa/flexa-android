@@ -1,6 +1,6 @@
 package com.flexa.spend.domain
 
-import com.flexa.core.data.db.TransactionBundle
+import com.flexa.core.data.db.BrandSession
 import com.flexa.core.entity.Account
 import com.flexa.core.entity.AppAccount
 import com.flexa.core.entity.AvailableAsset
@@ -58,19 +58,39 @@ internal class FakeInteractor : ISpendInteractor {
         TODO("Not yet implemented")
     }
 
-    override suspend fun getTransactionBySessionId(sessionId: String): TransactionBundle? {
+    override suspend fun getBrandSession(sessionId: String): BrandSession? {
         TODO("Not yet implemented")
     }
 
-    override suspend fun deleteTransaction(sessionId: String) {
+    override suspend fun deleteBrandSession(sessionId: String) {
         TODO("Not yet implemented")
     }
 
-    override suspend fun deleteOutdatedTransactions() {
+    override suspend fun deleteOutdatedSessions() {
         TODO("Not yet implemented")
     }
 
-    override suspend fun saveTransaction(transactionBundle: TransactionBundle) {
+    override suspend fun saveBrandSession(transactionBundle: BrandSession) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun saveLastSessionId(eventId: String?) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getLastSessionId(): String? {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getCommerceSession(sessionId: String): CommerceSession.Data {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun saveLastEventId(eventId: String) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getLastEventId(): String? {
         TODO("Not yet implemented")
     }
 
@@ -148,7 +168,7 @@ internal class FakeInteractor : ISpendInteractor {
         TODO("Not yet implemented")
     }
 
-    override suspend fun listenEvents(): Flow<CommerceSessionEvent> {
+    override suspend fun listenEvents(lastEventId: String?): Flow<CommerceSessionEvent> {
         TODO("Not yet implemented")
     }
 
@@ -167,17 +187,7 @@ internal class FakeInteractor : ISpendInteractor {
     override suspend fun getDbBrands(): List<Brand> {
         return arrayListOf<Brand>().apply {
             repeat(5) {
-                Brand(
-                    id = "",
-                    "",
-                    "",
-                    "",
-                    null,
-                    "https://flexa.network/static/4bbb1733b3ef41240ca0f0675502c4f7/d8419/flexa-logo%403x.png",
-                    "flexa",
-                    "",
-                    ""
-                )
+                MockFactory.getMockBrand()
             }
         }
     }
@@ -193,7 +203,7 @@ internal class FakeInteractor : ISpendInteractor {
         amount: String,
         assetId: String,
         paymentAssetId: String
-    ): CommerceSession {
+    ): CommerceSession.Data {
         TODO("Not yet implemented")
     }
 

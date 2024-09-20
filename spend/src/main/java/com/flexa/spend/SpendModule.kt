@@ -31,6 +31,8 @@ class SpendConfig private constructor() {
 
 class SpendConstants {
     companion object {
+        const val LAST_SESSION_ID = "last.session.id"
+        const val LAST_EVENT_ID = "last.event.id"
         const val COMMERCE_SESSION_KEY = "commerce.session.key"
         const val PINNED_BRANDS = "pinned.brands"
     }

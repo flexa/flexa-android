@@ -12,22 +12,20 @@ class BrandsResponse(
 data class Brand(
     @SerialName("id")
     val id: String,
-    @SerialName("object")
-    val objectType: String,
     @SerialName("category_name")
-    val categoryName: String,
+    val categoryName: String? = null,
     @SerialName("color")
-    val color: String,
+    val color: String? = null,
     @SerialName("legacy_flexcodes")
     val legacyFlexcodes: List<LegacyFlexcode>? = null,
     @SerialName("logo_url")
-    val logoUrl: String,
+    val logoUrl: String? = null,
     @SerialName("name")
-    val name: String,
+    val name: String? = null,
     @SerialName("slug")
-    val slug: String,
+    val slug: String? = null,
     @SerialName("status")
-    val status: String
+    val status: String? = null,
 )
 
 @Serializable

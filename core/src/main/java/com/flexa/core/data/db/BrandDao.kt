@@ -26,35 +26,33 @@ internal interface BrandDao {
 internal class Brand(
     @PrimaryKey
     val id: String,
-    @ColumnInfo(name = "object")
-    val objectType: String,
     @ColumnInfo(name = "category_name")
-    val categoryName: String,
+    val categoryName: String? = null,
     @ColumnInfo(name = "color")
-    val color: String,
+    val color: String? = null,
     @ColumnInfo(name = "legacy_flexcodes")
     @TypeConverters(LegacyFlexcodeConverter::class)
     val legacyFlexcodes: List<LegacyFlexcode>? = null,
     @ColumnInfo(name = "logo_url")
-    val logoUrl: String,
+    val logoUrl: String? = null,
     @ColumnInfo(name = "name")
-    val name: String,
+    val name: String? = null,
     @ColumnInfo(name = "slug")
-    val slug: String,
+    val slug: String? = null,
     @ColumnInfo(name = "status")
-    val status: String
+    val status: String? = null,
 )
 
 internal fun Brand.toObject(): com.flexa.core.shared.Brand =
     com.flexa.core.shared.Brand(
-        id = id, objectType = objectType, categoryName = categoryName,
+        id = id, categoryName = categoryName,
         color = color, legacyFlexcodes = legacyFlexcodes,
         logoUrl = logoUrl, name = name, slug = slug, status = status
     )
 
 internal fun com.flexa.core.shared.Brand.toDao(): Brand =
     Brand(
-        id = id, objectType = objectType, categoryName = categoryName,
+        id = id, categoryName = categoryName,
         color = color, legacyFlexcodes = legacyFlexcodes,
         logoUrl = logoUrl, name = name, slug = slug, status = status
     )

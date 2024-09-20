@@ -45,6 +45,7 @@ import com.flexa.core.entity.AvailableAsset
 import com.flexa.core.theme.FlexaTheme
 import com.flexa.spend.MockFactory
 import com.flexa.spend.logo
+import com.flexa.spend.main.ui_utils.SpendAsyncImage
 
 @Composable
 fun AssetItemCompose(
@@ -74,16 +75,11 @@ fun AssetItemCompose(
                     modifier = Modifier.size(38.dp),
                     onDraw = { drawCircle(palette.tertiary.copy(.5F)) })
             } else {
-                AsyncImage(
+                SpendAsyncImage(
                     modifier = Modifier
                         .size(38.dp)
                         .clip(CircleShape),
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(icon)
-                        .crossfade(true)
-                        .decoderFactory(SvgDecoder.Factory())
-                        .build(),
-                    contentDescription = null,
+                    imageUrl = icon,
                 )
             }
         },

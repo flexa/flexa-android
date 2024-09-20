@@ -1,6 +1,6 @@
 package com.flexa.spend.domain
 
-import com.flexa.core.data.db.TransactionBundle
+import com.flexa.core.data.db.BrandSession
 import com.flexa.core.domain.db.DbInteractor
 import com.flexa.core.domain.rest.RestInteractor
 import com.flexa.core.entity.AppAccount
@@ -92,23 +92,48 @@ internal class SpendInteractor(
         interactor.getAssets(pageSize, nextPageToken)
 
     override suspend fun getAssetById(assetId: String): Asset = interactor.getAssetById(assetId)
-    override suspend fun getTransactionBySessionId(sessionId: String): TransactionBundle? =
+    override suspend fun getBrandSession(sessionId: String): BrandSession? =
         withContext(Dispatchers.IO) {
-            dbInteractor.getTransactionBySessionId(sessionId)
+            dbInteractor.getBrandSession(sessionId)
         }
 
-    override suspend fun deleteTransaction(sessionId: String) = withContext(Dispatchers.IO) {
-        dbInteractor.deleteTransaction(sessionId)
+    override suspend fun deleteBrandSession(sessionId: String) = withContext(Dispatchers.IO) {
+        dbInteractor.deleteBrandSession(sessionId)
     }
 
-    override suspend fun deleteOutdatedTransactions() = withContext(Dispatchers.IO) {
-        dbInteractor.deleteOutdatedTransactions()
+    override suspend fun deleteOutdatedSessions() = withContext(Dispatchers.IO) {
+        dbInteractor.deleteOutdatedSessions()
     }
 
-    override suspend fun saveTransaction(transactionBundle: TransactionBundle) =
+    override suspend fun saveBrandSession(transactionBundle: BrandSession) =
         withContext(Dispatchers.IO) {
             dbInteractor.saveTransaction(transactionBundle)
         }
+
+    override suspend fun saveLastSessionId(eventId: String?) = withContext(Dispatchers.IO) {
+        if (eventId != null) {
+            preferences.saveString(SpendConstants.LAST_SESSION_ID, eventId)
+        } else {
+            preferences.remove(SpendConstants.LAST_SESSION_ID)
+        }
+    }
+
+    override suspend fun getLastSessionId(): String? = withContext(Dispatchers.IO) {
+        preferences.getString(SpendConstants.LAST_SESSION_ID)
+    }
+
+    override suspend fun getCommerceSession(sessionId: String): CommerceSession.Data =
+        withContext(Dispatchers.IO) {
+            interactor.getCommerceSession(sessionId)
+        }
+
+    override suspend fun saveLastEventId(eventId: String) = withContext(Dispatchers.IO) {
+        preferences.saveString(SpendConstants.LAST_EVENT_ID, eventId)
+    }
+
+    override suspend fun getLastEventId(): String? = withContext(Dispatchers.IO) {
+        preferences.getString(SpendConstants.LAST_EVENT_ID)
+    }
 
     override suspend fun getAccount() = withContext(Dispatchers.IO) {
         interactor.getAccount()
@@ -142,8 +167,8 @@ internal class SpendInteractor(
     override suspend fun saveAssets(items: List<Asset>) =
         withContext(Dispatchers.IO) { dbInteractor.saveAssets(items) }
 
-    override suspend fun listenEvents(): Flow<CommerceSessionEvent> =
-        interactor.listenEvents()
+    override suspend fun listenEvents(lastEventId: String?): Flow<CommerceSessionEvent> =
+        interactor.listenEvents(lastEventId)
 
     override suspend fun savePinnedBrands(itemsIds: List<String>) =
         withContext(Dispatchers.IO) {
@@ -183,7 +208,7 @@ internal class SpendInteractor(
         amount: String,
         assetId: String,
         paymentAssetId: String
-    ): CommerceSession =
+    ): CommerceSession.Data =
         withContext(Dispatchers.IO) {
             interactor.createCommerceSession(
                 brandId,

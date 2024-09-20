@@ -46,8 +46,8 @@ class RestInteractor(
 
     suspend fun deleteNotification(id: String): Unit = repository.deleteNotification(id)
 
-    suspend fun listenEvents(): Flow<CommerceSessionEvent> =
-        repository.listenEvents()
+    suspend fun listenEvents(lastEventId: String?): Flow<CommerceSessionEvent> =
+        repository.listenEvents(lastEventId)
 
     suspend fun getBrands(legacyOnly: Boolean?, startingAfter: String?) =
         repository.getBrands(legacyOnly, startingAfter)
@@ -71,6 +71,9 @@ class RestInteractor(
     suspend fun patchCommerceSession(
         commerceSessionId: String, paymentAssetId: String
     ) = repository.patchCommerceSession(commerceSessionId, paymentAssetId)
+
+    suspend fun getCommerceSession(sessionId: String) =
+        repository.getCommerceSession(sessionId)
 
     suspend fun getQuote(assetId: String, amount: String, unitOfAccount: String) =
         repository.getQuote(assetId, amount, unitOfAccount)

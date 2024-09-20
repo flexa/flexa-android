@@ -6,7 +6,6 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -181,12 +180,12 @@ fun FlexcodePagerCard(
                     Crossfade(
                         targetState = code.value, label = "Flexcode",
                         animationSpec = tween(1000)
-                    ) { code ->
+                    ) { codeString ->
                         FlexcodeLayout(
                             modifier = Modifier
                                 .aspectRatio(1.14f)
                                 .fillMaxSize(),
-                            code = code,
+                            code = codeString,
                             color = asset?.asset?.assetData?.color?.toColor() ?: Color.Magenta
                         )
                     }
@@ -216,7 +215,6 @@ fun FlexcodePagerCard(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Preview
 @Preview(uiMode = Configuration.UI_MODE_NIGHT_YES or Configuration.UI_MODE_TYPE_NORMAL)
 @Composable

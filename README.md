@@ -53,19 +53,19 @@ dependencyResolutionManagement {
 **Identity** module:
 
 ```groovy
-implementation "com.flexa:core:1.0.1"
+implementation "com.flexa:core:1.0.2"
 ```
 
 **Scan** module:
 
 ```groovy
-implementation "com.flexa:scan:1.0.1"
+implementation "com.flexa:scan:1.0.2"
 ```
 
 **Spend** module:
 
 ```groovy
-implementation "com.flexa:spend:1.0.1"
+implementation "com.flexa:spend:1.0.2"
 ```
 
 ### Remote repository
@@ -107,19 +107,19 @@ implementation "com.flexa:spend:1.0.1"
     **Identity** module:
 
     ```groovy
-    implementation "com.flexa:core:1.0.1"
+    implementation "com.flexa:core:1.0.2"
     ```
 
     **Scan** module:
 
     ```groovy
-    implementation "com.flexa:scan:1.0.1"
+    implementation "com.flexa:scan:1.0.2"
     ```
 
     **Spend** module:
 
     ```groovy
-    implementation "com.flexa:spend:1.0.1"
+    implementation "com.flexa:spend:1.0.2"
     ```
 
 
@@ -128,6 +128,10 @@ implementation "com.flexa:spend:1.0.1"
 1. The SDK initialization:
 
     ```kt
+    val accountId = "Account ID"
+    val accountIdSha256 = MessageDigest.getInstance("SHA-256")
+        .digest(accountId.toByteArray())
+        .fold("") { str, it -> str + "%02x".format(it) }
     Flexa.init(
         FlexaClientConfiguration(
             context = applicationContext,
@@ -137,7 +141,7 @@ implementation "com.flexa:spend:1.0.1"
             ),
             appAccounts = arrayListOf(
                 AppAccount(
-                    accountId = UUID.randomUUID().toString(),
+                    accountId = accountIdSha256,
                     displayName = "My Wallet",
                     icon = "https://flexa.network/static/4bbb1733b3ef41240ca0f0675502c4f7/d8419/flexa-logo%403x.png",
                     availableAssets = emptyList()

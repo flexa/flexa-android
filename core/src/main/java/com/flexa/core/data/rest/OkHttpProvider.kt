@@ -1,11 +1,14 @@
 package com.flexa.core.data.rest
 
 import com.flexa.BuildConfig
+import com.flexa.core.Flexa
 import com.flexa.core.data.data.TokenProvider
 import com.flexa.core.data.storage.SecuredPreferences
 import com.flexa.core.shared.FlexaConstants
+import okhttp3.Cache
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import java.io.File
 
 internal class OkHttpProvider(
     private val preferences: SecuredPreferences
@@ -29,6 +32,12 @@ internal class OkHttpProvider(
     internal val client by lazy {
         val tokenProvider = tokenProvider
         OkHttpClient().newBuilder()
+            .cache(
+                Cache(
+                    directory = File(Flexa.requiredContext.cacheDir, "http_cache"),
+                    maxSize = 50L * 1024L * 1024L // 50 MiB
+                )
+            )
             .addInterceptor(HeadersInterceptor(tokenProvider))
             .addInterceptor(HttpLoggingInterceptor().apply {
                 level = when (BuildConfig.DEBUG) {
@@ -42,7 +51,7 @@ internal class OkHttpProvider(
     internal val sseClient by lazy {
         val tokenProvider = tokenProvider
         OkHttpClient().newBuilder()
-            .addInterceptor(HeadersSSEInterceptor(tokenProvider))
+            .addInterceptor(HeadersInterceptor(tokenProvider, true))
             .addInterceptor(HttpLoggingInterceptor().apply {
                 level = when (BuildConfig.DEBUG) {
                     true -> HttpLoggingInterceptor.Level.HEADERS
@@ -52,7 +61,7 @@ internal class OkHttpProvider(
             )
             .build()
     }
-    internal val tokenProvider by lazy {
+    private val tokenProvider by lazy {
         TokenProvider(preferences, FlexaConstants.TOKEN)
     }
 }

@@ -21,6 +21,8 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.logging.HttpLoggingInterceptor
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 
 private const val TOKEN_ERROR_COUNTER = 3
@@ -30,8 +32,13 @@ internal class TokenProvider(
     private val tokenKey: String
 ) : ITokenProvider {
 
-    private val client by lazy {
-        OkHttpClient().newBuilder()
+    val countDownLatch = AtomicReference<CountDownLatch?>(null)
+    private val errorCounter = AtomicInteger(0)
+    private val tokenExpiration = AtomicLong(Long.MIN_VALUE)
+    private val token = AtomicReference(EMPTY)
+
+    private val client
+        get() = OkHttpClient().newBuilder()
             .addInterceptor(HttpLoggingInterceptor().apply {
                 level = when (BuildConfig.DEBUG) {
                     true -> HttpLoggingInterceptor.Level.BODY
@@ -39,100 +46,103 @@ internal class TokenProvider(
                 }
             }
             ).build()
+
+    override fun getTokenExpiration(): Long {
+        return tokenExpiration.updateAndGet { time ->
+            if (time == Long.MIN_VALUE)
+                preferences.getLongSynchronously(FlexaConstants.TOKEN_EXPIRATION)
+            else
+                time
+        }
     }
-    private var countDownLatch = AtomicReference<CountDownLatch>()
-    private var errorCounter = 0
 
-    override fun getTokenExpiration(): Long =
-        preferences.getLongSynchronously(FlexaConstants.TOKEN_EXPIRATION)
+    override fun getToken(): String {
+        return token.updateAndGet {
+            it.ifBlank { preferences.getStringSynchronously(tokenKey) ?: EMPTY }
+        }
+    }
 
-    override fun getToken(): String =
-        preferences.getStringSynchronously(tokenKey) ?: EMPTY
-
-    override fun setToken(token: String?) =
+    override fun saveToken(token: String) {
+        this.token.set(token)
         preferences.edit()
             .putString(tokenKey, token)
-            .apply()
+            .commit()
+    }
 
     override fun getRefreshToken(headersBundle: HeadersBundle): String {
-        if (countDownLatch.get() != null) {
-            countDownLatch.get()?.await()
-            val token = getToken()
-            Log.d(TokenProvider::class.java.simpleName, "refreshed token Waiting ⏳: $token")
-            return token
-        } else {
-            countDownLatch.set(CountDownLatch(1))
-            Log.d(TokenProvider::class.java.simpleName, "refresh: ${Thread.currentThread().name}")
+        val url = HttpUrl.Builder()
+            .scheme(RestRepository.SCHEME)
+            .host(RestRepository.host)
+            .addPathSegment("tokens").build()
 
-            val url = HttpUrl.Builder()
-                .scheme(RestRepository.SCHEME)
-                .host(RestRepository.host)
-                .addPathSegment("tokens").build()
+        val verifier = preferences.getStringSynchronously(FlexaConstants.VERIFIER)
+        val newVerifier = PikSeeProvider.getCodeVerifier()
+        val challenge = PikSeeProvider.getCodeChallenge(newVerifier)
 
-            val verifier = preferences.getStringSynchronously(FlexaConstants.VERIFIER)
-            val newVerifier = PikSeeProvider.getCodeVerifier()
-            val challenge = PikSeeProvider.getCodeChallenge(newVerifier)
+        val body = buildJsonObject {
+            put("challenge", challenge)
+            put("verifier", verifier)
+        }.run { toString().toRequestBody(RestRepository.mediaType) }
 
-            val body = buildJsonObject {
-                put("challenge", challenge)
-                put("verifier", verifier)
-            }.run { toString().toRequestBody(RestRepository.mediaType) }
+        val oldToken = getToken()
+        val tokenBase64 = android.util.Base64.encodeToString(
+            ":${oldToken}".toByteArray(), android.util.Base64.NO_WRAP
+        )
 
-            val oldToken = getToken()
-            val tokenBase64 = android.util.Base64.encodeToString(
-                ":${oldToken}".toByteArray(), android.util.Base64.NO_WRAP
-            )
+        val request: Request = Request.Builder().url(url)
+            .header("Accept", "application/vnd.flexa+json")
+            .header("Flexa-App", headersBundle.appName)
+            .header("Flexa-Version", headersBundle.appVersion)
+            .header("User-Agent", headersBundle.userAgent)
+            .header("Authorization", "Basic $tokenBase64")
+            .header("client-trace-id", UUID.randomUUID().toString())
+            .post(body).build()
 
-            val request: Request = Request.Builder().url(url)
-                .header("Accept", "application/vnd.flexa+json")
-                .header("Flexa-App", headersBundle.appName)
-                .header("Flexa-Version", headersBundle.appVersion)
-                .header("User-Agent", headersBundle.userAgent)
-                .header("Authorization", "Basic $tokenBase64")
-                .header("client-trace-id", UUID.randomUUID().toString())
-                .post(body).build()
-
-            val token = try {
-                val response = client.newCall(request).execute()
-                val raw = response.body?.string().toString()
-                val tokenResponse = try {
-                    json.decodeFromString<TokenPatch>(raw)
-                } catch (e: Exception) {
-                    TokenPatch("", "", "", 0)
+        val token = try {
+            val response = client.newCall(request).execute()
+            val raw = response.body?.string().toString()
+            val tokenResponse = try {
+                json.decodeFromString<TokenPatch>(raw)
+            } catch (e: Exception) {
+                TokenPatch("", "", "", 0)
+            }
+            val token = tokenResponse.value
+            if (token.isNotBlank()) {
+                errorCounter.set(0)
+                preferences.saveStringSynchronous(FlexaConstants.VERIFIER, newVerifier)
+                setTokenExpiration(tokenResponse.expiration)
+                saveToken(token)
+                Flexa.context?.let {
+                    val intent = Intent(preferences.getPublishableKey())
+                    intent.putExtra(FlexaConstants.TOKEN, true)
+                    it.sendBroadcast(intent)
                 }
-                val token = tokenResponse.value
-                if (token.isNotBlank()) {
-                    errorCounter = 0
-                    preferences.saveStringSynchronous(FlexaConstants.VERIFIER, newVerifier)
-                    preferences.edit()
-                        .putLong(FlexaConstants.TOKEN_EXPIRATION, tokenResponse.expiration).apply()
-                    setToken(token)
+            } else {
+                if (errorCounter.incrementAndGet() >= TOKEN_ERROR_COUNTER) {
                     Flexa.context?.let {
                         val intent = Intent(preferences.getPublishableKey())
-                        intent.putExtra(FlexaConstants.TOKEN, true)
+                        intent.putExtra(FlexaConstants.TOKEN, false)
                         it.sendBroadcast(intent)
                     }
-                } else {
-                    if (++errorCounter >= TOKEN_ERROR_COUNTER) {
-                        Flexa.context?.let {
-                            val intent = Intent(preferences.getPublishableKey())
-                            intent.putExtra(FlexaConstants.TOKEN, false)
-                            it.sendBroadcast(intent)
-                        }
-                    }
                 }
-                token
-            } catch (e: Exception) {
-                Log.e("TAG", "getRefreshToken: ", e)
-                ""
             }
-
-            try {
-                Log.d(TokenProvider::class.java.simpleName, "refreshed token: \uD83C\uDFC1: $token")
-                return token
-            } finally {
-                countDownLatch.getAndSet(null)?.countDown()
-            }
+            token
+        } catch (e: Exception) {
+            Log.e("TAG", "getRefreshToken: ", e)
+            EMPTY
         }
+
+        Log.d(
+            TokenProvider::class.java.simpleName,
+            "refreshed token: \uD83C\uDFC1: $token thread: ${Thread.currentThread().id}"
+        )
+        return token
+    }
+
+    private fun setTokenExpiration(timestamp: Long) {
+        tokenExpiration.set(timestamp)
+        preferences.edit()
+            .putLong(FlexaConstants.TOKEN_EXPIRATION, timestamp)
+            .apply()
     }
 }

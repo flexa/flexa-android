@@ -44,7 +44,7 @@ class AssetsViewModel(
     var filtered = MutableStateFlow(false)
     val assetsState = MutableStateFlow<AssetsState>(AssetsState.Retrieving)
     var filterValue = 0.0
-    val errorHandler = ApiErrorHandler()
+    private val errorHandler = ApiErrorHandler()
 
     init {
         subscribeAppAccounts()
@@ -52,10 +52,6 @@ class AssetsViewModel(
 
     internal fun setSelectedAsset(accountId: String, asset: AvailableAsset) {
         if (accountId != selectedAsset.value?.accountId || asset != selectedAsset.value?.asset) {
-            Log.d(
-                "TAG",
-                "setSelectedAsset: AssetsVM >>> ${asset.label} [${asset.value?.label}] ${asset.assetData}"
-            )
             Spend.selectedAsset(SelectedAsset(accountId, asset))
         }
     }
@@ -106,7 +102,7 @@ class AssetsViewModel(
                 verifySelectedAsset(accounts)
 
             } catch (e: Exception) {
-                Log.e("TAG", "checkAccountsAssets: ", e)
+                Log.e(null, "checkAccountsAssets: ", e)
                 withContext(Dispatchers.Main) {
                     errorHandler.setError(e)
                 }
@@ -168,7 +164,7 @@ class AssetsViewModel(
 }
 
 sealed class AssetsScreen {
-    object Assets : AssetsScreen()
+    data object Assets : AssetsScreen()
     data class Settings(val asset: SelectedAsset? = null) : AssetsScreen()
     data class AssetDetails(val asset: SelectedAsset) : AssetsScreen()
 }

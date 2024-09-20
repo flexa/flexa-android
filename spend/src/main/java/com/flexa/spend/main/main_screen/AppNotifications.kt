@@ -21,16 +21,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
-import coil.decode.SvgDecoder
-import coil.request.ImageRequest
 import com.flexa.core.entity.Notification
 import com.flexa.core.theme.FlexaTheme
 import com.flexa.spend.MockFactory
+import com.flexa.spend.main.ui_utils.SpendAsyncImage
 
 @Composable
 fun AppNotification(
@@ -47,18 +44,13 @@ fun AppNotification(
         ),
         leadingContent = {
             if (!previewMode) {
-                AsyncImage(
+                SpendAsyncImage(
                     modifier = Modifier
                         .padding(start = 2.dp)
                         .size(34.dp)
                         .clip(RoundedCornerShape(4.dp)),
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(appNotification.iconUrl)
-                        .crossfade(true)
-                        .crossfade(1000)
-                        .decoderFactory(SvgDecoder.Factory())
-                        .build(),
-                    contentDescription = null,
+                    imageUrl = appNotification.iconUrl,
+                    crossfadeDuration = 1000,
                 )
             } else {
                 Icon(

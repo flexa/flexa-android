@@ -1,6 +1,7 @@
 package com.flexa.spend
 
 import com.flexa.core.entity.AppAccount
+import com.flexa.core.entity.AssetKey
 import com.flexa.core.entity.AssetValue
 import com.flexa.core.entity.AvailableAsset
 import com.flexa.core.entity.CommerceSession
@@ -9,6 +10,7 @@ import com.flexa.core.entity.Quote
 import com.flexa.core.shared.Asset
 import com.flexa.core.shared.Brand
 import com.flexa.core.shared.SelectedAsset
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import java.time.Instant
 import java.util.UUID
@@ -16,7 +18,11 @@ import kotlin.random.Random
 
 class MockFactory {
     companion object {
-        private val json = Json { ignoreUnknownKeys = true }
+        @OptIn(ExperimentalSerializationApi::class)
+        private val json = Json {
+            ignoreUnknownKeys = true
+            explicitNulls = false
+        }
         fun getMockConfig(): List<AppAccount> =
             listOf(
                 AppAccount(
@@ -84,6 +90,9 @@ class MockFactory {
                     assetData = Asset(
                         id = "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/slip44:501",
                         displayName = "SOL"
+                    ),
+                    key = AssetKey(
+                        prefix = "123", secret = "321", length = 3
                     ),
                     value = AssetValue(
                         "", "", "\$68.43 Available"

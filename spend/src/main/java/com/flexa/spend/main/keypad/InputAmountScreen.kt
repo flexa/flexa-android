@@ -92,8 +92,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.flexa.core.theme.FlexaTheme
 import com.flexa.core.view.AutoSizeText
 import com.flexa.core.view.FlexaProgress
@@ -103,12 +101,13 @@ import com.flexa.spend.Spend
 import com.flexa.spend.containsAuthorization
 import com.flexa.spend.domain.FakeInteractor
 import com.flexa.spend.getAmount
-import com.flexa.spend.isLegacy
 import com.flexa.spend.main.assets.AssetsBottomSheet
 import com.flexa.spend.main.assets.AssetsViewModel
 import com.flexa.spend.main.main_screen.SpendDragHandler
 import com.flexa.spend.main.main_screen.SpendViewModel
-import com.flexa.spend.rememberSelectedAsset
+import com.flexa.spend.main.ui_utils.KeepScreenOn
+import com.flexa.spend.main.ui_utils.SpendAsyncImage
+import com.flexa.spend.main.ui_utils.rememberSelectedAsset
 import com.flexa.spend.toColor
 import kotlin.math.roundToInt
 
@@ -159,7 +158,7 @@ internal fun InputAmountScreen(
     }
 
     LaunchedEffect(commerceSession) {
-        val legacy = commerceSession?.isLegacy() ?: false
+        val legacy = commerceSession?.data?.isLegacy == true
         val containsAuthorization = commerceSession?.containsAuthorization() ?: false
         if (legacy && containsAuthorization) {
             returnBack()
@@ -200,6 +199,8 @@ internal fun InputAmountScreen(
             }
         }
     }
+
+    KeepScreenOn()
 
     val interactionSource = remember { MutableInteractionSource() }
     Column(
@@ -253,20 +254,16 @@ internal fun InputAmountScreen(
             }, label = "Icon"
         ) { progressState ->
             if (!progressState) {
-                AsyncImage(
+                SpendAsyncImage(
                     modifier = Modifier
                         .shadow(elevation = 2.dp, shape = RoundedCornerShape(14.dp))
                         .clip(RoundedCornerShape(14.dp))
                         .size(60.dp),
+                    imageUrl = brand?.logoUrl,
                     placeholder = BrushPainter(
                         SolidColor(Color.White.copy(.3F))
                     ),
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(brand?.logoUrl)
-                        .crossfade(true)
-                        .crossfade(500)
-                        .build(),
-                    contentDescription = null,
+                    crossfadeDuration = 500
                 )
             } else {
                 FlexaProgress(

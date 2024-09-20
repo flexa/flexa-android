@@ -4,6 +4,7 @@ package com.flexa.core.entity
 import com.flexa.core.shared.Brand
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 @Serializable
 data class CommerceSession(
@@ -35,7 +36,7 @@ data class CommerceSession(
         @SerialName("debits")
         val debits: List<Debit?>? = null,
         @SerialName("id")
-        val id: String? = null,
+        val id: String,
         @SerialName("intent")
         val intent: String? = null,
         @SerialName("object")
@@ -53,7 +54,9 @@ data class CommerceSession(
         @SerialName("updated")
         val updated: Long? = null,
         @SerialName("authorization")
-        val authorization: Authorization? = null
+        val authorization: Authorization? = null,
+        @Transient
+        val isLegacy: Boolean = false
     ) {
 
         @Serializable
@@ -176,9 +179,8 @@ data class CommerceSession(
     }
 }
 
-sealed class CommerceSessionEvent {
-    class Created(val session: CommerceSession) : CommerceSessionEvent()
-    class Updated(val session: CommerceSession) : CommerceSessionEvent()
-    class Completed(val session: CommerceSession) : CommerceSessionEvent()
-    object Canceled : CommerceSessionEvent()
+sealed class CommerceSessionEvent(val eventId: String?) {
+    class Created(id: String?, val session: CommerceSession) : CommerceSessionEvent(id)
+    class Updated(id: String?, val session: CommerceSession) : CommerceSessionEvent(id)
+    class Completed(id: String?, val session: CommerceSession) : CommerceSessionEvent(id)
 }

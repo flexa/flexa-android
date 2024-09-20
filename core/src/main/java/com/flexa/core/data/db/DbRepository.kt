@@ -15,6 +15,7 @@ class DbRepository(
         context,
         Database::class.java, BuildConfig.LIBRARY_PACKAGE_NAME
     )
+        .fallbackToDestructiveMigrationOnDowngrade()
         .fallbackToDestructiveMigration()
         .build()
 
@@ -35,20 +36,20 @@ class DbRepository(
     override suspend fun saveBrands(items: List<Brand>) =
         db.brandsDao().insertAll(items.map { it.toDao() })
 
-    override suspend fun getTransactionBySessionId(sessionId: String): TransactionBundle? {
-        return db.transactionDao().getBySessionId(sessionId).firstOrNull()
+    override suspend fun getBrandSession(sessionId: String): BrandSession? {
+        return db.brandSessionDao().getBySessionId(sessionId).firstOrNull()
     }
 
-    override suspend fun deleteTransactions(vararg sessionIds: String) {
-        db.transactionDao().deleteById(*sessionIds)
+    override suspend fun deleteBrandSession(vararg sessionIds: String) {
+        db.brandSessionDao().deleteById(*sessionIds)
     }
 
-    override suspend fun deleteOutdatedTransactions() {
-        db.transactionDao().deleteOutdated()
+    override suspend fun deleteOutdatedSessions() {
+        db.brandSessionDao().deleteOutdated()
     }
 
-    override suspend fun saveTransaction(transactionBundle: TransactionBundle) {
-        db.transactionDao().insert(transactionBundle)
+    override suspend fun saveTransaction(brandSession: BrandSession) {
+        db.brandSessionDao().insert(brandSession)
     }
 
     override suspend fun deleteBrands() = db.brandsDao().deleteAll()

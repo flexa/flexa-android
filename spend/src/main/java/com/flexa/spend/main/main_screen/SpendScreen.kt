@@ -90,7 +90,6 @@ import com.flexa.spend.Spend
 import com.flexa.spend.TokenState
 import com.flexa.spend.domain.CommerceSessionWorker
 import com.flexa.spend.domain.FakeInteractor
-import com.flexa.spend.isNexGen
 import com.flexa.spend.main.assets.AssetDetailViewModel
 import com.flexa.spend.main.assets.AssetDetailsScreen
 import com.flexa.spend.main.assets.AssetInfoSheetHeader
@@ -145,14 +144,14 @@ fun SpendScreen(
             showBottomSheet = true
         }
         val commerceSession by viewModel.commerceSession.collectAsStateWithLifecycle()
-        val showNextGenFlexcode by remember {
-            derivedStateOf { commerceSession.isNexGen() }
+        val showNextGenCard by remember {
+            derivedStateOf { commerceSession?.data?.isLegacy == false }
         }
         val showLegacyFlexcode by viewModel.openLegacyCard.collectAsStateWithLifecycle()
 
         AnimatedVisibility( // Background Dim
             modifier = Modifier.zIndex(.1F),
-            visible = showNextGenFlexcode || showLegacyFlexcode || settingsPopupViewModel.opened,
+            visible = showNextGenCard || showLegacyFlexcode || settingsPopupViewModel.opened,
             enter = fadeIn(animationSpec = tween(durationMillis = 500, delayMillis = 0)),
             exit = fadeOut(animationSpec = tween(durationMillis = 500, delayMillis = 0))
         ) {
@@ -186,6 +185,7 @@ fun SpendScreen(
                         .navigationBarsPadding(),
                     viewModel = viewModel,
                     toBack = { commerceSessionId ->
+                        viewModel.deleteCommerceSessionData()
                         commerceSessionId?.let { id ->
                             CommerceSessionWorker.execute(context, id)
                         }
@@ -205,7 +205,7 @@ fun SpendScreen(
         }
         AnimatedVisibility( // Confirm Payment Card Dim
             modifier = Modifier.zIndex(.4F),
-            visible = showNextGenFlexcode && showBottomSheet,
+            visible = showNextGenCard && showBottomSheet,
             enter = fadeIn(),
             exit = fadeOut()
         ) {
@@ -222,7 +222,7 @@ fun SpendScreen(
         }
         AnimatedVisibility( // Confirm Payment Card
             modifier = Modifier.zIndex(.3F),
-            visible = showNextGenFlexcode,
+            visible = showNextGenCard,
             enter = fadeIn(animationSpec = tween(500)) + scaleIn(
                 initialScale = .95F,
                 animationSpec = tween(500)
@@ -246,9 +246,9 @@ fun SpendScreen(
                 }
             )
 
-            DisposableEffect(showNextGenFlexcode) {
+            DisposableEffect(showNextGenCard) {
                 onDispose {
-                    if (!showNextGenFlexcode) {
+                    if (!showNextGenCard) {
                         viewModel.confirmViewModelStore.clear()
                         if (showBottomSheet && viewModel.sheetScreen is SheetScreen.PaymentDetails) {
                             closeBottomSheet()
@@ -294,7 +294,10 @@ fun SpendScreen(
                             viewModel.closeCommerceSession(context, id)
                         }
                     },
-                    onTransaction = { toBack() },
+                    onTransaction = {
+                        viewModel.deleteCommerceSessionData()
+                        toBack()
+                    },
                     toDetails = {
                         openBottomSheet(SheetScreen.PaymentDetails(it))
                     },
@@ -365,7 +368,7 @@ fun SpendScreen(
                     )
                 }
                 val blur by animateDpAsState(
-                    targetValue = if (showNextGenFlexcode || showLegacyFlexcode)
+                    targetValue = if (showNextGenCard || showLegacyFlexcode)
                         4.dp else 0.dp,
                     animationSpec = tween(
                         durationMillis = 500,
@@ -414,7 +417,7 @@ fun SpendScreen(
             }
         ) { padding ->
             val blur by animateDpAsState(
-                targetValue = if (showNextGenFlexcode || showLegacyFlexcode)
+                targetValue = if (showNextGenCard || showLegacyFlexcode)
                     4.dp else 0.dp,
                 animationSpec = tween(durationMillis = 500, delayMillis = 500),
                 label = "blur"

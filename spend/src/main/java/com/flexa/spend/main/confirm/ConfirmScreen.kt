@@ -98,6 +98,7 @@ import com.flexa.spend.domain.FakeInteractor
 import com.flexa.spend.getAmount
 import com.flexa.spend.getAmountLabel
 import com.flexa.spend.logo
+import com.flexa.spend.main.ui_utils.SpendAsyncImage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -212,16 +213,12 @@ fun ConfirmCard(
                 ) { progressState ->
                     if (!progressState) {
                         if (!previewMode) {
-                            AsyncImage(
+                            SpendAsyncImage(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .clip(RoundedCornerShape(8.dp)),
-                                model = ImageRequest.Builder(LocalContext.current)
-                                    .data(session?.data?.brand?.logoUrl)
-                                    .crossfade(true)
-                                    .crossfade(1000)
-                                    .build(),
-                                contentDescription = null,
+                                imageUrl = session?.data?.brand?.logoUrl,
+                                crossfadeDuration = 1000
                             )
                         } else {
                             Box(

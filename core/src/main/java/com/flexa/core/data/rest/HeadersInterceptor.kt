@@ -1,24 +1,26 @@
 package com.flexa.core.data.rest
 
 import android.os.Build
-import android.util.Log
 import com.flexa.BuildConfig
 import com.flexa.core.Flexa
 import com.flexa.core.data.data.AppInfoProvider
 import com.flexa.core.data.data.TokenProvider
 import com.flexa.core.minutesBetween
+import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
 import okhttp3.Request
 import okhttp3.Response
 import java.net.HttpURLConnection
 import java.time.Instant
 import java.util.UUID
+import java.util.concurrent.CountDownLatch
 
 
-internal const val MINIMUM_REFRESH_MINUTES = 5L
+internal const val MINIMUM_REFRESH_MINUTES = 5
 
 internal class HeadersInterceptor(
-    private val tokenProvider: TokenProvider
+    private val tokenProvider: TokenProvider,
+    private val keepAlive: Boolean = false
 ) : Interceptor {
 
     private val headersBundle by lazy(LazyThreadSafetyMode.NONE) {
@@ -40,26 +42,36 @@ internal class HeadersInterceptor(
             userAgent = userAgent
         )
     }
+    private val countDownLatch = tokenProvider.countDownLatch
 
-    override fun intercept(chain: Interceptor.Chain): Response {
+    override fun intercept(chain: Interceptor.Chain): Response = runBlocking {
         val tokenExpiration = tokenProvider.getTokenExpiration()
         val tokenExpirationMinutes = Instant.now().minutesBetween(tokenExpiration)
-        Log.d("TAG", "intercept: tokenExpiration > $tokenExpirationMinutes minutes")
-        val token = if (tokenExpirationMinutes <= MINIMUM_REFRESH_MINUTES)
-            tokenProvider.getRefreshToken(headersBundle)
-        else tokenProvider.getToken()
+
+        if (tokenExpirationMinutes <= MINIMUM_REFRESH_MINUTES) {
+            synchronized(this) {
+                if (countDownLatch.get() == null) {
+                    countDownLatch.set(CountDownLatch(1))
+                    tokenProvider.getRefreshToken(headersBundle)
+                    countDownLatch.getAndSet(null)?.countDown()
+                } else {
+                    countDownLatch.get()?.await()
+                }
+            }
+        }
+
+        val token = tokenProvider.getToken()
         val request = newRequestWithAccessToken(chain.request(), token)
         var response = chain.proceed(request)
 
         if (response.code == HttpURLConnection.HTTP_FORBIDDEN ||
-            response.code == HttpURLConnection.HTTP_UNAUTHORIZED) {
+            response.code == HttpURLConnection.HTTP_UNAUTHORIZED
+        ) {
             response.close()
-            synchronized(this) {
-                val newAccessToken = tokenProvider.getRefreshToken(headersBundle)
-                response = chain.proceed(newRequestWithAccessToken(request, newAccessToken))
-            }
+            val newAccessToken = tokenProvider.getRefreshToken(headersBundle)
+            response = chain.proceed(newRequestWithAccessToken(request, newAccessToken))
         }
-        return response
+        response
     }
 
     private fun newRequestWithAccessToken(
@@ -72,12 +84,19 @@ internal class HeadersInterceptor(
         )
 
         return request.newBuilder()
-            .header("Accept", "application/vnd.flexa+json")
             .header("Flexa-App", headersBundle.appName)
             .header("User-Agent", headersBundle.userAgent)
-            .header("Content-Type", "application/json")
             .header("Authorization", "Basic $tokenBase64")
             .header("client-trace-id", UUID.randomUUID().toString())
+            .run {
+                if (!keepAlive) {
+                    this.header("Accept", "application/vnd.flexa+json")
+                } else {
+                    this.header("Accept", "text/event-stream")
+                        .header("Cache-Control", "no-cache")
+                        .header("Connection", "keep-alive")
+                }
+            }
             .build()
     }
 }

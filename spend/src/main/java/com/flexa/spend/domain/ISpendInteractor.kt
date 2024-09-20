@@ -1,6 +1,6 @@
 package com.flexa.spend.domain
 
-import com.flexa.core.data.db.TransactionBundle
+import com.flexa.core.data.db.BrandSession
 import com.flexa.core.entity.Account
 import com.flexa.core.entity.AppAccount
 import com.flexa.core.entity.AvailableAsset
@@ -23,10 +23,15 @@ interface ISpendInteractor {
     suspend fun getAssetWithKey(livemode: Boolean): AvailableAsset?
     suspend fun getAssets(pageSize: Int, nextPageToken: String? = null): AssetsResponse
     suspend fun getAssetById(assetId: String): Asset
-    suspend fun getTransactionBySessionId(sessionId: String): TransactionBundle?
-    suspend fun deleteTransaction(sessionId: String)
-    suspend fun deleteOutdatedTransactions()
-    suspend fun saveTransaction(transactionBundle: TransactionBundle)
+    suspend fun getBrandSession(sessionId: String): BrandSession?
+    suspend fun deleteBrandSession(sessionId: String)
+    suspend fun deleteOutdatedSessions()
+    suspend fun saveBrandSession(transactionBundle: BrandSession)
+    suspend fun saveLastSessionId(eventId: String?)
+    suspend fun getLastSessionId(): String?
+    suspend fun getCommerceSession(sessionId: String): CommerceSession.Data
+    suspend fun saveLastEventId(eventId: String)
+    suspend fun getLastEventId(): String?
     suspend fun putAccounts(account: List<com.flexa.core.shared.AppAccount>): PutAppAccountsResponse
     suspend fun getAccount(): Account
     suspend fun deleteNotification(id: String)
@@ -37,7 +42,7 @@ interface ISpendInteractor {
     suspend fun getDbAssetsById(vararg ids: String): List<Asset>
     suspend fun deleteAssets()
     suspend fun saveAssets(items: List<Asset>)
-    suspend fun listenEvents(): Flow<CommerceSessionEvent>
+    suspend fun listenEvents(lastEventId: String?): Flow<CommerceSessionEvent>
     suspend fun savePinnedBrands(itemsIds: List<String>)
     suspend fun getPinnedBrands(): List<String>
     suspend fun getBrands(legacyOnly: Boolean): List<Brand>
@@ -46,7 +51,7 @@ interface ISpendInteractor {
     suspend fun deleteBrands()
     suspend fun createCommerceSession(
         brandId: String, amount: String, assetId: String, paymentAssetId: String
-    ): CommerceSession
+    ): CommerceSession.Data
     suspend fun closeCommerceSession(commerceSessionId: String): String
     suspend fun confirmTransaction(
         commerceSessionId: String, txSignature: String): String

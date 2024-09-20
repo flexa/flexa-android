@@ -4,11 +4,7 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
 import android.os.Build
-import android.renderscript.Allocation
-import android.renderscript.RenderScript
-import android.renderscript.ScriptIntrinsicBlur
 import android.util.Log
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -17,20 +13,17 @@ import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerInputChange
-import androidx.compose.ui.input.pointer.consumePositionChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
-import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.unit.IntOffset
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.flexa.core.data.db.TransactionBundle
+import com.flexa.core.data.db.BrandSession
 import com.flexa.core.entity.AppAccount
 import com.flexa.core.entity.AssetKey
 import com.flexa.core.entity.AvailableAsset
@@ -52,40 +45,6 @@ import java.time.Instant
 import java.util.concurrent.TimeUnit
 import kotlin.math.roundToInt
 import kotlin.math.sign
-
-
-@Suppress("DEPRECATION")
-internal fun Bitmap.blur(context: Context, radius: Float): Bitmap {
-    // Create a new bitmap to hold the blurred result
-    val blurredBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-
-    // Create a RenderScript context
-    val rs = RenderScript.create(context)
-
-    // Create a script to perform the blur effect
-    val script = ScriptIntrinsicBlur.create(rs, android.renderscript.Element.U8_4(rs))
-
-    // Convert the input bitmap to a RenderScript allocation
-    val input = Allocation.createFromBitmap(rs, this)
-
-    // Convert the output bitmap to a RenderScript allocation
-    val output = Allocation.createFromBitmap(rs, blurredBitmap)
-
-    // Set the blur radius
-    script.setRadius(radius)
-
-    // Apply the blur effect
-    script.setInput(input)
-    script.forEach(output)
-
-    // Copy the result back into the output bitmap
-    output.copyTo(blurredBitmap)
-
-    // Release the RenderScript resources
-    rs.destroy()
-
-    return blurredBitmap
-}
 
 internal fun String?.toColor(): Color {
     return if (this.isNullOrEmpty()) Color.Gray else
@@ -120,7 +79,7 @@ internal fun SelectedAsset.isSelected(accountId: String, assetId: String): Boole
 
 internal fun String?.getAmount(): Double {
     val regex = """\d+(\.\d+)?""".toRegex()
-    return regex.find(this?:"0")?.value?.toDoubleOrNull()?:0.0
+    return regex.find(this ?: "0")?.value?.toDoubleOrNull() ?: 0.0
 }
 
 internal fun AvailableAsset.logo(): String? =
@@ -131,9 +90,7 @@ internal fun CommerceSession.label(): String? =
     this.data?.debits?.firstOrNull { it?.label != null }?.label
 
 internal fun CommerceSession.transaction(): CommerceSession.Data.Transaction? =
-    this.data?.transactions?.firstOrNull {
-        it?.status == "requested"
-    }
+    this.data?.transaction()
 
 @Composable
 fun rememberTOTP(secret: String, length: Int): State<TimeBasedOneTimePasswordGenerator> {
@@ -162,30 +119,41 @@ fun rememberTOTP(secret: String, length: Int): State<TimeBasedOneTimePasswordGen
     }
 }
 
-@Composable
-fun rememberSelectedAsset(): State<SelectedAsset?> {
-    val previewMode = LocalInspectionMode.current
-    return if (!previewMode) Spend.selectedAsset.collectAsStateWithLifecycle()
-    else remember { mutableStateOf(MockFactory.getMockSelectedAsset()) }
+fun CommerceSession.isCompleted(): Boolean {
+    return this.data?.status == "completed"
 }
 
 fun CommerceSession?.isValid(): Boolean {
-    return this?.data != null && !this.data?.transactions.isNullOrEmpty() &&
-            this.data?.status != "closed" &&
-            this.data?.transactions?.any { it?.status == "requested" } == true
+    return this?.data?.isValid() ?: false
 }
 
-fun CommerceSession?.isNexGen() =
-    if (this == null) {
+fun CommerceSession.Data?.isValid(): Boolean {
+    val nonNull = this != null
+    val rightStatus = this?.status != null && this.status != "closed"
+    val transaction = this?.transactions?.firstOrNull {
+        it?.status == "requested" ||
+                it?.status == "approved"
+    }
+    val notExpired = transaction?.notExpired() ?: false
+    return nonNull && rightStatus && transaction != null && notExpired
+}
+
+fun CommerceSession.Data?.transaction(): CommerceSession.Data.Transaction? {
+    return this?.transactions?.firstOrNull {
+        it?.status == "requested" ||
+                it?.status == "approved"
+    }
+}
+
+fun CommerceSession.Data.Transaction?.notExpired(): Boolean {
+    return if (this == null) {
         false
     } else {
-        this.data?.brand?.legacyFlexcodes.isNullOrEmpty()
+        val expiresAt = this.expiresAt ?: 0
+        val currentTimestamp = System.currentTimeMillis() / 1000L
+        expiresAt > currentTimestamp
     }
-
-fun CommerceSession?.isLegacy() = !this.isNexGen()
-
-fun CommerceSession?.isCompleted() =
-    this?.type == "commerce_session.completed"
+}
 
 fun CommerceSession?.containsAuthorization() =
     if (this == null) {
@@ -208,7 +176,8 @@ fun CommerceSession?.toTransaction(): Transaction? {
         null
     } else {
         val currentTransaction = this.data?.transactions?.firstOrNull {
-            it?.status == "requested"
+            it?.status == "requested" ||
+                    it?.status == "approved"
         }
         Transaction(
             commerceSessionId = this.data?.id ?: "",
@@ -227,41 +196,41 @@ fun CommerceSession?.toTransaction(): Transaction? {
         )
     }
 }
-fun CommerceSession?.toTransactionBundle(): TransactionBundle? {
+
+fun CommerceSession.Data?.toBrandSession(): BrandSession? {
     return if (this == null) {
         null
     } else {
-        val transaction = this.data?.transactions?.firstOrNull {
-            it?.status == "requested"
+        val transaction = this.transactions?.firstOrNull {
+            it?.status == "requested" ||
+                    it?.status == "approved"
         }
-        val sessionId = data?.id?:""
-        val transactionId = transaction?.id?:""
+        val sessionId = id
+        val transactionId = transaction?.id ?: ""
         val date =
             transaction?.expiresAt ?: (Instant.now().toEpochMilli() / 1000)
-        TransactionBundle(
-            transactionId, sessionId, date
-        )
+        BrandSession(sessionId = sessionId, transactionId = transactionId, date = date)
     }
 }
 
 internal fun Context.getAppName(): String {
-      return  try {
-          val application = this.applicationContext
-            val packageInfo = when {
-                Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ->
-                    application.packageManager
-                        .getPackageInfo(application.packageName, 0)
+    return try {
+        val application = this.applicationContext
+        val packageInfo = when {
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ->
+                application.packageManager
+                    .getPackageInfo(application.packageName, 0)
 
-                else -> application.packageManager
-                    .getPackageInfo(
-                        application.packageName,
-                        PackageManager.PackageInfoFlags.of(0)
-                    )
-            }
-            application.getString(packageInfo.applicationInfo.labelRes)
-        } catch (e: Exception) {
-            "Inaccessible"
+            else -> application.packageManager
+                .getPackageInfo(
+                    application.packageName,
+                    PackageManager.PackageInfoFlags.of(0)
+                )
         }
+        application.getString(packageInfo.applicationInfo.labelRes)
+    } catch (e: Exception) {
+        "Inaccessible"
+    }
 }
 
 internal fun Context.openEmail() {
@@ -340,7 +309,7 @@ internal fun Modifier.dragToReorder(
                     listOffset = numberOfItems * offsetSign
                 }
                 // Consume the gesture event, not passed to external
-                change.consumePositionChange()
+                if (change.positionChange() != Offset.Zero) change.consume()
             }
             val onDragEnd = {
                 launch {

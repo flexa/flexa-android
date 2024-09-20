@@ -7,8 +7,8 @@ import androidx.room.TypeConverters
 
 @Database(
     entities = [
-        Asset::class, Brand::class, TransactionBundle::class
-    ], version = 2,
+        Asset::class, Brand::class, BrandSession::class
+    ], version = 5,
     exportSchema = false
 )
 @TypeConverters(StringListConverter::class, LegacyFlexcodeConverter::class)
@@ -18,5 +18,5 @@ internal abstract class Database : RoomDatabase() {
 
     abstract fun brandsDao(): BrandDao
 
-    abstract fun transactionDao(): TransactionDao
+    abstract fun brandSessionDao(): BrandSessionDao
 }

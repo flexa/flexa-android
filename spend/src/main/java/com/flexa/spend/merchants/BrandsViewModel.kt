@@ -101,7 +101,7 @@ class BrandsViewModel(
 
             val unmatchedItems = unmatchedBrands.map { item ->
                 BrandListItem(id = item.id, isDraggable = false, brand = item)
-            }.sortedBy { it.brand.name }
+            }
 
             _itemsA.clear()
             _itemsA.addAll(matchedItems)

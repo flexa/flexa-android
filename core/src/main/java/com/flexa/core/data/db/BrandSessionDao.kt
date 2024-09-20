@@ -9,29 +9,30 @@ import androidx.room.PrimaryKey
 import androidx.room.Query
 
 @Dao
-internal interface TransactionDao {
-    @Query("SELECT * FROM transactions WHERE session_id IN (:sessionId)")
-    fun getBySessionId(sessionId: String): List<TransactionBundle>
+internal interface BrandSessionDao {
+    @Query("SELECT * FROM brand_session WHERE session_id IN (:sessionId)")
+    fun getBySessionId(sessionId: String): List<BrandSession>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insert(item: TransactionBundle)
+    fun insert(item: BrandSession)
 
-    @Query("DELETE FROM transactions")
+    @Query("DELETE FROM brand_session")
     fun deleteAll()
 
-    @Query("DELETE FROM transactions WHERE transactionId IN (:sessionId)")
+    @Query("DELETE FROM brand_session WHERE session_id IN (:sessionId)")
     fun deleteById(vararg sessionId: String)
 
-    @Query("DELETE FROM transactions WHERE date < strftime('%s', 'now')")
+    @Query("DELETE FROM brand_session WHERE date < strftime('%s', 'now')")
     fun deleteOutdated()
 }
 
-@Entity(tableName = "transactions")
-class TransactionBundle(
+@Entity(tableName = "brand_session")
+class BrandSession(
     @PrimaryKey
-    val transactionId: String,
     @ColumnInfo(name = "session_id")
     val sessionId: String,
+    @ColumnInfo(name = "transaction_id")
+    val transactionId: String,
     @ColumnInfo(name = "date")
     val date: Long,
 )

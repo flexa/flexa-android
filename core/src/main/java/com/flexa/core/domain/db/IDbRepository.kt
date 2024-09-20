@@ -1,6 +1,6 @@
 package com.flexa.core.domain.db
 
-import com.flexa.core.data.db.TransactionBundle
+import com.flexa.core.data.db.BrandSession
 import com.flexa.core.shared.Asset
 import com.flexa.core.shared.Brand
 
@@ -21,11 +21,11 @@ interface IDbRepository {
 
     suspend fun saveBrands(items: List<Brand>)
 
-    suspend fun getTransactionBySessionId(sessionId: String): TransactionBundle?
+    suspend fun getBrandSession(sessionId: String): BrandSession?
 
-    suspend fun deleteTransactions(vararg sessionIds: String)
+    suspend fun deleteBrandSession(vararg sessionIds: String)
 
-    suspend fun deleteOutdatedTransactions()
+    suspend fun deleteOutdatedSessions()
 
-    suspend fun saveTransaction(transactionBundle: TransactionBundle)
+    suspend fun saveTransaction(brandSession: BrandSession)
 }

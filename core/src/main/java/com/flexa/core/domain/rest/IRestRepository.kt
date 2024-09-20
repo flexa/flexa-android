@@ -30,19 +30,22 @@ interface IRestRepository {
     suspend fun deleteToken(tokenId: String): Int
     suspend fun deleteAccount(): Int
     suspend fun deleteNotification(id: String)
-    suspend fun listenEvents(): Flow<CommerceSessionEvent>
+    suspend fun listenEvents(lastEventId: String?): Flow<CommerceSessionEvent>
     suspend fun getBrands(legacyOnly: Boolean?, startingAfter: String?): BrandsResponse
     suspend fun createCommerceSession(
         brandId: String, amount: String, assetId: String, paymentAssetId: String
-    ): CommerceSession
+    ): CommerceSession.Data
 
     suspend fun closeCommerceSession(commerceSessionId: String): String
     suspend fun confirmTransaction(
         commerceSessionId: String, txSignature: String
     ): String
+
     suspend fun patchCommerceSession(
         commerceSessionId: String, paymentAssetId: String
     ): String
+
+    suspend fun getCommerceSession(sessionId: String): CommerceSession.Data
 
     suspend fun getQuote(assetId: String, amount: String, unitOfAccount: String): Quote
 }

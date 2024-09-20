@@ -3,8 +3,6 @@ package com.flexa.spend
 import android.app.Activity
 import android.content.Context
 import android.util.Log
-import androidx.compose.animation.core.EaseOutBack
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -64,26 +62,10 @@ sealed class Route(val name: String) {
 
 }
 
-
-private const val duration = 300
-private const val delay = 100
-
-val enterTransition =
-    fadeIn(
-        animationSpec = tween(durationMillis = duration, delayMillis = delay)
-    ) + scaleIn(
-        animationSpec = tween(
-            durationMillis = duration,
-            easing = EaseOutBack, delayMillis = delay
-        ), initialScale = .9F
-    )
-
-val exitTransition =
-    fadeOut(animationSpec = tween(duration)) +
-            scaleOut(
-                animationSpec = tween(durationMillis = duration / 2),
-                targetScale = .9F
-            )
+val enterTransition = fadeIn() + scaleIn(initialScale = 1.1F)
+val popEnterTransition = fadeIn() + scaleIn(initialScale = .9F)
+val exitTransition = fadeOut() + scaleOut(targetScale = .9F)
+val popExitTransition = fadeOut() + scaleOut(targetScale = 1.1F)
 
 fun NavGraphBuilder.spendNavGraph(
     modifier: Modifier = Modifier,
@@ -140,8 +122,8 @@ fun NavGraphBuilder.spendNavGraph(
             Route.Welcome.name,
             enterTransition = { enterTransition },
             exitTransition = { exitTransition },
-            popEnterTransition = { enterTransition },
-            popExitTransition = { exitTransition }
+            popEnterTransition = { popEnterTransition },
+            popExitTransition = { popExitTransition }
         ) {
             val context = LocalContext.current
             Welcome(
@@ -163,15 +145,18 @@ fun NavGraphBuilder.spendNavGraph(
             Route.Pay.name,
             enterTransition = { enterTransition },
             exitTransition = { exitTransition },
-            popEnterTransition = { enterTransition },
-            popExitTransition = { exitTransition }
+            popEnterTransition = { popEnterTransition },
+            popExitTransition = { popExitTransition }
         ) {
             val context = LocalContext.current
             SpendScreen(
                 modifier = modifier,
                 viewModel = viewModel(
                     initializer = {
-                        SpendViewModel(Spend.interactor)
+                        SpendViewModel(
+                            interactor = Spend.interactor,
+                            selectedAsset = Spend.selectedAsset
+                        )
                     }, viewModelStoreOwner = context.getActivity() ?: it
                 ),
                 assetsViewModel = viewModel(initializer = {
@@ -203,8 +188,8 @@ fun NavGraphBuilder.spendNavGraph(
             Route.Brands.name,
             enterTransition = { enterTransition },
             exitTransition = { exitTransition },
-            popEnterTransition = { enterTransition },
-            popExitTransition = { exitTransition }
+            popEnterTransition = { popEnterTransition },
+            popExitTransition = { popExitTransition }
         ) {
             val context = LocalContext.current
             MerchantsEdit(
@@ -219,14 +204,14 @@ fun NavGraphBuilder.spendNavGraph(
             Route.InputAmount.name,
             enterTransition = { enterTransition },
             exitTransition = { exitTransition },
-            popEnterTransition = { enterTransition },
-            popExitTransition = { exitTransition }
+            popEnterTransition = { popEnterTransition },
+            popExitTransition = { popExitTransition }
         ) {
             val context = LocalContext.current
             InputAmountScreen(
                 modifier = modifier,
                 viewModel = viewModel(),
-                spendViewModel =viewModel(context.getActivity() ?: it),
+                spendViewModel = viewModel(context.getActivity() ?: it),
                 assetsViewModel = viewModel(context.getActivity() ?: it),
                 toUrl = { url -> navController.navigate(Route.WebView.createRoute(url)) },
                 toBack = { navController.navigateUp() }
@@ -236,8 +221,8 @@ fun NavGraphBuilder.spendNavGraph(
             Route.Account.name,
             enterTransition = { enterTransition },
             exitTransition = { exitTransition },
-            popEnterTransition = { enterTransition },
-            popExitTransition = { exitTransition }
+            popEnterTransition = { popEnterTransition },
+            popExitTransition = { popExitTransition }
         ) {
             val context = LocalContext.current
             ManageAccount(
@@ -263,8 +248,8 @@ fun NavGraphBuilder.spendNavGraph(
             Route.DataAndPrivacy.name,
             enterTransition = { enterTransition },
             exitTransition = { exitTransition },
-            popEnterTransition = { enterTransition },
-            popExitTransition = { exitTransition }
+            popEnterTransition = { popEnterTransition },
+            popExitTransition = { popExitTransition }
         ) {
             val context = LocalContext.current
             DataAndPrivacy(
@@ -281,8 +266,8 @@ fun NavGraphBuilder.spendNavGraph(
             Route.DeleteAccount.name,
             enterTransition = { enterTransition },
             exitTransition = { exitTransition },
-            popEnterTransition = { enterTransition },
-            popExitTransition = { exitTransition }
+            popEnterTransition = { popEnterTransition },
+            popExitTransition = { popExitTransition }
         ) {
             val context = LocalContext.current
             DeleteAccount(
@@ -296,8 +281,8 @@ fun NavGraphBuilder.spendNavGraph(
             Route.ConfirmDeleteAccount.name,
             enterTransition = { enterTransition },
             exitTransition = { exitTransition },
-            popEnterTransition = { enterTransition },
-            popExitTransition = { exitTransition }
+            popEnterTransition = { popEnterTransition },
+            popExitTransition = { popExitTransition }
         ) {
             val context = LocalContext.current
             ConfirmDeleteAccount(
@@ -315,8 +300,8 @@ fun NavGraphBuilder.spendNavGraph(
             arguments = Route.WebView.arguments,
             enterTransition = { enterTransition },
             exitTransition = { exitTransition },
-            popEnterTransition = { enterTransition },
-            popExitTransition = { exitTransition }
+            popEnterTransition = { popEnterTransition },
+            popExitTransition = { popExitTransition }
         ) { entry ->
             val url = entry.arguments?.getString(Route.WebView.KEY) ?: ""
             WebView(

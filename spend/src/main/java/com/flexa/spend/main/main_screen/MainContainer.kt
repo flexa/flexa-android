@@ -34,7 +34,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -73,8 +72,8 @@ import com.flexa.spend.domain.FakeInteractor
 import com.flexa.spend.main.NoAssetsCard
 import com.flexa.spend.main.assets.AssetsState
 import com.flexa.spend.main.assets.AssetsViewModel
+import com.flexa.spend.main.ui_utils.rememberSelectedAsset
 import com.flexa.spend.merchants.BrandsViewModel
-import com.flexa.spend.rememberSelectedAsset
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -332,7 +331,6 @@ fun Spend(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Preview
 @Preview(uiMode = Configuration.UI_MODE_NIGHT_YES or Configuration.UI_MODE_TYPE_NORMAL)
 @Composable

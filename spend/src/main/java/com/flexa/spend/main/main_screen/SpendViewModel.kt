@@ -18,6 +18,7 @@ import com.flexa.core.entity.CommerceSessionEvent
 import com.flexa.core.entity.Notification
 import com.flexa.core.shared.ApiErrorHandler
 import com.flexa.core.shared.Brand
+import com.flexa.core.shared.ConnectionState
 import com.flexa.core.shared.SelectedAsset
 import com.flexa.core.shared.filterAssets
 import com.flexa.core.toDate
@@ -25,10 +26,11 @@ import com.flexa.spend.Spend
 import com.flexa.spend.containsAuthorization
 import com.flexa.spend.domain.CommerceSessionWorker
 import com.flexa.spend.domain.ISpendInteractor
-import com.flexa.spend.isLegacy
+import com.flexa.spend.isCompleted
 import com.flexa.spend.isValid
+import com.flexa.spend.toBrandSession
 import com.flexa.spend.toTransaction
-import com.flexa.spend.toTransactionBundle
+import com.flexa.spend.transaction
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -38,15 +40,25 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.Instant
 
+internal const val ZERO = "0"
+private const val RETRY_COUNT = 5
+private const val RETRY_DELAY = 1000L
+private const val COMPLETE_SESSION_TIMEOUT = 60_000L
+
 class SpendViewModel(
     private val interactor: ISpendInteractor = Spend.interactor,
+    private val selectedAsset: StateFlow<SelectedAsset?> = MutableStateFlow(null),
 ) : ViewModel() {
 
     companion object {
@@ -75,12 +87,13 @@ class SpendViewModel(
     val errorHandler = ApiErrorHandler()
     var openLegacyCard = MutableStateFlow(false)
 
+    private var lastSessionError = false
+
     init {
         initCachedAppAccount()
         listenConnection()
         listenCommerceSession()
         listenTransactionSent()
-        deleteOutdatedTransactions()
     }
 
     override fun onCleared() {
@@ -94,6 +107,7 @@ class SpendViewModel(
     }
 
     internal fun deleteCommerceSessionData() {
+        deleteLastSessionId()
         viewModelScope.launch {
             _commerceSession.emit(null)
         }
@@ -109,12 +123,16 @@ class SpendViewModel(
                 interactor.createCommerceSession(
                     brandId, amount, assetId, paymentAssetId
                 )
-            }.onFailure {
-                stopProgress()
             }
+                .onFailure { stopProgress() }
                 .onSuccess { session ->
-                    if (session.isValid())
-                        _commerceSession.emit(session)
+                    interactor.deleteOutdatedSessions()
+                    if (session.isValid()) {
+                        saveBrandSession(session)
+                        val cs = session.copy(isLegacy = true)
+                        saveLastSessionId(cs.id)
+                        _commerceSession.emit(CommerceSession(data = cs))
+                    }
                     initCloseSessionTimeout()
                 }
 
@@ -125,7 +143,7 @@ class SpendViewModel(
     internal fun initCloseSessionTimeout() {
         timeoutJob = viewModelScope.launch {
             _timeout.value = false
-            delay(60_000)
+            delay(COMPLETE_SESSION_TIMEOUT)
             if (isActive) {
                 _timeout.value = true
             }
@@ -138,6 +156,7 @@ class SpendViewModel(
     }
 
     internal fun closeCommerceSession(context: Context, sessionId: String) {
+        deleteLastSessionId()
         stopProgress()
         CommerceSessionWorker.execute(context, sessionId)
     }
@@ -164,33 +183,63 @@ class SpendViewModel(
         }
     }
 
+    private suspend fun isLegacy(
+        commerceSession: CommerceSession.Data?
+    ): Boolean {
+        val brandSession = interactor.getBrandSession(commerceSession?.id ?: "")
+        return brandSession != null
+    }
+
     private fun listenEvents() {
         viewModelScope.launch {
-            interactor.listenEvents()
+            checkLastSession()
+            interactor.listenEvents(interactor.getLastEventId())
                 .flowOn(Dispatchers.IO)
                 .retryWhen { _, attempt ->
-                    delay(1000)
-                    attempt < 100
+                    delay(RETRY_DELAY)
+                    attempt < RETRY_COUNT
                 }
                 .catch { Log.e(null, "listenEvents: ", it) }
+                .onEach { event -> event.eventId?.let { interactor.saveLastEventId(it) } }
                 .collect { event ->
                     when (event) {
                         is CommerceSessionEvent.Created -> {
-                            if (event.session.isValid())
-                                _commerceSession.emit(event.session)
+                            if (event.session.isValid()) {
+                                val updatedSessionEvent = event.session.copy(
+                                    data = event.session.data?.copy(isLegacy = isLegacy(event.session.data))
+                                )
+                                saveLastSessionId(updatedSessionEvent.data?.id)
+                                _commerceSession.emit(updatedSessionEvent)
+                            }
                         }
 
                         is CommerceSessionEvent.Updated -> {
                             if (event.session.isValid()) {
-                                _commerceSession.emit(event.session)
+                                val updatedSessionEvent = event.session.copy(
+                                    data = event.session.data?.copy(isLegacy = isLegacy(event.session.data))
+                                )
+                                if (updatedSessionEvent.data?.isLegacy == false && updatedSessionEvent.isCompleted()) {
+                                    // Close Next-Gen session card
+                                    _commerceSession.emit(null)
+                                } else {
+                                    _commerceSession.emit(updatedSessionEvent)
+                                }
                             }
                         }
 
-                        is CommerceSessionEvent.Canceled -> {
-                            _commerceSession.emit(null)
+                        is CommerceSessionEvent.Completed -> {
+                            if (event.session.isValid()) {
+                                val updatedSessionEvent = event.session.copy(
+                                    data = event.session.data?.copy(isLegacy = isLegacy(event.session.data))
+                                )
+                                if (updatedSessionEvent.data?.isLegacy == false) {
+                                    // Close Next-Gen session card
+                                    deleteCommerceSessionData()
+                                } else {
+                                    _commerceSession.emit(updatedSessionEvent)
+                                }
+                            }
                         }
-
-                        else -> {}
                     }
                 }
         }
@@ -204,6 +253,7 @@ class SpendViewModel(
                     getAccount()
                     listenFlexaAppAccounts()
                     listenEvents()
+                    checkLastSessionError()
                 }
         }
     }
@@ -217,7 +267,6 @@ class SpendViewModel(
     private fun listenFlexaAppAccounts() {
         viewModelScope.launch {
             Flexa.appAccounts.collect {
-                Log.d("TAG", "listenFlexaAppAccounts: $it")
                 runCatching {
                     val assets = interactor.getAllAssets()
                     interactor.deleteAssets()
@@ -237,14 +286,8 @@ class SpendViewModel(
     private fun listenCommerceSession() {
         viewModelScope.launch {
             _commerceSession.collect { cs ->
-                val legacy = cs.isLegacy()
+                val legacy = cs?.data?.isLegacy ?: false
                 val containsAuthorization = cs.containsAuthorization()
-                if (legacy) {
-                    cs?.toTransactionBundle()?.let {
-                        interactor.saveTransaction(it)
-                    }
-                }
-
                 when {
                     legacy && containsAuthorization -> {
                         openLegacyCard.value = true
@@ -265,33 +308,85 @@ class SpendViewModel(
         if (Flexa.context != null) {
             Spend.transactionSent = { id, txSignature ->
                 viewModelScope.launch {
-                    interactor.getTransactionBySessionId(id)?.let { transaction ->
-                        runCatching {
-                            interactor.confirmTransaction(transaction.transactionId, txSignature)
-                        }.onFailure { Log.e(null, "listenTransactionSent: ", it) }
-                            .onSuccess {
-
+                    interactor.getBrandSession(id)?.let { transaction ->
+                        interactor.getConnectionListener()
+                            ?.filter { it == ConnectionState.Available }
+                            ?.map {
+                                interactor.confirmTransaction(
+                                    transaction.transactionId,
+                                    txSignature
+                                )
                             }
+                            ?.retryWhen { _, attempt ->
+                                delay(RETRY_DELAY)
+                                attempt < RETRY_COUNT
+                            }
+                            ?.catch { Log.e(null, "listenTransactionSent: ", it) }
+                            ?.collect { }
                     }
                 }
             }
         }
     }
 
+    private fun saveLastSessionId(sessionId: String?) {
+        viewModelScope.launch { interactor.saveLastSessionId(sessionId) }
+    }
+
+    private fun deleteLastSessionId() {
+        viewModelScope.launch { interactor.saveLastSessionId(null) }
+    }
+
+    private fun checkLastSessionError() {
+        if (lastSessionError) {
+            viewModelScope.launch { checkLastSession() }
+        }
+    }
+
+    private suspend fun checkLastSession() {
+        flow {
+            val id = interactor.getLastSessionId()
+            emit(id?.let { interactor.getCommerceSession(it) })
+        }
+            .retryWhen { _, attempt ->
+                delay(RETRY_DELAY)
+                attempt < RETRY_COUNT
+            }
+            .catch { lastSessionError = true }
+            .filter { it != null }
+            .filter { it.isValid() }
+            .onEach {
+                val selectedAssetId = selectedAsset.value?.asset?.assetId ?: ""
+                if (it.transaction()?.asset != selectedAssetId) {
+                    interactor.patchCommerceSession(
+                        it?.id ?: "", selectedAssetId
+                    )
+                }
+            }.collect { cs ->
+                lastSessionError = false
+                val updatedSessionEvent = CommerceSession(
+                    data = cs?.copy(isLegacy = isLegacy(cs))
+                )
+                if (updatedSessionEvent.data?.isLegacy == false && updatedSessionEvent.isCompleted()) {
+                    _commerceSession.emit(null)
+                } else {
+                    _commerceSession.emit(updatedSessionEvent)
+                }
+            }
+    }
+
+    private suspend fun saveBrandSession(session: CommerceSession.Data?) {
+        session?.toBrandSession()?.let { interactor.saveBrandSession(it) }
+    }
+
     private fun getDuration(date: String): Duration {
         val serverTime = date.toDate().toInstant()
         val clientTime = Instant.now()
         val duration = Duration.between(serverTime, clientTime)
-        Log.d("TAG", "getDuration: server: $serverTime")
-        Log.d("TAG", "getDuration: local : $clientTime")
-        Log.d("TAG", "getDuration: >${duration.toMillis()}<")
+        Log.d(null, "getDuration: server: $serverTime")
+        Log.d(null, "getDuration: local : $clientTime")
+        Log.d(null, "getDuration: >${duration.toMillis()}<")
         return duration
-    }
-
-    private fun deleteOutdatedTransactions() {
-        viewModelScope.launch {
-            interactor.deleteOutdatedTransactions()
-        }
     }
 }
 

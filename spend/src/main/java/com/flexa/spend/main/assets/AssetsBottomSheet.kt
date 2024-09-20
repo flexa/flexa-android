@@ -62,7 +62,7 @@ import com.flexa.spend.R
 import com.flexa.spend.Spend
 import com.flexa.spend.domain.FakeInteractor
 import com.flexa.spend.isSelected
-import com.flexa.spend.rememberSelectedAsset
+import com.flexa.spend.main.ui_utils.rememberSelectedAsset
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
