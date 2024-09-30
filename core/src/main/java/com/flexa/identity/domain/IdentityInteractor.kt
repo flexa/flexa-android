@@ -5,6 +5,7 @@ import com.flexa.core.data.rest.RestRepository.Companion.json
 import com.flexa.core.data.storage.SecuredPreferences
 import com.flexa.core.domain.db.DbInteractor
 import com.flexa.core.domain.rest.RestInteractor
+import com.flexa.core.entity.ExchangeRate
 import com.flexa.core.entity.PutAppAccountsResponse
 import com.flexa.core.entity.TokenPatch
 import com.flexa.core.entity.TokensResponse
@@ -16,9 +17,9 @@ import com.flexa.core.shared.FlexaConstants
 import com.flexa.identity.create_id.AccountsRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.util.UUID
 
 internal class IdentityInteractor(
     private val restInteractor: RestInteractor,
@@ -39,16 +40,17 @@ internal class IdentityInteractor(
     }
 
     override suspend fun clearLoginData() = withContext(Dispatchers.IO) {
-        deleteAssets()
-        deleteBrands()
-        preferences.remove(FlexaConstants.EMAIL)
-        preferences.remove(FlexaConstants.TOKEN)
-        preferences.remove(FlexaConstants.TOKEN_ID)
-        preferences.remove(FlexaConstants.VERIFIER)
-        preferences.remove(FlexaConstants.TOKEN_EXPIRATION)
-        preferences.remove(FlexaConstants.APP_ACCOUNTS)
-        preferences.remove(FlexaConstants.ASSET_KEY)
-        preferences.remove(FlexaConstants.ASSET_TESTMODE_KEY)
+        dbInteractor.clearAllTables()
+
+        val pubKey = preferences.getPublishableKey()
+        val uniqueId = preferences.getUniqueIdentifier() ?: UUID.randomUUID().toString()
+        val placesToPayTheme = preferences.getString(FlexaConstants.PLACES_TO_PAY_THEME)
+
+        preferences.clearPreferences()
+
+        preferences.savePublishableKey(pubKey)
+        preferences.saveUniqueIdentifier(uniqueId)
+        preferences.savePlacesToPayTheme(placesToPayTheme)
     }
 
     override suspend fun getAllAssets(pageSize: Int): List<Asset> {
@@ -85,6 +87,21 @@ internal class IdentityInteractor(
         dbInteractor.saveBrands(items)
 
     override suspend fun deleteBrands() = dbInteractor.deleteBrands()
+    override suspend fun getExchangeRates(
+        assetIds: List<String>,
+        unitOfAccount: String
+    ): List<ExchangeRate> = withContext(Dispatchers.IO) {
+        restInteractor.getExchangeRates(assetIds, unitOfAccount)
+    }
+
+    override suspend fun saveExchangeRates(items: List<ExchangeRate>) =
+        withContext(Dispatchers.IO) {
+            dbInteractor.saveExchangeRates(items)
+        }
+
+    override suspend fun deleteExchangeRates() = withContext(Dispatchers.IO) {
+        dbInteractor.deleteExchangeRates()
+    }
 
     override suspend fun tokens(email: String): TokensResponse = withContext(Dispatchers.IO) {
         val verifier = PikSeeProvider.getCodeVerifier()

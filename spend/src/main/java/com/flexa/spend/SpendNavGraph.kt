@@ -29,18 +29,17 @@ import com.flexa.spend.main.flexa_id.DataAndPrivacy
 import com.flexa.spend.main.flexa_id.DeleteAccount
 import com.flexa.spend.main.flexa_id.ManageAccount
 import com.flexa.spend.main.keypad.InputAmountScreen
+import com.flexa.spend.main.keypad.InputAmountViewModel
 import com.flexa.spend.main.main_screen.SpendScreen
 import com.flexa.spend.main.main_screen.SpendViewModel
 import com.flexa.spend.main.web_view.WebView
 import com.flexa.spend.merchants.BrandsViewModel
 import com.flexa.spend.merchants.MerchantsEdit
-import com.flexa.spend.welcome.Welcome
 
 const val PAY_ROUTE = "com.flexa.spend"
 
 sealed class Route(val name: String) {
     data object Entrance : Route("$PAY_ROUTE.entrance")
-    data object Welcome : Route("$PAY_ROUTE.welcome")
     data object Pay : Route("$PAY_ROUTE.pay")
     data object Brands : Route("$PAY_ROUTE.brands")
     data object InputAmount : Route("$PAY_ROUTE.input_amount")
@@ -119,29 +118,6 @@ fun NavGraphBuilder.spendNavGraph(
             )
         }
         composable(
-            Route.Welcome.name,
-            enterTransition = { enterTransition },
-            exitTransition = { exitTransition },
-            popEnterTransition = { popEnterTransition },
-            popExitTransition = { popExitTransition }
-        ) {
-            val context = LocalContext.current
-            Welcome(
-                modifier = modifier,
-                toStoresAndRestaurants = {},
-                toLogin = {
-                    if (context is Activity)
-                        Flexa.buildIdentity().build().open(context)
-                },
-                toBack = { close(context, navController) },
-                toPay = {
-                    navController.navigate(Route.Pay.name) {
-                        popUpTo(PAY_ROUTE) { inclusive = true }
-                    }
-                }
-            )
-        }
-        composable(
             Route.Pay.name,
             enterTransition = { enterTransition },
             exitTransition = { exitTransition },
@@ -210,7 +186,7 @@ fun NavGraphBuilder.spendNavGraph(
             val context = LocalContext.current
             InputAmountScreen(
                 modifier = modifier,
-                viewModel = viewModel(),
+                viewModel = viewModel<InputAmountViewModel>(),
                 spendViewModel = viewModel(context.getActivity() ?: it),
                 assetsViewModel = viewModel(context.getActivity() ?: it),
                 toUrl = { url -> navController.navigate(Route.WebView.createRoute(url)) },

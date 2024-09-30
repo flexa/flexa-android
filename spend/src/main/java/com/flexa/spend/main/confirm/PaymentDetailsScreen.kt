@@ -18,8 +18,8 @@ import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material3.BottomSheetDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -46,19 +46,19 @@ import com.flexa.spend.label
 import com.flexa.spend.main.assets.AssetInfoFooter
 import com.flexa.spend.transaction
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PaymentDetailsScreen(
     modifier: Modifier = Modifier,
-    sessionFlow: SharedFlow<CommerceSession?>,
+    sessionFlow: StateFlow<CommerceSession?>,
     color: Color = BottomSheetDefaults.ContainerColor,
     toBack: () -> Unit,
     toLearnMore: () -> Unit,
 ) {
 
-    val session by sessionFlow.collectAsStateWithLifecycle(initialValue = null)
+    val session by sessionFlow.collectAsStateWithLifecycle()
 
     Column(
         modifier = modifier.background(color),
@@ -175,7 +175,7 @@ fun PaymentDetailsScreen(
             }
         )
         Spacer(modifier = Modifier.height(8.dp))
-        Divider(
+        HorizontalDivider(
             modifier = Modifier.padding(horizontal = 16.dp),
             color = palette.outline.copy(alpha = .5F),
             thickness = 1.dp

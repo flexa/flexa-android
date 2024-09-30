@@ -18,6 +18,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
@@ -30,9 +31,10 @@ class ConfirmViewModel(
     val buttonsBlocked by derivedStateOf { payProgress || patchProgress }
     var completed by mutableStateOf(false)
     val errorHandler = ApiErrorHandler()
-    val enough = MutableStateFlow(true)
     val transaction = MutableStateFlow<Transaction?>(null)
     var patchProgress by mutableStateOf(false)
+    private val _showBalanceRestrictions = MutableStateFlow<Boolean>(false)
+    val showBalanceRestrictions = _showBalanceRestrictions.asStateFlow()
     private var watchDefaultAssetJob: Job? = null
     private var intentEventId: String = ""
 
@@ -51,6 +53,10 @@ class ConfirmViewModel(
         transaction.value = null
         intentEventId = ""
         completed = false
+    }
+
+    fun showBalanceRestrictions(show: Boolean) {
+        _showBalanceRestrictions.value = show
     }
 
     fun payNow() {

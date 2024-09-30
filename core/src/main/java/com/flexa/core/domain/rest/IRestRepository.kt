@@ -3,6 +3,7 @@ package com.flexa.core.domain.rest
 import com.flexa.core.entity.Account
 import com.flexa.core.entity.CommerceSession
 import com.flexa.core.entity.CommerceSessionEvent
+import com.flexa.core.entity.ExchangeRate
 import com.flexa.core.entity.PutAppAccountsResponse
 import com.flexa.core.entity.Quote
 import com.flexa.core.entity.TokenPatch
@@ -48,4 +49,5 @@ interface IRestRepository {
     suspend fun getCommerceSession(sessionId: String): CommerceSession.Data
 
     suspend fun getQuote(assetId: String, amount: String, unitOfAccount: String): Quote
+    suspend fun getExchangeRates(assetIds: List<String>, unitOfAccount: String): List<ExchangeRate>
 }

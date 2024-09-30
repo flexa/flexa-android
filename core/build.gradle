@@ -4,7 +4,7 @@ plugins {
     id 'kotlin-parcelize'
     id 'maven-publish'
     id 'org.jetbrains.kotlin.plugin.serialization'
-    id 'kotlin-kapt'
+    id 'com.google.devtools.ksp'
 }
 
 android {
@@ -99,7 +99,6 @@ dependencies {
     debugImplementation "androidx.customview:customview:$customview_version"
     debugImplementation "androidx.compose.ui:ui-tooling:$compose_version"
     debugImplementation "androidx.compose.ui:ui-test-manifest:$compose_version"
-    api 'androidx.compose.animation:animation-core:1.7.1'
     implementation 'androidx.webkit:webkit:1.11.0'
     implementation "androidx.lifecycle:lifecycle-runtime-compose:$lifecycle_version"
     implementation "androidx.lifecycle:lifecycle-viewmodel-compose:$lifecycle_version"
@@ -128,7 +127,7 @@ dependencies {
 
     /*Database*/
     implementation "androidx.room:room-runtime:$room_version"
-    kapt "androidx.room:room-compiler:$room_version"
+    ksp "androidx.room:room-compiler:$room_version"
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'

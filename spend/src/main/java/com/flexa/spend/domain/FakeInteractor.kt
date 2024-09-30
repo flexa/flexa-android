@@ -6,6 +6,7 @@ import com.flexa.core.entity.AppAccount
 import com.flexa.core.entity.AvailableAsset
 import com.flexa.core.entity.CommerceSession
 import com.flexa.core.entity.CommerceSessionEvent
+import com.flexa.core.entity.ExchangeRate
 import com.flexa.core.entity.Limit
 import com.flexa.core.entity.PutAppAccountsResponse
 import com.flexa.core.entity.Quote
@@ -237,6 +238,36 @@ internal class FakeInteractor : ISpendInteractor {
     }
 
     override suspend fun deleteAccount(): Int {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun hasOutdatedExchangeRates(): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getDbExchangeRates(): List<ExchangeRate> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getExchangeRates(
+        assetIds: List<String>,
+        unitOfAccount: String
+    ): List<ExchangeRate> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getExchangeRatesSmart(
+        assetIds: List<String>,
+        unitOfAccount: String
+    ): List<ExchangeRate> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun saveExchangeRates(items: List<ExchangeRate>) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun deleteExchangeRates() {
         TODO("Not yet implemented")
     }
 }

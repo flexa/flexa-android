@@ -77,4 +77,7 @@ class RestInteractor(
 
     suspend fun getQuote(assetId: String, amount: String, unitOfAccount: String) =
         repository.getQuote(assetId, amount, unitOfAccount)
+
+    suspend fun getExchangeRates(assetIds: List<String>, unitOfAccount: String) =
+        repository.getExchangeRates(assetIds, unitOfAccount)
 }

@@ -17,10 +17,16 @@ import com.flexa.spend.domain.ISpendInteractor
 import com.flexa.spend.getKey
 import com.flexa.spend.main.main_screen.Event
 import com.flexa.spend.main.main_screen.SpendViewModel
+import com.flexa.spend.toBalanceBundle
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 class AssetsViewModel(
@@ -40,7 +46,11 @@ class AssetsViewModel(
         mutableStateListOf()
     val assets: List<SelectedAsset> = _assets
 
-    val assetsScreen = MutableStateFlow<AssetsScreen>(AssetsScreen.Assets)
+    private val _selectedAssetWithBundles = MutableStateFlow(selectedAsset.value)
+    val selectedAssetWithBundles = _selectedAssetWithBundles.asStateFlow()
+
+    private val _assetsScreen = MutableStateFlow<AssetsScreen>(AssetsScreen.Assets)
+    val assetsScreen = _assetsScreen.asStateFlow()
     var filtered = MutableStateFlow(false)
     val assetsState = MutableStateFlow<AssetsState>(AssetsState.Retrieving)
     var filterValue = 0.0
@@ -48,6 +58,11 @@ class AssetsViewModel(
 
     init {
         subscribeAppAccounts()
+        subscribeSelectedAsset()
+    }
+
+    internal fun setScreen(screen: AssetsScreen) {
+        _assetsScreen.value = screen
     }
 
     internal fun setSelectedAsset(accountId: String, asset: AvailableAsset) {
@@ -56,47 +71,75 @@ class AssetsViewModel(
         }
     }
 
-    private fun subscribeAppAccounts() {
+    private fun subscribeSelectedAsset() {
         viewModelScope.launch {
+            selectedAsset.collect { sa ->
+                _selectedAssetWithBundles.value =
+                    _assets.firstOrNull {
+                        it.accountId == sa?.accountId && it.asset.assetId == sa.asset.assetId
+                    }
+            }
+        }
+    }
+
+    private var subscribeAppAccountsJob: Job? = null
+    private fun subscribeAppAccounts() {
+        if (subscribeAppAccountsJob?.isActive == true) return
+
+        subscribeAppAccountsJob = viewModelScope.launch {
             SpendViewModel.eventFlow.collect {
                 when (it) {
                     is Event.AppAccountsUpdate -> {
                         compileAccountsAssets(it.accounts)
+                    }
+
+                    is Event.ExchangeRatesUpdate -> {
+                        compileAccountsAssets(interactor.getLocalAppAccounts())
                     }
                 }
             }
         }
     }
 
+    private var updateAccountJob: Job? = null
     private fun compileAccountsAssets(accounts: List<AppAccount>) {
-        viewModelScope.launch(Dispatchers.IO) {
+        if (updateAccountJob?.isActive == true) {
+            updateAccountJob?.cancel()
+        }
+        updateAccountJob = viewModelScope.launch(Dispatchers.IO) {
             updateAssetsKeys()
             try {
                 val dbAssets = interactor.getDbAssets()
                 val assets = dbAssets.ifEmpty { interactor.getAllAssets() }
+
+                val rates = interactor.getDbExchangeRates()
                 accounts.forEach { account ->
-                    val localAccount =
-                        Flexa.appAccounts.value.firstOrNull { it.accountId == account.accountId }
+                    val localAccount = Flexa.appAccounts.value
+                        .firstOrNull { it.accountId == account.accountId }
                     account.displayName = localAccount?.displayName
+
                     val accAssets = ArrayList<AvailableAsset>(account.availableAssets.size)
                     for (availableAsset in account.availableAssets) {
                         val localAsset =
                             localAccount?.availableAssets?.firstOrNull { it.assetId == availableAsset.assetId }
                         val assetData = assets.firstOrNull { it.id == availableAsset.assetId }
+                        val exchangeRate = rates.firstOrNull { it.asset == availableAsset.assetId }
                         accAssets.add(
                             availableAsset.copy(
                                 assetData = assetData,
-                                icon = localAsset?.icon
+                                icon = localAsset?.icon,
+                                balanceAvailable = localAsset?.balanceAvailable,
+                                exchangeRate = exchangeRate,
+                                balanceBundle = exchangeRate.toBalanceBundle(localAsset)
                             )
                         )
                     }
                     account.availableAssets.clear()
                     account.availableAssets.addAll(accAssets)
                 }
-
                 _appAccounts.clear()
                 _appAccounts.addAll(accounts)
-
+                ensureActive()
                 compileAssets(accounts)
                 verifyAssetState(accounts)
                 verifySelectedAsset(accounts)
@@ -110,7 +153,8 @@ class AssetsViewModel(
         }
     }
 
-    private fun compileAssets(appAccounts: List<AppAccount>) {
+    private val mutex = Mutex()
+    private suspend fun compileAssets(appAccounts: List<AppAccount>) {
         val list = ArrayList<SelectedAsset>(appAccounts.sumOf { it.availableAssets.size })
         for (appAccount in appAccounts) {
             for (asset in appAccount.availableAssets) {
@@ -118,8 +162,15 @@ class AssetsViewModel(
                 list.add(SelectedAsset(appAccount.accountId, asset.copy(key = assetKey)))
             }
         }
-        _assets.clear()
-        _assets.addAll(list)
+
+        mutex.withLock {
+            _assets.clear()
+            _assets.addAll(list)
+        }
+        _selectedAssetWithBundles.value =
+            _assets.firstOrNull {
+                it.accountId == selectedAsset.value?.accountId && it.asset.assetId == selectedAsset.value?.asset?.assetId
+            }
     }
 
     private fun verifyAssetState(appAccounts: List<AppAccount>) {

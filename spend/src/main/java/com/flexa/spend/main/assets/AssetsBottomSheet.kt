@@ -103,7 +103,7 @@ fun AssetsBottomSheet(
                 is AssetsScreen.Assets -> {
                     AssetsSheetHeader(
                         stringResource(id = R.string.pay_using)
-                    ) { viewModel.assetsScreen.value = AssetsScreen.Settings() }
+                    ) { viewModel.setScreen(AssetsScreen.Settings()) }
                 }
 
                 is AssetsScreen.AssetDetails -> {
@@ -111,10 +111,10 @@ fun AssetsBottomSheet(
                         backNavigation = true,
                         asset = screen.asset.asset,
                         toBack = {
-                            viewModel.assetsScreen.value = AssetsScreen.Assets
+                            viewModel.setScreen(AssetsScreen.Assets)
                         },
                         toSettings = {
-                            viewModel.assetsScreen.value = AssetsScreen.Settings()
+                            viewModel.setScreen(AssetsScreen.Settings())
                         }
                     )
                 }
@@ -122,7 +122,7 @@ fun AssetsBottomSheet(
                 is AssetsScreen.Settings -> {
                     AssetsSettingsSheetHeader(
                         toBack = {
-                            viewModel.assetsScreen.value = AssetsScreen.Assets
+                            viewModel.setScreen(AssetsScreen.Assets)
                         }
                     )
                 }
@@ -236,10 +236,11 @@ fun AssetsBottomSheet(
                                                 color = color,
                                                 asset = asset,
                                                 toDetails = { ast ->
-                                                    viewModel.assetsScreen.value =
+                                                    viewModel.setScreen(
                                                         AssetsScreen.AssetDetails(
                                                             SelectedAsset(accountId, ast)
                                                         )
+                                                    )
                                                 }
                                             )
                                         }

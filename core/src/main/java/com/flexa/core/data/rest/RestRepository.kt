@@ -7,6 +7,7 @@ import com.flexa.core.domain.rest.IRestRepository
 import com.flexa.core.entity.Account
 import com.flexa.core.entity.CommerceSession
 import com.flexa.core.entity.CommerceSessionEvent
+import com.flexa.core.entity.ExchangeRate
 import com.flexa.core.entity.PutAppAccountsResponse
 import com.flexa.core.entity.Quote
 import com.flexa.core.entity.TokenPatch
@@ -150,6 +151,8 @@ internal class RestRepository(
         code: String?,
         link: String?,
     ): TokenPatch = suspendCancellableCoroutine {
+        okHttpProvider.tokenProvider.dropCache()
+
         val url = HttpUrl.Builder()
             .scheme(SCHEME).host(host)
             .addPathSegment("tokens")
@@ -324,7 +327,10 @@ internal class RestRepository(
             .fold(
                 onSuccess = { response ->
                     runCatching { response.code }.fold(
-                        onSuccess = { dto -> it.resume(dto) },
+                        onSuccess = { dto ->
+                            okHttpProvider.tokenProvider.dropCache()
+                            it.resume(dto)
+                        },
                         onFailure = { ex -> it.resumeWithException(ex) }
                     )
                 },
@@ -723,4 +729,44 @@ internal class RestRepository(
                     onFailure = { ex -> it.resumeWithException(ex) }
                 )
         }
+
+    override suspend fun getExchangeRates(
+        assetIds: List<String>,
+        unitOfAccount: String
+    ): List<ExchangeRate> = suspendCancellableCoroutine {
+        val ids = assetIds.joinToString(",")
+        val url = HttpUrl.Builder()
+            .scheme(SCHEME).host(host)
+            .addPathSegment("exchange_rates")
+            .addEncodedQueryParameter("assets", ids)
+            .addEncodedQueryParameter("unit_of_account", unitOfAccount)
+            .build()
+
+        val request: Request = Request.Builder().url(url)
+            .get().build()
+
+        runCatching { okHttpProvider.client.newCall(request).execute() }
+            .onSuccess { response ->
+                runCatching {
+                    if (response.code != 200) {
+                        Result.failure(NullPointerException())
+                    } else {
+                        val raw = response.body?.string().toString()
+                        val jsonElement = json.parseToJsonElement(raw)
+                        val data = jsonElement.jsonObject["data"]
+                        val dto = data?.let { json.decodeFromJsonElement<List<ExchangeRate>>(it) }
+                            ?: emptyList()
+                        Result.success(dto)
+                    }
+                }.onSuccess { res ->
+                    if (res.isSuccess) {
+                        res.getOrNull()?.let { r -> it.resume(r) }
+                    } else {
+                        res.exceptionOrNull()?.let { e ->
+                            it.resumeWithException(e)
+                        }
+                    }
+                }.onFailure { ex -> it.resumeWithException(ex) }
+            }.onFailure { ex -> it.resumeWithException(ex) }
+    }
 }

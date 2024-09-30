@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flexa.core.Flexa
 import com.flexa.core.entity.AppAccount
+import com.flexa.core.getAssetIds
+import com.flexa.core.getUnitOfAccount
 import com.flexa.core.shared.ApiErrorHandler
 import com.flexa.core.shared.Asset
 import com.flexa.core.shared.FlexaConstants.Companion.RETRY_COUNT
@@ -12,6 +14,7 @@ import com.flexa.core.shared.FlexaConstants.Companion.RETRY_DELAY
 import com.flexa.core.shared.filterAssets
 import com.flexa.identity.domain.IIdentityInteractor
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -52,7 +55,14 @@ internal class SecretCodeViewModel(
                 val acc = interactor.putAppAccounts(Flexa.appAccounts.value.filterAssets(assets))
                 interactor.saveAppAccounts(acc.accounts)
 
-                kotlin.runCatching { retrieveAndSaveBrands() }
+                async { retrieveAndSaveBrands() }.await()
+                async {
+                    val unitOfAccount = acc.accounts.getUnitOfAccount() ?: ""
+                    val assetIds = acc.accounts.getAssetIds()
+                    retrieveAndSaveExchangeRates(
+                        assetIds = assetIds, unitOfAccount = unitOfAccount
+                    )
+                }.await()
 
                 emit(acc.accounts)
             }.retryWhen { _, attempt ->
@@ -108,5 +118,14 @@ internal class SecretCodeViewModel(
         val brands = interactor.getBrands(true)
         interactor.deleteBrands()
         interactor.saveBrands(brands)
+    }
+
+    private suspend fun retrieveAndSaveExchangeRates(
+        assetIds: List<String>,
+        unitOfAccount: String
+    ) {
+        val items = interactor.getExchangeRates(assetIds, unitOfAccount)
+        interactor.deleteExchangeRates()
+        interactor.saveExchangeRates(items)
     }
 }

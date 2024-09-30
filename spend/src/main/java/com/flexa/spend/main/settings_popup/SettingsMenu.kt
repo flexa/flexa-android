@@ -21,13 +21,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.HelpOutline
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.outlined.Feedback
 import androidx.compose.material.icons.outlined.ShoppingCartCheckout
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Map
 import androidx.compose.material.icons.rounded.Tune
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -94,7 +94,7 @@ fun SettingsMenu(
             )
             Spacer(modifier = Modifier.width(14.dp))
         }
-        Divider(thickness = 1.dp, color = palette.onSurfaceVariant)
+        HorizontalDivider(thickness = 1.dp, color = palette.onSurfaceVariant)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -125,7 +125,7 @@ fun SettingsMenu(
             )
             Spacer(modifier = Modifier.width(14.dp))
         }
-        Divider(thickness = 1.dp, color = palette.onSurfaceVariant)
+        HorizontalDivider(thickness = 1.dp, color = palette.onSurfaceVariant)
         val previewMode = LocalInspectionMode.current
         var openHelp by rememberSaveable { mutableStateOf(previewMode) }
         val transition = updateTransition(openHelp, label = "open")
@@ -159,7 +159,7 @@ fun SettingsMenu(
             Spacer(modifier = Modifier.weight(1f))
             Icon(
                 modifier = Modifier.size(26.dp),
-                imageVector = Icons.Filled.HelpOutline,
+                imageVector = Icons.AutoMirrored.Filled.HelpOutline,
                 tint = onSurfaceVariant,
                 contentDescription = null
             )
@@ -174,7 +174,10 @@ fun SettingsMenu(
                 modifier = Modifier
                     .background(containerColor)
             ) {
-                Divider(thickness = 1.dp, color = palette.onSurfaceVariant.copy(alpha = .5F))
+                HorizontalDivider(
+                    thickness = 1.dp,
+                    color = palette.onSurfaceVariant.copy(alpha = .5F)
+                )
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -201,7 +204,7 @@ fun SettingsMenu(
                     )
                     Spacer(modifier = Modifier.width(14.dp))
                 }
-                Divider(
+                HorizontalDivider(
                     modifier = Modifier.padding(start = paddingStart),
                     thickness = 1.dp,
                     color = palette.onSurfaceVariant.copy(alpha = .5F)

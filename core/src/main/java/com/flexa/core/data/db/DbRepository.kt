@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.flexa.BuildConfig
 import com.flexa.core.domain.db.IDbRepository
+import com.flexa.core.entity.ExchangeRate
 import com.flexa.core.shared.Asset
 import com.flexa.core.shared.Brand
 
@@ -18,6 +19,8 @@ class DbRepository(
         .fallbackToDestructiveMigrationOnDowngrade()
         .fallbackToDestructiveMigration()
         .build()
+
+    override suspend fun clearAllTables() = db.clearAllTables()
 
     override suspend fun getAssets(): List<Asset> =
         db.assetsDao().getAll().map { it.toObject() }
@@ -35,6 +38,18 @@ class DbRepository(
 
     override suspend fun saveBrands(items: List<Brand>) =
         db.brandsDao().insertAll(items.map { it.toDao() })
+
+    override suspend fun hasOutdatedExchangeRates(): Boolean =
+        db.exchangeRateDao().hasOutdatedItems()
+
+
+    override suspend fun getExchangeRates(): List<ExchangeRate> =
+        db.exchangeRateDao().getAll().map { it.toObject() }
+
+    override suspend fun saveExchangeRates(items: List<ExchangeRate>) =
+        db.exchangeRateDao().insertAll(items.map { it.toDao() })
+
+    override suspend fun deleteExchangeRates() = db.exchangeRateDao().deleteAll()
 
     override suspend fun getBrandSession(sessionId: String): BrandSession? {
         return db.brandSessionDao().getBySessionId(sessionId).firstOrNull()

@@ -15,7 +15,10 @@ import com.flexa.core.entity.AppAccount
 import com.flexa.core.entity.AvailableAsset
 import com.flexa.core.entity.CommerceSession
 import com.flexa.core.entity.CommerceSessionEvent
+import com.flexa.core.entity.ExchangeRate
 import com.flexa.core.entity.Notification
+import com.flexa.core.getAssetIds
+import com.flexa.core.getUnitOfAccount
 import com.flexa.core.shared.ApiErrorHandler
 import com.flexa.core.shared.Brand
 import com.flexa.core.shared.ConnectionState
@@ -26,6 +29,7 @@ import com.flexa.spend.Spend
 import com.flexa.spend.containsAuthorization
 import com.flexa.spend.domain.CommerceSessionWorker
 import com.flexa.spend.domain.ISpendInteractor
+import com.flexa.spend.getExpireTimeMills
 import com.flexa.spend.isCompleted
 import com.flexa.spend.isValid
 import com.flexa.spend.toBrandSession
@@ -36,7 +40,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -168,18 +171,50 @@ class SpendViewModel(
         }
     }
 
-    internal fun getAccount() {
-        viewModelScope.launch {
-            runCatching {
-                interactor.getAccount()
-            }.onFailure { Log.e(null, "getAccount: ", it) }
-                .onSuccess { account ->
-                    _account.value = account
-                    account.notifications?.let { n ->
-                        _notifications.clear()
-                        _notifications.addAll(n)
-                    }
+    internal suspend fun getAccount() {
+        runCatching {
+            interactor.getAccount()
+        }.onFailure { Log.e(null, "getAccount: ", it) }
+            .onSuccess { account ->
+                _account.value = account
+                account.notifications?.let { n ->
+                    _notifications.clear()
+                    _notifications.addAll(n)
                 }
+            }
+    }
+
+    private var subscribeExchangeRatesJob: Job? = null
+    private var unsubscribeExchangeRatesJob: Job? = null
+    internal fun unsubscribeExchangeRates() {
+        unsubscribeExchangeRatesJob = viewModelScope.launch {
+            delay(3000)
+            subscribeExchangeRatesJob?.cancel()
+        }
+    }
+
+    internal fun subscribeExchangeRates() {
+        if (subscribeExchangeRatesJob?.isActive == true) {
+            unsubscribeExchangeRatesJob?.cancel()
+            return
+        }
+        val minimumUpdateTime = 20_000L
+        subscribeExchangeRatesJob = viewModelScope.launch {
+            while (isActive) {
+                val acc = interactor.getLocalAppAccounts()
+                val unitOfAccount = acc.getUnitOfAccount() ?: ""
+                val assetIds = acc.getAssetIds()
+                kotlin.runCatching {
+                    interactor.getExchangeRatesSmart(assetIds, unitOfAccount)
+                }.onSuccess { exchangeRates ->
+                    eventFlow.emit(Event.ExchangeRatesUpdate(exchangeRates))
+                    val diff = exchangeRates.getExpireTimeMills(Instant.now().toEpochMilli())
+                        .coerceAtLeast(minimumUpdateTime)
+                    delay(diff)
+                }.onFailure {
+                    delay(minimumUpdateTime)
+                }
+            }
         }
     }
 
@@ -192,7 +227,6 @@ class SpendViewModel(
 
     private fun listenEvents() {
         viewModelScope.launch {
-            checkLastSession()
             interactor.listenEvents(interactor.getLastEventId())
                 .flowOn(Dispatchers.IO)
                 .retryWhen { _, attempt ->
@@ -250,8 +284,9 @@ class SpendViewModel(
             interactor.getConnectionListener()
                 ?.distinctUntilChanged()
                 ?.collect {
-                    getAccount()
                     listenFlexaAppAccounts()
+                    getAccount()
+                    checkLastSession()
                     listenEvents()
                     checkLastSessionError()
                 }
@@ -395,9 +430,10 @@ sealed class SheetScreen {
     class AssetDetails(val asset: SelectedAsset) : SheetScreen()
     data object PlacesToPay : SheetScreen()
     data object Locations : SheetScreen()
-    class PaymentDetails(val session: SharedFlow<CommerceSession?>) : SheetScreen()
+    class PaymentDetails(val session: StateFlow<CommerceSession?>) : SheetScreen()
 }
 
 sealed class Event {
     class AppAccountsUpdate(val accounts: List<AppAccount>) : Event()
+    class ExchangeRatesUpdate(val rates: List<ExchangeRate>) : Event()
 }

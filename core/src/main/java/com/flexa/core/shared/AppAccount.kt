@@ -16,6 +16,12 @@ data class AppAccount(
 data class AvailableAsset(
     val assetId: String,
     val balance: Double,
+    /**
+     * Due to the nature of the UTXO model used on Bitcoin and Zcash,
+     * spendable balance can fluctuate, sometimes to zero temporarily
+     * as the transaction is being mined and confirmed on-chain
+     */
+    val balanceAvailable: Double? = null,
     val icon: String? = null,
     val displayName: String? = null,
     val symbol: String? = null,

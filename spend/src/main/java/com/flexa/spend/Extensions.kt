@@ -27,7 +27,9 @@ import com.flexa.core.data.db.BrandSession
 import com.flexa.core.entity.AppAccount
 import com.flexa.core.entity.AssetKey
 import com.flexa.core.entity.AvailableAsset
+import com.flexa.core.entity.BalanceBundle
 import com.flexa.core.entity.CommerceSession
+import com.flexa.core.entity.ExchangeRate
 import com.flexa.core.shared.SelectedAsset
 import com.flexa.identity.getActivity
 import com.flexa.spend.data.totp.HmacAlgorithm
@@ -41,10 +43,18 @@ import kotlinx.coroutines.launch
 import org.apache.commons.codec.binary.Base32
 import java.math.BigDecimal
 import java.math.MathContext
+import java.math.RoundingMode
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 import kotlin.math.roundToInt
 import kotlin.math.sign
+
+internal fun String?.toCurrencySign(): String =
+    when (this) {
+        "iso4217/USD" -> "\$"
+        "iso4217/EUR" -> "€"
+        else -> "¤"
+    }
 
 internal fun String?.toColor(): Color {
     return if (this.isNullOrEmpty()) Color.Gray else
@@ -77,9 +87,15 @@ internal fun SelectedAsset.isSelected(accountId: String, assetId: String): Boole
     return this.accountId == accountId && this.asset.assetId == assetId
 }
 
-internal fun String?.getAmount(): Double {
+internal fun String?.getAmount(): BigDecimal {
     val regex = """\d+(\.\d+)?""".toRegex()
-    return regex.find(this ?: "0")?.value?.toDoubleOrNull() ?: 0.0
+    return regex.find(this ?: "0")?.value?.toBigDecimalOrNull() ?: BigDecimal.ZERO
+}
+
+internal fun String?.getDigitWithPrecision(precision: Int): String {
+    val value = this.getAmount()
+    val scaledValue = value.setScale(precision, RoundingMode.DOWN).stripTrailingZeros()
+    return scaledValue.toPlainString()
 }
 
 internal fun AvailableAsset.logo(): String? =
@@ -163,8 +179,8 @@ fun CommerceSession?.containsAuthorization() =
                 this.data?.authorization?.number != null
     }
 
-fun CommerceSession?.getAmount(): Double {
-    return this?.data?.amount?.toDoubleOrNull() ?: 0.0
+fun CommerceSession?.getAmount(): BigDecimal {
+    return this?.data?.amount?.toBigDecimalOrNull() ?: BigDecimal.ZERO
 }
 
 fun CommerceSession?.getAmountLabel(): String {
@@ -211,6 +227,84 @@ fun CommerceSession.Data?.toBrandSession(): BrandSession? {
             transaction?.expiresAt ?: (Instant.now().toEpochMilli() / 1000)
         BrandSession(sessionId = sessionId, transactionId = transactionId, date = date)
     }
+}
+
+fun ExchangeRate?.toBalanceBundle(
+    asset: com.flexa.core.shared.AvailableAsset?
+): BalanceBundle {
+    return if (this == null) {
+        BalanceBundle(
+            total = BigDecimal.ZERO, available = BigDecimal.ZERO,
+            totalLabel = "", availableLabel = ""
+        )
+    } else {
+        val scale = 2
+        val roundingMode = RoundingMode.DOWN
+        val balance = BigDecimal.valueOf(asset?.balance ?: 0.0)
+        val balanceAvailable = asset?.balanceAvailable?.run { BigDecimal.valueOf(this) }
+        val total = (price?.toBigDecimalOrNull() ?: BigDecimal.ZERO).multiply(balance)
+            .setScale(scale, roundingMode)
+        val available = balanceAvailable?.run {
+            (price?.toBigDecimalOrNull() ?: BigDecimal.ZERO).multiply(this)
+                .setScale(scale, roundingMode)
+        }
+        val currencySign = unitOfAccount?.toCurrencySign()
+        val totalLabel = currencySign + total
+        val availableLabel = available?.run { currencySign + this }
+        BalanceBundle(
+            total = total,
+            available = available,
+            totalLabel = totalLabel,
+            availableLabel = availableLabel
+        )
+    }
+}
+
+internal fun ExchangeRate.getCurrencySign(): String? {
+    return this.unitOfAccount?.toCurrencySign()
+}
+
+internal fun ExchangeRate.getAssetAmount(amount: String): String {
+    return getAssetAmountValue(amount).toString()
+}
+
+internal fun ExchangeRate.getAssetAmountValue(amount: String): BigDecimal {
+    val amountD = amount.toBigDecimalOrNull() ?: BigDecimal.ZERO
+    val priceD = price?.toBigDecimalOrNull() ?: BigDecimal(1)
+    val res = amountD.divide(priceD, precision?:0, RoundingMode.DOWN).stripTrailingZeros()
+    return res
+}
+
+fun List<ExchangeRate>.getMinimumExpireTime(): Long {
+    return this.minOfOrNull { it.expiresAt ?: 0L } ?: 0L
+}
+
+fun List<ExchangeRate>.getByAssetId(id: String): ExchangeRate? {
+    return this.firstOrNull { it.asset == id }
+}
+
+fun List<ExchangeRate>.getExpireTimeMills(
+    currentTimestamp: Long,
+    plusMillis: Long = 0,
+): Long {
+    val minimumExpireTime = this.getMinimumExpireTime()
+    val rateTimestamp = minimumExpireTime * 1000
+    val diff = rateTimestamp + plusMillis - currentTimestamp
+    return diff
+}
+
+fun AvailableAsset.hasBalanceRestrictions(): Boolean {
+    val total = this.balanceBundle?.total ?: BigDecimal.ZERO
+    val available = this.balanceBundle?.available ?: BigDecimal.ZERO
+    return available > BigDecimal.ZERO && total != available
+}
+
+fun AvailableAsset.getSpendableBalance(): BigDecimal {
+    val total = this.balanceBundle?.total ?: BigDecimal.ZERO
+    val available = this.balanceBundle?.available
+    return if (available != null && available != total) {
+        available
+    } else total
 }
 
 internal fun Context.getAppName(): String {
@@ -308,7 +402,6 @@ internal fun Modifier.dragToReorder(
                     }
                     listOffset = numberOfItems * offsetSign
                 }
-                // Consume the gesture event, not passed to external
                 if (change.positionChange() != Offset.Zero) change.consume()
             }
             val onDragEnd = {
@@ -345,7 +438,6 @@ internal fun Modifier.dragToReorder(
         }
     }
         .offset {
-            // Use the animating offset value here.
             IntOffset(offsetX.value.roundToInt(), offsetY.value.roundToInt())
         }
 }

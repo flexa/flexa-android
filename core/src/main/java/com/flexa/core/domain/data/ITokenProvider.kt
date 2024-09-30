@@ -4,6 +4,8 @@ import com.flexa.core.data.rest.HeadersBundle
 
 internal interface ITokenProvider {
 
+    fun dropCache()
+
     fun getTokenExpiration(): Long
 
     fun getToken(): String

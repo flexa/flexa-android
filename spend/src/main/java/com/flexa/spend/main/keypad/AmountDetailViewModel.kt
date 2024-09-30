@@ -3,9 +3,12 @@ package com.flexa.spend.main.keypad
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.flexa.core.entity.ExchangeRate
 import com.flexa.core.entity.Quote
 import com.flexa.core.shared.SelectedAsset
 import com.flexa.spend.domain.ISpendInteractor
+import com.flexa.spend.main.main_screen.Event
+import com.flexa.spend.main.main_screen.SpendViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -24,6 +27,7 @@ internal class AmountDetailViewModel(
     val quote = MutableStateFlow<Quote?>(null)
     val progress = MutableStateFlow(false)
     val error = MutableStateFlow(false)
+    val exchangeRates = MutableStateFlow<List<ExchangeRate>>(emptyList())
     private val percent = MutableStateFlow(0F)
 
     var percentJob: Job? = null
@@ -31,11 +35,26 @@ internal class AmountDetailViewModel(
 
     init {
         listenConnection()
+        subscribeAppAccounts()
     }
 
     override fun onCleared() {
         percentJob?.cancel()
         super.onCleared()
+    }
+
+    private var subscribeAppAccountsJob: Job? = null
+    private fun subscribeAppAccounts() {
+        if (subscribeAppAccountsJob?.isActive == true) return
+        subscribeAppAccountsJob = viewModelScope.launch {
+            kotlin.runCatching { interactor.getDbExchangeRates() }
+                .onSuccess { exchangeRates.value = it }
+            SpendViewModel.eventFlow.collect { event ->
+                if (event is Event.ExchangeRatesUpdate) {
+                    exchangeRates.value = event.rates
+                }
+            }
+        }
     }
 
     private fun listenConnection() {
@@ -66,11 +85,9 @@ internal class AmountDetailViewModel(
                 error.value = false
                 progress.value = true
                 val res = interactor.getQuote(assetId, amount, unitOfAccount)
-                Log.d(null, "getQuote:>>> $res")
                 res
             }.onFailure {
                 progress.value = false
-                error.value = true
             }.onSuccess {
                 progress.value = false
                 quote.value = it

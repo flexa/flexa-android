@@ -126,6 +126,8 @@ fun SpendScreen(
 ) {
     val context = LocalContext.current
 
+    SpendLifecycleRelatedMethods(viewModel)
+
     Box(modifier = modifier) {
         val isPreview = LocalInspectionMode.current
         val assetsState by if (!isPreview) assetsViewModel.assetsState.collectAsStateWithLifecycle() else MutableStateFlow(
@@ -193,7 +195,6 @@ fun SpendScreen(
                         viewModel.amount.value = null
                         viewModel.brand.value = null
                     },
-                    toDetails = { openBottomSheet(SheetScreen.PaymentDetails(it)) }
                 )
                 Spacer(modifier = Modifier.height(26.dp))
                 Spacer(
@@ -288,6 +289,7 @@ fun SpendScreen(
                         )
                         .padding(horizontal = 26.dp),
                     viewModel = vm,
+                    assetsViewModel = assetsViewModel,
                     onClose = {
                         viewModel.deleteCommerceSessionData()
                         commerceSession?.data?.id?.let { id ->
@@ -435,7 +437,7 @@ fun SpendScreen(
                 brandsViewModel = brandsViewModel,
                 sheetStateVisible = showBottomSheet,
                 toAssets = {
-                    assetsViewModel.assetsScreen.value = AssetsScreen.Assets
+                    assetsViewModel.setScreen(AssetsScreen.Assets)
                     openBottomSheet(SheetScreen.Assets)
                 },
                 toAddAssets = { toBack() },
@@ -449,7 +451,11 @@ fun SpendScreen(
 
             if (showBottomSheet) {
                 val sheetState = rememberModalBottomSheetState(
-                    skipPartiallyExpanded = viewModel.sheetScreen == SheetScreen.PlacesToPay
+                    skipPartiallyExpanded = when {
+                        viewModel.sheetScreen == SheetScreen.PlacesToPay -> true
+                        viewModel.sheetScreen is SheetScreen.AssetDetails -> true
+                        else -> false
+                    }
                 )
                 ModalBottomSheet(
                     modifier = Modifier

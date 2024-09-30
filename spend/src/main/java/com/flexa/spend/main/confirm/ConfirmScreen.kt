@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -68,6 +69,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -97,11 +99,16 @@ import com.flexa.spend.Transaction
 import com.flexa.spend.domain.FakeInteractor
 import com.flexa.spend.getAmount
 import com.flexa.spend.getAmountLabel
+import com.flexa.spend.getSpendableBalance
+import com.flexa.spend.hasBalanceRestrictions
 import com.flexa.spend.logo
+import com.flexa.spend.main.assets.AssetsViewModel
+import com.flexa.spend.main.ui_utils.BalanceRestrictionsDialog
 import com.flexa.spend.main.ui_utils.SpendAsyncImage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import java.math.BigDecimal
 
 @Composable
 fun ConfirmCard(
@@ -110,6 +117,7 @@ fun ConfirmCard(
     elevation: Dp = 0.dp,
     containerColor: Color = MaterialTheme.colorScheme.secondaryContainer,
     viewModel: ConfirmViewModel,
+    assetsViewModel: AssetsViewModel,
     onClose: () -> Unit,
     onTransaction: (Transaction) -> Unit = {},
     toDetails: (StateFlow<CommerceSession?>) -> Unit,
@@ -255,9 +263,9 @@ fun ConfirmCard(
             )
             Spacer(modifier = Modifier.height(8.dp))
             Box {
-                val text by remember { derivedStateOf {
-                    session.getAmountLabel()
-                } }
+                val text by remember {
+                    derivedStateOf { session.getAmountLabel() }
+                }
                 AnimatedContent(
                     targetState = session.getAmount(),
                     transitionSpec = {
@@ -392,6 +400,50 @@ fun ConfirmCard(
             CompositionLocalProvider(
                 LocalMinimumInteractiveComponentSize provides 0.dp,
             ) {
+                val showBalanceRestrictions by viewModel.showBalanceRestrictions.collectAsStateWithLifecycle()
+                if (showBalanceRestrictions) {
+                    BalanceRestrictionsDialog(
+                        modifier = Modifier.padding(8.dp),
+                        viewModel = assetsViewModel
+                    ) { viewModel.showBalanceRestrictions(false) }
+                }
+                val selectedAsset by assetsViewModel.selectedAssetWithBundles.collectAsStateWithLifecycle()
+                val hasBalanceRestrictions by remember {
+                    derivedStateOf { selectedAsset?.asset?.hasBalanceRestrictions() ?: false }
+                }
+                val totalBalanceEnough by remember {
+                    derivedStateOf {
+                        val assetAmount =
+                            selectedAsset?.asset?.balanceBundle?.total ?: BigDecimal.ZERO
+                        val amount = session?.getAmount() ?: BigDecimal.ZERO
+                        assetAmount >= amount
+                    }
+                }
+                val availableBalanceEnough by remember {
+                    derivedStateOf {
+                        val assetAmount =
+                            selectedAsset?.asset?.getSpendableBalance() ?: BigDecimal.ZERO
+                        val amount = session?.getAmount() ?: BigDecimal.ZERO
+                        assetAmount >= amount
+                    }
+                }
+                val enough by remember(session) {
+                    derivedStateOf {
+                        val res = totalBalanceEnough && availableBalanceEnough
+                        if (res) viewModel.showBalanceRestrictions(false)
+                        res
+                    }
+                }
+                val canProceed by remember(session) {
+                    derivedStateOf {
+                        !viewModel.buttonsBlocked && enough
+                    }
+                }
+                val wrongAvailableState by remember {
+                    derivedStateOf { !availableBalanceEnough && hasBalanceRestrictions && totalBalanceEnough }
+                }
+
+
                 TextButton(
                     modifier = Modifier
                         .size(width, height)
@@ -405,9 +457,9 @@ fun ConfirmCard(
                             )
                         )
                         .background(
-                            brush = Brush.linearGradient(
+                            brush = if (enough) Brush.linearGradient(
                                 listOf(buttonColor1, buttonColor2, buttonColor3)
-                            )
+                            ) else SolidColor(MaterialTheme.colorScheme.outline)
                         ),
                     shape = RoundedCornerShape(
                         topStart = 4.dp,
@@ -417,19 +469,22 @@ fun ConfirmCard(
                     ),
                     contentPadding = PaddingValues(0.dp),
                     onClick = {
-                        if (!viewModel.buttonsBlocked) viewModel.payNow()
+                        when {
+                            canProceed -> viewModel.payNow()
+                            wrongAvailableState -> viewModel.showBalanceRestrictions(
+                                true
+                            )
+                        }
                     }) {
                     val context = LocalContext.current
-                    val enough by viewModel.enough.collectAsStateWithLifecycle()
-                    val selectedAsset by if (!previewMode) Spend.selectedAsset.collectAsStateWithLifecycle()
-                    else remember { mutableStateOf(null) }
                     val payButtonText by remember {
                         derivedStateOf {
                             when {
                                 viewModel.completed -> context.resources.getString(R.string.done)
                                 viewModel.payProgress -> context.resources.getString(R.string.processing) + "..."
                                 viewModel.patchProgress -> context.resources.getString(R.string.updating) + "..."
-                                !enough -> "Not enough ${selectedAsset?.asset?.label}"
+                                !totalBalanceEnough -> "Not enough ${selectedAsset?.asset?.assetData?.displayName}"
+                                !availableBalanceEnough -> context.getString(R.string.balance_not_yet_available)
                                 else -> context.resources.getString(R.string.pay_now)
                             }
                         }
@@ -456,15 +511,27 @@ fun ConfirmCard(
                             }.using(SizeTransform(clip = false))
                         }, label = "Text"
                     ) { state ->
-                        state
-                        Text(
-                            text = payButtonText,
-                            style = TextStyle(
-                                brush = Brush.linearGradient(listOf(textColor1, textColor2)),
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.W500,
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = state,
+                                style = TextStyle(
+                                    brush = Brush.linearGradient(listOf(textColor1, textColor2)),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.W500,
+                                )
                             )
-                        )
+                            androidx.compose.animation.AnimatedVisibility(
+                                modifier = Modifier.padding(4.dp),
+                                visible = wrongAvailableState
+                            ) {
+                                Icon(
+                                    modifier = Modifier.size(20.dp),
+                                    imageVector = Icons.Rounded.Info,
+                                    contentDescription = null,
+                                    tint = Color.White
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -513,6 +580,9 @@ private fun ConfirmDialogPreview() {
                     interactor = FakeInteractor()
                 )
             }),
+            assetsViewModel = AssetsViewModel(
+                FakeInteractor(), MutableStateFlow(MockFactory.getMockSelectedAsset())
+            ),
             onClose = {},
             toDetails = {},
         )

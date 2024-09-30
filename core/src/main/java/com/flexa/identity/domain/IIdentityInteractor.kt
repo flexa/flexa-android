@@ -1,5 +1,6 @@
 package com.flexa.identity.domain
 
+import com.flexa.core.entity.ExchangeRate
 import com.flexa.core.entity.PutAppAccountsResponse
 import com.flexa.core.entity.TokenPatch
 import com.flexa.core.entity.TokensResponse
@@ -32,4 +33,7 @@ internal interface IIdentityInteractor {
     suspend fun getBrands(legacyOnly: Boolean? = null): List<Brand>
     suspend fun saveBrands(items: List<Brand>)
     suspend fun deleteBrands()
+    suspend fun getExchangeRates(assetIds: List<String>, unitOfAccount: String): List<ExchangeRate>
+    suspend fun saveExchangeRates(items: List<ExchangeRate>)
+    suspend fun deleteExchangeRates()
 }

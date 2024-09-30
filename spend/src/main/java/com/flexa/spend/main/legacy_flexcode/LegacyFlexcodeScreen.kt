@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -48,7 +47,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.flexa.core.entity.CommerceSession
 import com.flexa.core.theme.FlexaTheme
 import com.flexa.core.view.FlexaLogo
 import com.flexa.spend.MockFactory
@@ -63,14 +61,12 @@ import com.flexa.spend.main.ui_utils.SpendAsyncImage
 import com.flexa.spend.main.ui_utils.rememberSelectedAsset
 import com.flexa.spend.toColor
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 
 @Composable
 fun LegacyFlexcode(
     modifier: Modifier = Modifier,
     viewModel: SpendViewModel,
     toBack: (commerceSessionId: String?) -> Unit,
-    toDetails: (StateFlow<CommerceSession?>) -> Unit,
 ) {
     val previewMode = LocalInspectionMode.current
     val brand by viewModel.brand.collectAsStateWithLifecycle()
@@ -106,13 +102,8 @@ fun LegacyFlexcode(
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold)
                 )
             }
-            Row {
-                IconButton(onClick = { toDetails(viewModel.commerceSession) }) {
-                    Icon(imageVector = Icons.Filled.MoreVert, contentDescription = null)
-                }
-                IconButton(onClick = { toBack(commerceSession?.data?.id) }) {
-                    Icon(imageVector = Icons.Filled.Close, contentDescription = null)
-                }
+            IconButton(onClick = { toBack(commerceSession?.data?.id) }) {
+                Icon(imageVector = Icons.Filled.Close, contentDescription = null)
             }
         }
         Spacer(modifier = Modifier.height(40.dp))
@@ -235,7 +226,6 @@ fun LegacyFlexcodePreview() {
                         amount.value = "13.9"
                     },
                     toBack = { },
-                    toDetails = { }
                 )
             }
         }

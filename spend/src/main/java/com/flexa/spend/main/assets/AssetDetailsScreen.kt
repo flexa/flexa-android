@@ -2,6 +2,7 @@ package com.flexa.spend.main.assets
 
 import android.content.res.Configuration
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -29,6 +30,7 @@ import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.SwapHoriz
+import androidx.compose.material.icons.rounded.HourglassTop
 import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -59,6 +61,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -68,6 +71,10 @@ import com.flexa.core.theme.FlexaTheme
 import com.flexa.spend.MockFactory
 import com.flexa.spend.R
 import com.flexa.spend.domain.FakeInteractor
+import com.flexa.spend.getAmount
+import com.flexa.spend.getDigitWithPrecision
+import com.flexa.spend.hasBalanceRestrictions
+import java.math.BigDecimal
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -83,7 +90,6 @@ internal fun AssetDetailsScreen(
     val density = LocalDensity.current
     var height by remember { mutableStateOf(200.dp) }
     val error by viewModel.error.collectAsStateWithLifecycle()
-
     val asset by remember {
         derivedStateOf {
             assetsViewModel.assets.firstOrNull {
@@ -132,6 +138,52 @@ internal fun AssetDetailsScreen(
                 ) {
                     val quote by viewModel.quote.collectAsStateWithLifecycle()
                     val progress by viewModel.progress.collectAsStateWithLifecycle()
+                    val balanceRestricted by remember {
+                        derivedStateOf { asset?.asset?.hasBalanceRestrictions() == true }
+                    }
+
+                    AnimatedVisibility(balanceRestricted, label = "") {
+                        ListItem(
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            leadingContent = {
+                                Icon(
+                                    modifier = Modifier.size(24.dp),
+                                    imageVector = Icons.Rounded.HourglassTop,
+                                    contentDescription = null
+                                )
+                            },
+                            headlineContent = {
+                                Text(
+                                    text = "${stringResource(R.string.balance)} ${stringResource(R.string.updating)}...",
+                                    style = TextStyle(
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.W400,
+                                        color = palette.onBackground
+                                    )
+                                )
+                            },
+                            supportingContent = {
+                                Text(
+                                    text = buildAnnotatedString {
+                                        withStyle(style = SpanStyle(fontSize = MaterialTheme.typography.bodyMedium.fontSize)) {
+                                            append(stringResource(R.string.balance_restrictions_copy1))
+                                            append(" ")
+                                            withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                                                append(asset?.asset?.balanceBundle?.availableLabel ?: "")
+                                            }
+                                            append(" ")
+                                            append(stringResource(R.string.balance_restrictions_copy2))
+                                        }
+                                    },
+                                    style = TextStyle(
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.W400,
+                                        color = palette.outline
+                                    )
+                                )
+                            }
+                        )
+                    }
                     ListItem(
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                         leadingContent = {
@@ -143,9 +195,9 @@ internal fun AssetDetailsScreen(
                         },
                         headlineContent = {
                             AnimatedContent(
-                                targetState = asset?.asset?.value?.labelTitlecase,
+                                targetState = asset?.asset?.balanceBundle?.total ?: BigDecimal.ZERO,
                                 transitionSpec = {
-                                    if ((targetState?.length ?: 0) < (initialState?.length ?: 0)) {
+                                    if (targetState.compareTo(initialState) == -1) {
                                         slideInVertically { width -> width } +
                                                 fadeIn() togetherWith slideOutVertically()
                                         { width -> -width } + fadeOut()
@@ -158,7 +210,7 @@ internal fun AssetDetailsScreen(
                             ) { state ->
                                 state
                                 Text(
-                                    text = asset?.asset?.value?.labelTitlecase ?: "",
+                                    text = asset?.asset?.balanceBundle?.totalLabel ?: "",
                                     style = TextStyle(
                                         fontSize = 18.sp,
                                         fontWeight = FontWeight.W400,
@@ -169,7 +221,9 @@ internal fun AssetDetailsScreen(
                         },
                         supportingContent = {
                             Text(
-                                text = asset?.asset?.label ?: "",
+                                text = asset?.asset?.balance?.getDigitWithPrecision(
+                                    asset?.asset?.exchangeRate?.precision?:0
+                                ) ?: "",
                                 style = TextStyle(
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.W400,
@@ -189,9 +243,9 @@ internal fun AssetDetailsScreen(
                         },
                         headlineContent = {
                             AnimatedContent(
-                                targetState = quote?.value?.rate?.label,
+                                targetState = asset?.asset?.exchangeRate?.price?.getAmount() ?: BigDecimal.ZERO,
                                 transitionSpec = {
-                                    if ((targetState?.length ?: 0) < (initialState?.length ?: 0)) {
+                                    if (targetState < initialState) {
                                         slideInVertically { width -> width } +
                                                 fadeIn() togetherWith slideOutVertically()
                                         { width -> -width } + fadeOut()
@@ -201,17 +255,20 @@ internal fun AssetDetailsScreen(
                                         { width -> width } + fadeOut()
                                     }.using(SizeTransform(clip = false))
                                 }, label = ""
-                            ) {
+                            ) { state ->
+                                state
                                 Text(
-                                    text = it
-                                        ?: "${stringResource(R.string.updating)}...",
+                                    text = if (asset?.asset?.exchangeRate == null) {
+                                        "${stringResource(R.string.updating)}..."
+                                    } else {
+                                        "1 ${asset?.asset?.assetData?.symbol} = ${asset?.asset?.exchangeRate?.label}"
+                                    },
                                     style = TextStyle(
                                         fontSize = 18.sp,
                                         fontWeight = FontWeight.W400,
                                         color = palette.onBackground
                                     )
                                 )
-
                             }
                         }
                     )
@@ -241,7 +298,7 @@ internal fun AssetDetailsScreen(
                             ) { state ->
                                 state
                                 Text(
-                                    text = quote?.fee?.equivalent ?: "",
+                                    text = state ?: "${stringResource(R.string.updating)}...",
                                     style = TextStyle(
                                         fontSize = 18.sp,
                                         fontWeight = FontWeight.W400,
@@ -280,7 +337,7 @@ internal fun AssetDetailsScreen(
                         contentDescription = null
                     )
                     Text(
-                        "Can't retrieve ${assetBundle.asset.assetData?.displayName} quote!",
+                        "Can't retrieve ${assetBundle.asset.assetData?.displayName} data!",
                         color = MaterialTheme.colorScheme.onSurface,
                         style = MaterialTheme.typography.titleMedium
                     )
@@ -366,8 +423,14 @@ fun AssetDetailContentPreview() {
                 FakeInteractor()
             ).apply {
                 quote.value = MockFactory.getMockQuote()
+                exchangeRates.value = MockFactory.getExchangeRates()
             },
-            assetBundle = MockFactory.getMockSelectedAsset(),
+            assetBundle = MockFactory.getMockSelectedAsset().copy(
+                asset = MockFactory.getMockSelectedAsset().asset.copy(
+                    exchangeRate = MockFactory.getExchangeRate(),
+                    balanceBundle = MockFactory.getBalanceBundle()
+                )
+            ),
             assetsViewModel = AssetsViewModel(FakeInteractor()),
             toLearnMore = {}
         )

@@ -47,6 +47,12 @@ internal class TokenProvider(
             }
             ).build()
 
+    override fun dropCache() {
+        errorCounter.set(0)
+        tokenExpiration.set(Long.MIN_VALUE)
+        token.set(EMPTY)
+    }
+
     override fun getTokenExpiration(): Long {
         return tokenExpiration.updateAndGet { time ->
             if (time == Long.MIN_VALUE)

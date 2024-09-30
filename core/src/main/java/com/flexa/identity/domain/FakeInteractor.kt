@@ -1,5 +1,6 @@
 package com.flexa.identity.domain
 
+import com.flexa.core.entity.ExchangeRate
 import com.flexa.core.entity.PutAppAccountsResponse
 import com.flexa.core.entity.TokenPatch
 import com.flexa.core.entity.TokensResponse
@@ -37,6 +38,21 @@ internal class FakeInteractor : IIdentityInteractor {
     }
 
     override suspend fun deleteBrands() {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getExchangeRates(
+        assetIds: List<String>,
+        unitOfAccount: String
+    ): List<ExchangeRate> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun saveExchangeRates(items: List<ExchangeRate>) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun deleteExchangeRates() {
         TODO("Not yet implemented")
     }
 

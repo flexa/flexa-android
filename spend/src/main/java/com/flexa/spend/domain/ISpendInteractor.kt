@@ -6,6 +6,7 @@ import com.flexa.core.entity.AppAccount
 import com.flexa.core.entity.AvailableAsset
 import com.flexa.core.entity.CommerceSession
 import com.flexa.core.entity.CommerceSessionEvent
+import com.flexa.core.entity.ExchangeRate
 import com.flexa.core.entity.PutAppAccountsResponse
 import com.flexa.core.entity.Quote
 import com.flexa.core.shared.Asset
@@ -52,12 +53,23 @@ interface ISpendInteractor {
     suspend fun createCommerceSession(
         brandId: String, amount: String, assetId: String, paymentAssetId: String
     ): CommerceSession.Data
+
     suspend fun closeCommerceSession(commerceSessionId: String): String
     suspend fun confirmTransaction(
-        commerceSessionId: String, txSignature: String): String
+        commerceSessionId: String, txSignature: String
+    ): String
+
     suspend fun patchCommerceSession(
-        commerceSessionId: String, paymentAssetId: String): String
+        commerceSessionId: String, paymentAssetId: String
+    ): String
+
     suspend fun getQuote(assetId: String, amount: String, unitOfAccount: String): Quote
     suspend fun deleteToken(): Int
     suspend fun deleteAccount(): Int
+    suspend fun hasOutdatedExchangeRates(): Boolean
+    suspend fun getDbExchangeRates(): List<ExchangeRate>
+    suspend fun getExchangeRates(assetIds: List<String>, unitOfAccount: String): List<ExchangeRate>
+    suspend fun getExchangeRatesSmart(assetIds: List<String>, unitOfAccount: String): List<ExchangeRate>
+    suspend fun saveExchangeRates(items: List<ExchangeRate>)
+    suspend fun deleteExchangeRates()
 }

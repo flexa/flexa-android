@@ -59,8 +59,13 @@ import com.flexa.core.theme.FlexaTheme
 import com.flexa.spend.MockFactory
 import com.flexa.spend.R
 import com.flexa.spend.domain.FakeInteractor
+import com.flexa.spend.getAmount
+import com.flexa.spend.getAssetAmount
+import com.flexa.spend.getByAssetId
+import com.flexa.spend.getCurrencySign
 import com.flexa.spend.main.assets.AssetInfoFooter
 import com.flexa.spend.main.assets.AssetsViewModel
+import java.math.BigDecimal
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -81,8 +86,17 @@ internal fun AmountDetailsScreen(
                 }
             }
         }
+        val exchangeRates by viewModel.exchangeRates.collectAsStateWithLifecycle()
+        val exchangeRate by remember {
+            derivedStateOf {
+                exchangeRates.getByAssetId(asset?.asset?.assetId ?: "")
+            }
+        }
         val palette = MaterialTheme.colorScheme
         val quote by viewModel.quote.collectAsStateWithLifecycle()
+        val exchangeRateProgress by remember {
+            derivedStateOf { exchangeRate == null }
+        }
         val progress by viewModel.progress.collectAsStateWithLifecycle()
         val error by viewModel.error.collectAsStateWithLifecycle()
 
@@ -132,9 +146,7 @@ internal fun AmountDetailsScreen(
                     }
                 ) {
                     ListItem(
-                        colors = ListItemDefaults.colors(
-                            containerColor = color
-                        ),
+                        colors = ListItemDefaults.colors(containerColor = color),
                         leadingContent = {
                             Icon(
                                 modifier = Modifier.size(24.dp),
@@ -143,33 +155,26 @@ internal fun AmountDetailsScreen(
                             )
                         },
                         headlineContent = {
-                            AnimatedContent(
-                                targetState = quote?.value?.label,
-                                transitionSpec = {
-                                    if ((targetState?.length ?: 0) < (initialState?.length ?: 0)) {
-                                        (slideInVertically { width -> width } +
-                                                fadeIn()).togetherWith(slideOutVertically()
-                                        { width -> -width } + fadeOut())
-                                    } else {
-                                        (slideInVertically { width -> -width } +
-                                                fadeIn()).togetherWith(slideOutVertically()
-                                        { width -> width } + fadeOut())
-                                    }.using(SizeTransform(clip = false))
-                                }, label = ""
-                            ) { state ->
-                                Text(
-                                    text = state ?: "",
-                                    style = TextStyle(
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.W400,
-                                        color = palette.onBackground
-                                    )
-                                )
+                            val text by remember {
+                                derivedStateOf { (exchangeRate?.getCurrencySign() ?: "") + amount }
                             }
+                            Text(
+                                text = text,
+                                style = TextStyle(
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.W400,
+                                    color = palette.onBackground
+                                )
+                            )
                         },
                         supportingContent = {
+                            val text by remember {
+                                derivedStateOf {
+                                    "${exchangeRate?.getAssetAmount(amount)} ${asset?.asset?.assetData?.displayName}"
+                                }
+                            }
                             Text(
-                                text = quote?.label ?: "",
+                                text = text,
                                 style = TextStyle(
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.W400,
@@ -188,12 +193,15 @@ internal fun AmountDetailsScreen(
                             )
                         },
                         headlineContent = {
+                            val text by remember {
+                                derivedStateOf {
+                                    "1 ${asset?.asset?.assetData?.symbol ?: ""} = ${exchangeRate?.getCurrencySign() ?: ""}${exchangeRate?.price ?: ""}"
+                                }
+                            }
                             AnimatedContent(
-                                targetState = quote?.value?.rate?.label,
+                                targetState = exchangeRate?.price?.getAmount() ?: BigDecimal.ZERO,
                                 transitionSpec = {
-                                    if ((targetState?.length ?: 0) < (initialState?.length
-                                            ?: 0)
-                                    ) {
+                                    if (targetState < initialState) {
                                         (slideInVertically { width -> width } +
                                                 fadeIn()).togetherWith(slideOutVertically()
                                         { width -> -width } + fadeOut())
@@ -204,9 +212,10 @@ internal fun AmountDetailsScreen(
                                     }.using(SizeTransform(clip = false))
                                 }, label = ""
                             ) { label ->
+                                label
                                 Text(
-                                    text = if (!progress) label
-                                        ?: "" else "${stringResource(R.string.updating)}...",
+                                    text = if (!exchangeRateProgress) text
+                                    else "${stringResource(R.string.updating)}...",
                                     style = TextStyle(
                                         fontSize = 18.sp,
                                         fontWeight = FontWeight.W400,
@@ -242,7 +251,7 @@ internal fun AmountDetailsScreen(
                                 }, label = ""
                             ) { state ->
                                 Text(
-                                    text = state ?: "",
+                                    text = state ?: "${stringResource(R.string.updating)}...",
                                     style = TextStyle(
                                         fontSize = 18.sp,
                                         fontWeight = FontWeight.W400,
@@ -281,7 +290,7 @@ internal fun AmountDetailsScreen(
                         contentDescription = null
                     )
                     Text(
-                        "Can't retrieve ${assetBundle.asset.assetData?.displayName} quote!",
+                        "Can't retrieve ${assetBundle.asset.assetData?.displayName} data!",
                         color = MaterialTheme.colorScheme.onSurface,
                         style = MaterialTheme.typography.titleMedium
                     )
@@ -324,6 +333,7 @@ private fun AmountDetailsPreview() {
             assetBundle = MockFactory.getMockSelectedAsset(),
             viewModel = AmountDetailViewModel(FakeInteractor()).apply {
                 quote.value = MockFactory.getMockQuote()
+                exchangeRates.value = MockFactory.getExchangeRates()
             },
             assetsViewModel = AssetsViewModel(FakeInteractor()),
             amount = "5.23",

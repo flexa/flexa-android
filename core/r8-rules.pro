@@ -25,7 +25,6 @@
 -keep class com.flexa.core.shared.ApiError { public *; }
 -keep class com.flexa.core.shared.ApiError$InfoEntity { public *; }
 -keep class com.flexa.core.shared.ApiError$ReportEntity { public *; }
--keep class com.flexa.core.entity.MagicCode { public *; }
 -keep class com.flexa.core.shared.ConnectStatus { public *; }
 -keep class com.flexa.core.shared.ConnectStatus$Status { public *; }
 -keep class com.flexa.core.shared.ConnectionState { public *; }

@@ -3,9 +3,9 @@ buildscript {
         kotlinVersion = '1.9.21'
 
         groupId = 'com.flexa'
-        core_version = '1.0.2'
-        scan_version = '1.0.2'
-        spend_version = '1.0.2'
+        core_version = '1.0.3'
+        scan_version = '1.0.3'
+        spend_version = '1.0.3'
 
         compose_version = '1.7.1'
         kotlin_compiler_version = '1.5.7'
@@ -30,15 +30,16 @@ buildscript {
         navigation = '2.5.2'
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.2.0'
+        classpath 'com.android.tools.build:gradle:8.2.2'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
     }
 }
 plugins {
-    id 'com.android.application' version '8.2.0' apply false
-    id 'com.android.library' version '8.2.0' apply false
+    id 'com.android.application' version '8.2.2' apply false
+    id 'com.android.library' version '8.2.2' apply false
     id 'org.jetbrains.kotlin.android' version "$kotlinVersion" apply false
     id 'org.jetbrains.kotlin.plugin.serialization' version "$kotlinVersion" apply false
+    id 'com.google.devtools.ksp' version '1.9.21-1.0.16' apply false
 }
 
 task clean(type: Delete) {

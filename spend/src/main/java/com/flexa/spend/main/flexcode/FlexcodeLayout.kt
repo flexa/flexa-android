@@ -173,11 +173,11 @@ fun FlexcodeLayout(
                 }
                 val imgWidth by remember {
                     derivedStateOf {
-                        with(density) { ((parentWidth / (multiplier * 1.392f))).toDp() }
+                        with(density) { ((parentWidth / (multiplier * 1.393f))).toDp() }
                     }
                 }
                 val imgOffset by remember {
-                    derivedStateOf { (parentHeight * (multiplier / 5.38)).toInt() }
+                    derivedStateOf { (parentWidth * (multiplier / 7.19)).toInt() }
                 }
                 val imgHeight by remember {
                     derivedStateOf { with(density) { (rootSize.height * 0.0555f).toDp() } }

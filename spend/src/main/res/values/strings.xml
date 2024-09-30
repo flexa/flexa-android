@@ -94,4 +94,8 @@
     <string name="session_expired_copy">Please sign in again to continue</string>
     <string name="sign_in">Sign in</string>
     <string name="learn_more_link">https://docs.flexa.co/payments/overview</string>
+    <string name="balance">Balance</string>
+    <string name="balance_restrictions_copy1">Your recent transaction is still mining. You can spend up to</string>
+    <string name="balance_restrictions_copy2">now, or wait for your full balance to become available.</string>
+    <string name="balance_not_yet_available">Balance Not Yet Available</string>
 </resources>

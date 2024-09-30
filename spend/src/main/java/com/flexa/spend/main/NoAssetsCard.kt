@@ -88,9 +88,7 @@ fun NoAssetsCard(
     uiMode = Configuration.UI_MODE_NIGHT_YES or Configuration.UI_MODE_TYPE_NORMAL
 )
 @Composable
-fun NoAssetsCardPreview(
-    modifier: Modifier = Modifier
-) {
+fun NoAssetsCardPreview() {
     FlexaTheme {
         NoAssetsCard(
             modifier = Modifier

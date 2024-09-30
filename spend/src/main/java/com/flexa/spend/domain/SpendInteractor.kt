@@ -7,6 +7,7 @@ import com.flexa.core.entity.AppAccount
 import com.flexa.core.entity.AvailableAsset
 import com.flexa.core.entity.CommerceSession
 import com.flexa.core.entity.CommerceSessionEvent
+import com.flexa.core.entity.ExchangeRate
 import com.flexa.core.entity.PutAppAccountsResponse
 import com.flexa.core.entity.Quote
 import com.flexa.core.shared.Asset
@@ -255,5 +256,48 @@ internal class SpendInteractor(
 
     override suspend fun deleteAccount(): Int = withContext(Dispatchers.IO) {
         interactor.deleteAccount()
+    }
+
+    override suspend fun hasOutdatedExchangeRates(): Boolean = withContext(Dispatchers.IO) {
+        dbInteractor.hasOutdatedExchangeRates()
+    }
+
+    override suspend fun getDbExchangeRates(): List<ExchangeRate> = withContext(Dispatchers.IO) {
+        dbInteractor.getExchangeRates()
+    }
+
+    override suspend fun getExchangeRates(
+        assetIds: List<String>,
+        unitOfAccount: String
+    ): List<ExchangeRate> = withContext(Dispatchers.IO) {
+        interactor.getExchangeRates(assetIds, unitOfAccount).apply {
+            dbInteractor.deleteExchangeRates()
+            dbInteractor.saveExchangeRates(this)
+        }
+    }
+
+    override suspend fun getExchangeRatesSmart(
+        assetIds: List<String>,
+        unitOfAccount: String
+    ): List<ExchangeRate> = withContext(Dispatchers.IO) {
+        when {
+            dbInteractor.hasOutdatedExchangeRates() -> {
+                getExchangeRates(assetIds, unitOfAccount)
+            }
+
+            else -> {
+                dbInteractor.getExchangeRates()
+                    .ifEmpty { getExchangeRates(assetIds, unitOfAccount) }
+            }
+        }
+    }
+
+    override suspend fun saveExchangeRates(items: List<ExchangeRate>) =
+        withContext(Dispatchers.IO) {
+            dbInteractor.saveExchangeRates(items)
+        }
+
+    override suspend fun deleteExchangeRates() = withContext(Dispatchers.IO) {
+        dbInteractor.deleteExchangeRates()
     }
 }

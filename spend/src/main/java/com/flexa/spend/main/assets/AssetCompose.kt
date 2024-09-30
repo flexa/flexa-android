@@ -6,8 +6,8 @@ import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Row
@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -32,20 +33,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
-import coil.decode.SvgDecoder
-import coil.request.ImageRequest
 import com.flexa.core.entity.AvailableAsset
 import com.flexa.core.theme.FlexaTheme
 import com.flexa.spend.MockFactory
+import com.flexa.spend.R
 import com.flexa.spend.logo
 import com.flexa.spend.main.ui_utils.SpendAsyncImage
+import java.math.BigDecimal
 
 @Composable
 fun AssetItemCompose(
@@ -64,7 +64,7 @@ fun AssetItemCompose(
         )
     }
 
-    androidx.compose.material3.ListItem(
+    ListItem(
         modifier = modifier,
         colors = ListItemDefaults.colors(
             containerColor = color
@@ -95,23 +95,25 @@ fun AssetItemCompose(
         },
         supportingContent = {
             AnimatedContent(
-                targetState = asset.balance.toDoubleOrNull()?:0.0,
+                targetState = asset.balanceBundle?.total ?:BigDecimal.ZERO,
                 transitionSpec = {
-                    if (targetState.compareTo(initialState) < 0) {
-                        (slideInVertically { width -> width } +
-                                fadeIn()).togetherWith(slideOutVertically()
+                    if (targetState < initialState) {
+                        (slideInHorizontally { width -> width } +
+                                fadeIn()).togetherWith(
+                            slideOutHorizontally()
                         { width -> -width } + fadeOut())
                     } else {
-                        (slideInVertically { width -> -width } +
-                                fadeIn()).togetherWith(slideOutVertically()
+                        (slideInHorizontally { width -> -width } +
+                                fadeIn()).togetherWith(
+                            slideOutHorizontally()
                         { width -> width } + fadeOut())
                     }.using(SizeTransform(clip = false))
                 }, label = ""
             ) { state ->
-                state.isFinite()
+                state
                 Text(
                     modifier = Modifier.animateContentSize(),
-                    text = "${asset.value?.labelTitlecase} ",
+                    text = asset.balanceBundle?.totalLabel ?: stringResource(R.string.updating),
                     style = TextStyle(
                         fontSize = 13.sp,
                         fontWeight = FontWeight.W400,
@@ -155,7 +157,9 @@ private fun AssetItemPreview() {
     FlexaTheme {
         AssetItemCompose(
             modifier = Modifier,
-            asset = MockFactory.getMockSelectedAsset().asset,
+            asset = MockFactory.getMockSelectedAsset().asset.copy(
+                balanceBundle = MockFactory.getBalanceBundle()
+            ),
             toDetails = {}
         )
     }

@@ -45,6 +45,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.rounded.CreditCard
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.WatchLater
 import androidx.compose.material3.AlertDialog
@@ -101,14 +102,20 @@ import com.flexa.spend.Spend
 import com.flexa.spend.containsAuthorization
 import com.flexa.spend.domain.FakeInteractor
 import com.flexa.spend.getAmount
+import com.flexa.spend.getSpendableBalance
+import com.flexa.spend.hasBalanceRestrictions
 import com.flexa.spend.main.assets.AssetsBottomSheet
 import com.flexa.spend.main.assets.AssetsViewModel
 import com.flexa.spend.main.main_screen.SpendDragHandler
+import com.flexa.spend.main.main_screen.SpendLifecycleRelatedMethods
 import com.flexa.spend.main.main_screen.SpendViewModel
+import com.flexa.spend.main.ui_utils.BalanceRestrictionsDialog
 import com.flexa.spend.main.ui_utils.KeepScreenOn
 import com.flexa.spend.main.ui_utils.SpendAsyncImage
 import com.flexa.spend.main.ui_utils.rememberSelectedAsset
 import com.flexa.spend.toColor
+import kotlinx.coroutines.flow.MutableStateFlow
+import java.math.BigDecimal
 import kotlin.math.roundToInt
 
 
@@ -152,6 +159,8 @@ internal fun InputAmountScreen(
         }
         toBack()
     }
+
+    SpendLifecycleRelatedMethods(spendViewModel)
 
     BackHandler {
         returnBack()
@@ -385,6 +394,7 @@ internal fun InputAmountScreen(
                     .systemBarsPadding()
                     .height(54.dp),
                 viewModel = viewModel,
+                assetsViewModel = assetsViewModel,
                 inputState = inputState,
                 progress = progress,
                 colors = listOf(brand?.color.toColor(), palette.primary),
@@ -525,29 +535,63 @@ private enum class SheetType {
 }
 
 @Composable
-fun PayButton(
+internal fun PayButton(
     modifier: Modifier = Modifier,
     viewModel: InputAmountViewModel,
+    assetsViewModel: AssetsViewModel,
     inputState: InputState,
     progress: Boolean,
     colors: List<Color> = listOf(Color.Red, Color.Yellow),
     onClick: () -> Unit = {},
 ) {
-    val asset by rememberSelectedAsset()
+    val context = LocalContext.current
+    val selectedAsset by assetsViewModel.selectedAssetWithBundles.collectAsStateWithLifecycle()
     val amount by viewModel.formatter.dataAsFlow.collectAsStateWithLifecycle()
-    val enough by remember {
+    val totalBalanceEnough by remember {
         derivedStateOf {
-            val assetAmount = asset?.asset?.value?.label?.getAmount() ?: 0.0
-            val inputAmount = amount.getAmount()
-            assetAmount >= inputAmount
+            val assetAmount =
+                selectedAsset?.asset?.balanceBundle?.total ?: BigDecimal.ZERO
+            val paymentAmount = amount.getAmount()
+            assetAmount >= paymentAmount
         }
     }
-    val enabled by remember(inputState, progress) {
+    val availableBalanceEnough by remember {
+        derivedStateOf {
+            val assetAmount =
+                selectedAsset?.asset?.getSpendableBalance() ?: BigDecimal.ZERO
+            val paymentAmount = amount.getAmount()
+            assetAmount >= paymentAmount
+        }
+    }
+    val enough by remember {
+        derivedStateOf {
+            val res = totalBalanceEnough && availableBalanceEnough
+            if (res) viewModel.showBalanceRestrictions(false)
+            res
+        }
+    }
+    val hasBalanceRestrictions by remember {
+        derivedStateOf { selectedAsset?.asset?.hasBalanceRestrictions() ?: false }
+    }
+    val enabled by remember(inputState, progress, enough) {
         derivedStateOf {
             enough && (inputState is InputState.Fine || inputState is InputState.Max) && !progress
         }
     }
-
+    val wrongAvailableState by remember {
+        derivedStateOf { !availableBalanceEnough && hasBalanceRestrictions && totalBalanceEnough }
+    }
+    val text by remember {
+        derivedStateOf {
+            when {
+                progress -> "${context.getString(R.string.processing)}..."
+                !totalBalanceEnough -> "Not enough ${selectedAsset?.asset?.assetData?.displayName}"
+                !availableBalanceEnough -> "${context.getString(R.string.balance_not_yet_available)}..."
+                else -> context.getString(R.string.confirm)
+            }
+        }
+    }
+    val showBalanceRestrictions by viewModel.showBalanceRestrictions.collectAsStateWithLifecycle()
     TextButton(
         modifier = modifier
             .fillMaxWidth()
@@ -558,29 +602,46 @@ fun PayButton(
             ),
         contentPadding = PaddingValues(0.dp),
         shape = RoundedCornerShape(14.dp),
-        onClick = { if (enough) onClick.invoke() }) {
+        onClick = {
+            when {
+                enough -> onClick()
+                wrongAvailableState ->
+                    viewModel.showBalanceRestrictions(true)
+            }
+        }
+    ) {
         AnimatedContent(
-            targetState = !progress,
+            targetState = text,
             transitionSpec = {
                 (expandHorizontally { it / 2 } + fadeIn() + scaleIn(initialScale = .7F))
                     .togetherWith(
                         shrinkHorizontally { it / 2 } + fadeOut() + scaleOut(targetScale = .7F))
             }, label = "Pay Now"
         ) { state ->
-            val context = LocalContext.current
-            val text by remember {
-                derivedStateOf {
-                    if (state) context.getString(R.string.confirm)
-                    else "${context.getString(R.string.processing)}..."
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    modifier = Modifier,
+                    text = state,
+                    color = Color.White,
+                    fontWeight = FontWeight.W700,
+                    fontSize = 17.sp
+                )
+                androidx.compose.animation.AnimatedVisibility(
+                    modifier = Modifier.padding(4.dp),
+                    visible = wrongAvailableState
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Info,
+                        contentDescription = null,
+                        tint = Color.White
+                    )
                 }
             }
-            Text(
-                modifier = Modifier,
-                text = text,
-                color = Color.White,
-                fontWeight = FontWeight.W700,
-                fontSize = 17.sp
-            )
+        }
+    }
+    if (showBalanceRestrictions) {
+        BalanceRestrictionsDialog(viewModel = assetsViewModel) {
+            viewModel.showBalanceRestrictions(false)
         }
     }
 }
@@ -641,12 +702,14 @@ private fun KeypadScreenPreview() {
         InputAmountScreen(
             modifier = Modifier.fillMaxSize(),
             viewModel = InputAmountViewModel().apply {
-                formatter.append(Symbol("53.13"))
+                formatter.append(Symbol("13.13"))
             },
             spendViewModel = SpendViewModel(FakeInteractor()).apply {
                 brand.value = MockFactory.getMockBrand()
             },
-            assetsViewModel = AssetsViewModel(FakeInteractor()),
+            assetsViewModel = AssetsViewModel(
+                FakeInteractor(), MutableStateFlow(MockFactory.getMockSelectedAsset())
+            ),
             toUrl = {},
             toBack = {},
         )

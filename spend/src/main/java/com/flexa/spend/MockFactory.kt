@@ -4,7 +4,9 @@ import com.flexa.core.entity.AppAccount
 import com.flexa.core.entity.AssetKey
 import com.flexa.core.entity.AssetValue
 import com.flexa.core.entity.AvailableAsset
+import com.flexa.core.entity.BalanceBundle
 import com.flexa.core.entity.CommerceSession
+import com.flexa.core.entity.ExchangeRate
 import com.flexa.core.entity.Notification
 import com.flexa.core.entity.Quote
 import com.flexa.core.shared.Asset
@@ -12,6 +14,7 @@ import com.flexa.core.shared.Brand
 import com.flexa.core.shared.SelectedAsset
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
+import java.math.BigDecimal
 import java.time.Instant
 import java.util.UUID
 import kotlin.random.Random
@@ -23,6 +26,7 @@ class MockFactory {
             ignoreUnknownKeys = true
             explicitNulls = false
         }
+
         fun getMockConfig(): List<AppAccount> =
             listOf(
                 AppAccount(
@@ -84,129 +88,26 @@ class MockFactory {
             SelectedAsset(
                 accountId = "1",
                 asset = AvailableAsset(
-                    assetId = "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/slip44:501",
+                    assetId = "eip155:1/slip44:60",
                     balance = "0.5",
-                    label = "0.5 SOL",
+                    label = "0.5 ETH",
                     assetData = Asset(
-                        id = "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/slip44:501",
-                        displayName = "SOL"
+                        id = "eip155:1/slip44:60",
+                        displayName = "ETH",
+                        symbol = "ETH"
                     ),
                     key = AssetKey(
                         prefix = "123", secret = "321", length = 3
                     ),
                     value = AssetValue(
                         "", "", "\$68.43 Available"
-                    )
+                    ),
+                    balanceBundle = getBalanceBundle()
                 )
             )
 
-        fun getLegacyCommerceSession(): CommerceSession {
-            return json.decodeFromString<CommerceSession>(
-                """{
-    "id": "id",
-    "api_version": "2024-06-11",
-    "data": {
-        "account": "acc",
-        "amount": "5",
-        "asset": "iso4217/USD",
-        "brand": {
-            "category_name": "",
-            "color": "#8043FF",
-            "created": 1672409955,
-            "id": "id",
-            "legacy_flexcodes": [
-                {
-                    "amount": {
-                        "maximum": "100.00",
-                        "minimum": "5.00"
-                    },
-                    "asset": "iso4217/USD"
-                }
-            ],
-            "logo_url": "",
-            "name": "Flexa",
-            "slug": "flexa",
-            "status": "active",
-            "updated": 1716498844
-        },
-        "created": 1725375422,
-        "debits": [
-            {
-                "amount": "5",
-                "asset": "iso4217/USD",
-                "created": 1725375422,
-                "id": "id",
-                "intent": "intent",
-                "kind": "total",
-                "label": "${'$'}5.00",
-                "session": "session",
-                "test_mode": true,
-                "updated": 1725375422
-            }
-        ],
-        "detected_location": {},
-        "id": "id",
-        "intent": "intent",
-        "preferences": {
-            "app": "flexa",
-            "payment_asset": "eip155:11155111/slip44:60"
-        },
-        "rate": {
-            "expires_at": 1725376322,
-            "label": "1 ETH = ${'$'}2,460.63"
-        },
-        "status": "requires_transaction",
-        "test_mode": true,
-        "transactions": [
-            {
-                "amount": "0.002032",
-                "asset": "eip155:11155111/slip44:60",
-                "created": 1725375422,
-                "destination": {
-                    "address": "address",
-                    "label": "label"
-                },
-                "expires_at": 1725379022,
-                "fee": {
-                    "amount": "0.0021",
-                    "asset": "eip155:11155111/slip44:60",
-                    "equivalent": "${'$'}5.17",
-                    "label": "0.0021 ETH",
-                    "price": {
-                        "amount": "0.0000001",
-                        "label": "100 gwei",
-                        "priority": "0.000000001"
-                    },
-                    "zone": "very_high"
-                },
-                "id": "id",
-                "label": "0.002032 ETH",
-                "session": "session",
-                "size": "21000",
-                "status": "approved",
-                "test_mode": true,
-                "updated": 1725375428
-            }
-        ],
-        "updated": 1725375422
-    },
-    "created": 1725375429,
-    "type": "commerce_session.updated"
-}""".trimIndent()
-            )
-
-        }
-
-        fun getLegacyCommerceSessionCompleted(): CommerceSession {
-            val cs = getLegacyCommerceSession()
-            return cs.copy(
-                data = cs.data?.copy(authorization = CommerceSession.Data.Authorization(
-                    details = "", instructions = "Test Data", number = "12345"
-                ))
-            )
-        }
-
         fun getMockCommerceSession(): CommerceSession {
+            val price = "32.15"
             return json.decodeFromString<CommerceSession>(
                 """
                 {
@@ -214,7 +115,7 @@ class MockFactory {
     "api_version": "2024-06-11",
     "data": {
         "account": "acc",
-        "amount": "0.1",
+        "amount": "$price",
         "asset": "iso4217/USD",
         "brand": {
             "category_name": "",
@@ -230,13 +131,13 @@ class MockFactory {
         "created": 1721215290,
         "debits": [
             {
-                "amount": "0.1",
+                "amount": "$price",
                 "asset": "iso4217/USD",
                 "created": 1721215290,
                 "id": "id",
                 "intent_id": "intent_id",
                 "kind": "total",
-                "label": "${'$'}0.10",
+                "label": "${'$'}$price",
                 "session_id": "session_id",
                 "test_mode": true,
                 "updated": 1721215290
@@ -415,5 +316,62 @@ class MockFactory {
             id = "id",
             title = "Get started with Flexa"
         )
+
+        fun getExchangeRate(): ExchangeRate = ExchangeRate(
+            asset = "",
+            label = "\$2642.56",
+            precision = 6,
+            price = "2642.56",
+            unitOfAccount = "iso4217/USD"
+        )
+
+        fun getBalanceBundle(): BalanceBundle = BalanceBundle(
+            total = BigDecimal(68.43),
+            available = BigDecimal(23.0),
+            totalLabel = "\$68.43",
+            availableLabel = "\$23.00",
+        )
+
+        fun getExchangeRates(): List<ExchangeRate> {
+            val randomPrice = String.format("%.2f", Random.nextDouble(2676.0, 2690.0))
+            return json.decodeFromString<List<ExchangeRate>>(
+                """
+                [
+        {
+            "asset": "eip155:1/slip44:60",
+            "expires_at": 1727546252,
+            "label": "${'$'}$randomPrice",
+            "precision": 6,
+            "price": "$randomPrice",
+            "unit_of_account": "iso4217/USD"
+        },
+        {
+            "asset": "cip34:1-764824073/slip44:1815",
+            "expires_at": 1727546404,
+            "label": "${'$'}0.40",
+            "precision": 0,
+            "price": "0.40",
+            "unit_of_account": "iso4217/USD"
+        },
+        {
+            "asset": "eip155:1/erc20:0xe7ae9b78373d0D54BAC81a85525826Fd50a1E2d3",
+            "expires_at": 1727546252,
+            "label": "${'$'}1.00",
+            "precision": 2,
+            "price": "1.00",
+            "unit_of_account": "iso4217/USD"
+        },
+        {
+            "asset": "eip155:1/erc20:0xdBdb4d16EdA451D0503b854CF79D55697F90c8DF",
+            "expires_at": 1727546252,
+            "label": "${'$'}14.82",
+            "precision": 4,
+            "price": "14.82",
+            "unit_of_account": "iso4217/USD"
+        }
+    ]
+                """.trimIndent()
+            )
+        }
     }
 }

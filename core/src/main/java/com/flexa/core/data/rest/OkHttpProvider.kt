@@ -61,7 +61,7 @@ internal class OkHttpProvider(
             )
             .build()
     }
-    private val tokenProvider by lazy {
+    internal val tokenProvider by lazy {
         TokenProvider(preferences, FlexaConstants.TOKEN)
     }
 }

@@ -2,15 +2,14 @@ package com.flexa.spend.main.flexa_id
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.flexa.core.Flexa
 import com.flexa.core.shared.ApiErrorHandler
+import com.flexa.identity.buildIdentity
 import com.flexa.spend.domain.ISpendInteractor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.net.HttpURLConnection
-
-private const val RETRY_DELAY = 500L
-private const val RETRY_COUNT = 3
 
 class FlexaIDViewModel(
     private val interactor: ISpendInteractor = com.flexa.spend.Spend.interactor
@@ -39,12 +38,15 @@ class FlexaIDViewModel(
                 _progress.value = false
                 errorHandler.setError(it)
             }.onSuccess { code ->
-                _progress.value = false
                 if (code == HttpURLConnection.HTTP_NO_CONTENT ||
                     code < HttpURLConnection.HTTP_INTERNAL_ERROR
                 ) {
-                    _signOut.value = true
+                    Flexa.buildIdentity().build().disconnect {
+                        _progress.value = false
+                        _signOut.value = true
+                    }
                 } else {
+                    _progress.value = false
                     errorHandler.setError(IllegalArgumentException())
                 }
             }

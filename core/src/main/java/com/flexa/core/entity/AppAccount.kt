@@ -4,13 +4,13 @@ import com.flexa.core.shared.Asset
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
+import java.math.BigDecimal
 
 class PutAppAccountsResponse(
     val hasMore: Boolean,
     val date: String,
     val accounts: List<AppAccount>
 )
-
 
 @Serializable
 data class AppAccount(
@@ -40,8 +40,21 @@ data class AvailableAsset(
     val livemode: Boolean? = null,
     @SerialName("assetData")
     val assetData: Asset? = null,
+    @SerialName("icon")
+    val icon: String? = null,
+    @SerialName("balanceAvailable")
+    val balanceAvailable: Double? = null,
+    @SerialName("exchangeRate")
+    val exchangeRate: ExchangeRate? = null,
     @Transient
-    val icon: String? = null
+    val balanceBundle: BalanceBundle? = null,
+)
+
+data class BalanceBundle (
+    val total: BigDecimal,
+    val totalLabel: String,
+    val available: BigDecimal? = null,
+    val availableLabel: String? = null,
 )
 
 @Serializable

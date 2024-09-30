@@ -6,7 +6,9 @@ import com.flexa.core.shared.Brand
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -16,13 +18,15 @@ import kotlinx.coroutines.launch
 private const val MAX_AMOUNT_DELAY = 5000L
 internal const val INPUT_DELAY = 1000L
 
-class InputAmountViewModel : ViewModel() {
+internal class InputAmountViewModel : ViewModel() {
 
     val formatter = Formatter()
     private val _inputState = MutableSharedFlow<InputState>()
     val inputState = _inputState.asSharedFlow()
     private val _inputStateDelayed = MutableSharedFlow<InputState>()
     val inputStateDelayed = _inputStateDelayed.asSharedFlow()
+    private val _showBalanceRestrictions = MutableStateFlow<Boolean>(false)
+    val showBalanceRestrictions = _showBalanceRestrictions.asStateFlow()
     private var maxAmount = 0.0
     private var minAmount = 0.0
     private var amountVerifyJob: Job? = null
@@ -37,12 +41,8 @@ class InputAmountViewModel : ViewModel() {
         super.onCleared()
     }
 
-    fun clean() {
-        viewModelScope.launch {
-            amountVerifyJob?.cancel()
-            stateJob?.cancel()
-            _inputState.emit(InputState.Unspecified)
-        }
+    fun showBalanceRestrictions(show: Boolean) {
+        _showBalanceRestrictions.value = show
     }
 
     fun setMinMaxValue(brand: Brand?) {
@@ -72,6 +72,14 @@ class InputAmountViewModel : ViewModel() {
                     _inputStateDelayed.emit(InputState.Fine)
                 }
             }
+        }
+    }
+
+    private fun clean() {
+        viewModelScope.launch {
+            amountVerifyJob?.cancel()
+            stateJob?.cancel()
+            _inputState.emit(InputState.Unspecified)
         }
     }
 

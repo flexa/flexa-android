@@ -86,6 +86,17 @@ fun List<AppAccount>.toJsonObject(): JsonObject =
         }
     }
 
+fun List<com.flexa.core.entity.AppAccount>.getUnitOfAccount(): String? {
+    return this.firstOrNull { it.availableAssets.isNotEmpty() }
+        ?.availableAssets?.firstOrNull { !it.value?.asset.isNullOrEmpty() }
+        ?.value?.asset
+}
+
+fun List<com.flexa.core.entity.AppAccount>.getAssetIds(): List<String> {
+    return this.flatMap { it.availableAssets }
+        .map { it.assetId }.toSet().toList()
+}
+
 fun AppAccount.toJsonObject(): JsonObject =
     buildJsonObject {
         put("account_id", accountId)

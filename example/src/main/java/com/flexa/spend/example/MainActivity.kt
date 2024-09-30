@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -53,6 +54,9 @@ import com.flexa.scan.buildScan
 import com.flexa.spend.buildSpend
 import com.flexa.spend.enterTransition
 import com.flexa.spend.exitTransition
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -61,9 +65,7 @@ class MainActivity : ComponentActivity() {
             FlexaClientConfiguration(
                 context = applicationContext,
                 publishableKey = BuildConfig.PUBLISHABLE_KEY,
-                theme = FlexaTheme(
-                    useDynamicColorScheme = true,
-                ),
+                theme = FlexaTheme(),
                 appAccounts = arrayListOf(
                     AppAccount(
                         accountId = "1".toSha256(),
@@ -234,6 +236,7 @@ fun Greeting() {
             }
         }
         item {
+            val scope = rememberCoroutineScope()
             OutlinedButton(
                 modifier = Modifier.defaultMinSize(minWidth = minWidth),
                 onClick = {
@@ -246,6 +249,51 @@ fun Greeting() {
                             }
                             .open(it)
                     }
+                    scope.launch(Dispatchers.IO) {
+                        delay(5_000)
+                        Flexa.updateAppAccounts(
+                            arrayListOf(
+                                AppAccount(
+                                    accountId = "1".toSha256(),
+                                    custodyModel = CustodyModel.LOCAL,
+                                    displayName = "Example Wallet",
+                                    icon = "https://flexa.network/static/4bbb1733b3ef41240ca0f0675502c4f7/d8419/flexa-logo%403x.png",
+                                    availableAssets = listOf(
+                                        AvailableAsset(
+                                            assetId = "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/slip44:501",
+                                            balance = 0.5,
+                                        ),
+                                        AvailableAsset(
+                                            assetId = "eip155:1/slip44:60",
+                                            balance = 0.101003423423,
+                                            balanceAvailable = 0.01
+                                        ),
+                                        AvailableAsset(
+                                            assetId = "cip34:1-764824073/slip44:1815",
+                                            balance = 25.0,
+                                        ),
+                                        AvailableAsset(
+                                            assetId = "eip155:1/erc20:0xe7ae9b78373d0D54BAC81a85525826Fd50a1E2d3",
+                                            balance = 25.0,
+                                        ),
+                                        AvailableAsset(
+                                            assetId = "eip155:1/erc20:0xbb0e17ef65f82ab018d8edd776e8dd940327b28b",
+                                            balance = 25.0,
+                                        ),
+                                        AvailableAsset(
+                                            assetId = "eip155:1/erc20:0xdBdb4d16EdA451D0503b854CF79D55697F90c8DF",
+                                            balance = 25.0,
+                                        ),
+                                        AvailableAsset(
+                                            assetId = "eip155:1/erc20:0xC011a73ee8576Fb46F5E1c5751cA3B9Fe0af2a6F",
+                                            balance = 25.0,
+                                        ),
+                                    )
+                                )
+                            )
+                        )
+                    }
+
                 }) {
                 Icon(imageVector = Icons.Rounded.ShoppingCart, contentDescription = null)
                 Spacer(modifier = Modifier.width(4.dp))
