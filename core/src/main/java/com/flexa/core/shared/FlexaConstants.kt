@@ -14,8 +14,6 @@ class FlexaConstants {
         const val TOKEN = "token"
         const val TOKEN_EXPIRATION = "token.expiration"
         const val APP_ACCOUNTS = "app.accounts"
-        const val ASSET_KEY = "asset.key"
-        const val ASSET_TESTMODE_KEY = "asset.testmode.key"
         const val TOKEN_ID = "token.id"
         const val EMAIL = "email"
         const val EMPTY = ""

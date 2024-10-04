@@ -8,17 +8,17 @@ import com.flexa.core.entity.Account
 import com.flexa.core.entity.CommerceSession
 import com.flexa.core.entity.CommerceSessionEvent
 import com.flexa.core.entity.ExchangeRate
-import com.flexa.core.entity.PutAppAccountsResponse
-import com.flexa.core.entity.Quote
+import com.flexa.core.entity.ExchangeRatesResponse
+import com.flexa.core.entity.OneTimeKey
+import com.flexa.core.entity.OneTimeKeyResponse
 import com.flexa.core.entity.TokenPatch
 import com.flexa.core.entity.TokensResponse
-import com.flexa.core.shared.AppAccount
+import com.flexa.core.entity.TransactionFee
 import com.flexa.core.shared.Asset
 import com.flexa.core.shared.AssetsResponse
 import com.flexa.core.shared.Brand
 import com.flexa.core.shared.BrandsResponse
 import com.flexa.core.shared.FlexaConstants
-import com.flexa.core.toJsonObject
 import com.flexa.identity.create_id.AccountsRequest
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.awaitClose
@@ -27,7 +27,6 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -36,17 +35,17 @@ import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
-import okhttp3.CacheControl
 import okhttp3.HttpUrl
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okhttp3.internal.EMPTY_REQUEST
+import okhttp3.logging.HttpLoggingInterceptor
 import okhttp3.sse.EventSource
 import okhttp3.sse.EventSourceListener
 import okhttp3.sse.EventSources
-import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -184,48 +183,41 @@ internal class RestRepository(
             )
     }
 
-    override suspend fun putAccounts(accounts: List<AppAccount>): PutAppAccountsResponse =
+    override suspend fun getOneTimeKeys(assetIds: List<String>): OneTimeKeyResponse =
         suspendCancellableCoroutine {
-            val url = HttpUrl.Builder()
-                .scheme(SCHEME).host(host)
+            val builder = HttpUrl.Builder().scheme(SCHEME).host(host)
                 .addPathSegment("accounts")
                 .addPathSegment("me")
-                .addPathSegment("app_accounts")
-                .build()
+                .addPathSegment("one_time_keys")
 
-            val body = accounts.toJsonObject()
-                .run { toString().toRequestBody(mediaType) }
+            val url = builder.build()
 
-            val request: Request = Request.Builder().url(url)
-                .put(body).build()
+            val body = buildJsonObject {
+                put("data", buildJsonArray {
+                    assetIds.forEach { assetId -> add(buildJsonObject { put("asset", assetId) }) }
+                })
+            }.run { toString().toRequestBody(mediaType) }
+
+            val request: Request = Request.Builder().url(url).put(body).build()
 
             runCatching { okHttpProvider.client.newCall(request).execute() }
-                .fold(
-                    onSuccess = { response ->
-                        runCatching {
-                            val raw = response.body?.string().toString()
-                            val jsonElement = json.parseToJsonElement(raw)
-                            val hasMore = jsonElement.jsonObject["has_more"].toString().toBoolean()
-                            val data = jsonElement.jsonObject["data"]
-                            val accData = if (data !is JsonNull) {
-                                data!!
-                            } else buildJsonArray { }
-                            val dto =
-                                json.decodeFromJsonElement<List<com.flexa.core.entity.AppAccount>>(
-                                    accData
-                                )
-                            val date = response.header("date", null) ?: ""
-                            PutAppAccountsResponse(hasMore = hasMore, accounts = dto, date = date)
-                        }.fold(
-                            onSuccess = { dto -> it.resume(dto) },
-                            onFailure = { ex ->
-                                Log.e(null, "putAccounts:>>> ", ex)
-                                it.resumeWithException(ex)
-                            }
+                .onSuccess { response ->
+                    runCatching {
+                        val raw = response.body?.string().toString()
+                        val jsonElement = json.parseToJsonElement(raw)
+                        val hasMore = jsonElement.jsonObject["has_more"].toString().toBoolean()
+                        val dataObject =
+                            jsonElement.jsonObject["data"] ?: JsonObject(emptyMap())
+                        val data = json.decodeFromJsonElement<List<OneTimeKey>>(dataObject)
+                        val lastId = if (hasMore) data.lastOrNull()?.id else null
+                        val date = response.header("date", null) ?: ""
+                        val dto = OneTimeKeyResponse(
+                            startingAfter = lastId, date = date, data = data
                         )
-                    },
-                    onFailure = { ex -> it.resumeWithException(ex) }
-                )
+                        dto
+                    }.onSuccess { dto -> it.resume(dto) }
+                        .onFailure { ex -> it.resumeWithException(ex) }
+                }.onFailure { ex -> it.resumeWithException(ex) }
         }
 
     override suspend fun getAssets(pageSize: Int, startingAfter: String?): AssetsResponse =
@@ -242,7 +234,18 @@ internal class RestRepository(
 
             val request: Request = Request.Builder().url(url).get().build()
 
-            runCatching { okHttpProvider.client.newCall(request).execute() }
+            val client = OkHttpClient().newBuilder()
+                .addInterceptor(HeadersInterceptor(okHttpProvider.tokenProvider))
+                .addInterceptor(HttpLoggingInterceptor().apply {
+                    level = when (BuildConfig.DEBUG) {
+                        true -> HttpLoggingInterceptor.Level.HEADERS
+                        else -> HttpLoggingInterceptor.Level.NONE
+                    }
+                }
+                )
+                .build()
+
+            runCatching { client.newCall(request).execute() }
                 .fold(
                     onSuccess = { response ->
                         runCatching {
@@ -482,7 +485,18 @@ internal class RestRepository(
 
             val request: Request = Request.Builder().url(url).get().build()
 
-            runCatching { okHttpProvider.client.newCall(request).execute() }
+            val client = OkHttpClient().newBuilder()
+                .addInterceptor(HeadersInterceptor(okHttpProvider.tokenProvider))
+                .addInterceptor(HttpLoggingInterceptor().apply {
+                    level = when (BuildConfig.DEBUG) {
+                        true -> HttpLoggingInterceptor.Level.HEADERS
+                        else -> HttpLoggingInterceptor.Level.NONE
+                    }
+                }
+                )
+                .build()
+
+            runCatching { client.newCall(request).execute() }
                 .fold(
                     onSuccess = { response ->
                         runCatching {
@@ -503,7 +517,6 @@ internal class RestRepository(
                     },
                     onFailure = { ex -> it.resumeWithException(ex) }
                 )
-
         }
 
     override suspend fun createCommerceSession(
@@ -681,59 +694,10 @@ internal class RestRepository(
                 )
         }
 
-    override suspend fun getQuote(assetId: String, amount: String, unitOfAccount: String): Quote =
-        suspendCancellableCoroutine {
-            val url = HttpUrl.Builder()
-                .scheme(SCHEME).host(host)
-                .addPathSegment("asset_converter")
-                .build()
-
-            val body = buildJsonObject {
-                put("amount", amount)
-                put("asset", assetId)
-                put("unit_of_account", unitOfAccount)
-            }.run { toString().toRequestBody(mediaType) }
-
-            val cacheControl = CacheControl.Builder()
-                .maxAge(25, TimeUnit.SECONDS)
-                .build()
-
-            val request: Request = Request.Builder().url(url)
-                .cacheControl(cacheControl)
-                .put(body).build()
-
-            runCatching { okHttpProvider.client.newCall(request).execute() }
-                .fold(
-                    onSuccess = { response ->
-                        runCatching {
-                            val res = response.body?.string().toString()
-                            if (response.code != 200) {
-                                Result.failure(NullPointerException())
-                            } else {
-                                val dto = json.decodeFromString<Quote>(res)
-                                Result.success(dto)
-                            }
-                        }.fold(
-                            onSuccess = { res ->
-                                if (res.isSuccess) {
-                                    res.getOrNull()?.let { r -> it.resume(r) }
-                                } else {
-                                    res.exceptionOrNull()?.let { e ->
-                                        it.resumeWithException(e)
-                                    }
-                                }
-                            },
-                            onFailure = { ex -> it.resumeWithException(ex) }
-                        )
-                    },
-                    onFailure = { ex -> it.resumeWithException(ex) }
-                )
-        }
-
     override suspend fun getExchangeRates(
         assetIds: List<String>,
         unitOfAccount: String
-    ): List<ExchangeRate> = suspendCancellableCoroutine {
+    ): ExchangeRatesResponse = suspendCancellableCoroutine {
         val ids = assetIds.joinToString(",")
         val url = HttpUrl.Builder()
             .scheme(SCHEME).host(host)
@@ -754,7 +718,48 @@ internal class RestRepository(
                         val raw = response.body?.string().toString()
                         val jsonElement = json.parseToJsonElement(raw)
                         val data = jsonElement.jsonObject["data"]
+                        val date = response.header("date", null) ?: ""
                         val dto = data?.let { json.decodeFromJsonElement<List<ExchangeRate>>(it) }
+                            ?: emptyList()
+                        Result.success(ExchangeRatesResponse(date= date, data = dto))
+                    }
+                }.onSuccess { res ->
+                    if (res.isSuccess) {
+                        res.getOrNull()?.let { r -> it.resume(r) }
+                    } else {
+                        res.exceptionOrNull()?.let { e ->
+                            it.resumeWithException(e)
+                        }
+                    }
+                }.onFailure { ex -> it.resumeWithException(ex) }
+            }.onFailure { ex -> it.resumeWithException(ex) }
+    }
+
+    override suspend fun getTransactionFees(
+        assetIds: List<String>,
+        unitOfAccount: String
+    ): List<TransactionFee> = suspendCancellableCoroutine {
+        val ids = assetIds.joinToString(",")
+        val url = HttpUrl.Builder()
+            .scheme(SCHEME).host(host)
+            .addPathSegment("transaction_fees")
+            .addEncodedQueryParameter("assets", ids)
+            .addEncodedQueryParameter("unit_of_account", unitOfAccount)
+            .build()
+
+        val request: Request = Request.Builder().url(url)
+            .get().build()
+
+        runCatching { okHttpProvider.client.newCall(request).execute() }
+            .onSuccess { response ->
+                runCatching {
+                    if (response.code != 200) {
+                        Result.failure(NullPointerException())
+                    } else {
+                        val raw = response.body?.string().toString()
+                        val jsonElement = json.parseToJsonElement(raw)
+                        val data = jsonElement.jsonObject["data"]
+                        val dto = data?.let { json.decodeFromJsonElement<List<TransactionFee>>(it) }
                             ?: emptyList()
                         Result.success(dto)
                     }

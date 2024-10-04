@@ -7,20 +7,19 @@ import com.flexa.core.entity.AvailableAsset
 import com.flexa.core.entity.CommerceSession
 import com.flexa.core.entity.CommerceSessionEvent
 import com.flexa.core.entity.ExchangeRate
+import com.flexa.core.entity.ExchangeRatesResponse
 import com.flexa.core.entity.Limit
+import com.flexa.core.entity.OneTimeKey
+import com.flexa.core.entity.OneTimeKeyResponse
 import com.flexa.core.entity.PutAppAccountsResponse
-import com.flexa.core.entity.Quote
+import com.flexa.core.entity.TransactionFee
 import com.flexa.core.shared.Asset
 import com.flexa.core.shared.AssetsResponse
 import com.flexa.core.shared.Brand
 import com.flexa.core.shared.ConnectionState
 import com.flexa.spend.MockFactory
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.withContext
-import kotlin.random.Random
 
 
 internal class FakeInteractor : ISpendInteractor {
@@ -95,7 +94,7 @@ internal class FakeInteractor : ISpendInteractor {
         TODO("Not yet implemented")
     }
 
-    override suspend fun putAccounts(account: List<com.flexa.core.shared.AppAccount>): PutAppAccountsResponse {
+    override suspend fun putAccounts(accounts: List<com.flexa.core.shared.AppAccount>): PutAppAccountsResponse {
         TODO("Not yet implemented")
     }
 
@@ -226,13 +225,6 @@ internal class FakeInteractor : ISpendInteractor {
         TODO("Not yet implemented")
     }
 
-    override suspend fun getQuote(
-        assetId: String, amount: String, unitOfAccount: String
-    ): Quote = withContext(Dispatchers.IO) {
-        delay(Random.nextLong(300, 2000))
-        MockFactory.getMockQuote()
-    }
-
     override suspend fun deleteToken(): Int {
         TODO("Not yet implemented")
     }
@@ -249,17 +241,45 @@ internal class FakeInteractor : ISpendInteractor {
         TODO("Not yet implemented")
     }
 
+    override suspend fun getDbExchangeRate(id: String): ExchangeRate? {
+        TODO("Not yet implemented")
+    }
+
     override suspend fun getExchangeRates(
         assetIds: List<String>,
         unitOfAccount: String
-    ): List<ExchangeRate> {
+    ): ExchangeRatesResponse {
         TODO("Not yet implemented")
     }
 
     override suspend fun getExchangeRatesSmart(
         assetIds: List<String>,
         unitOfAccount: String
-    ): List<ExchangeRate> {
+    ): ExchangeRatesResponse {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun hasOutdatedOneTimeKeys(): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getDbOneTimeKey(assetId: String): OneTimeKey? {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getDbOneTimeKeys(): List<OneTimeKey> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getOneTimeKeys(assetIds: List<String>): OneTimeKeyResponse {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getOneTimeKeysSmart(assetIds: List<String>): List<OneTimeKey> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun saveOneTimeKeys(items: List<OneTimeKey>) {
         TODO("Not yet implemented")
     }
 
@@ -268,6 +288,25 @@ internal class FakeInteractor : ISpendInteractor {
     }
 
     override suspend fun deleteExchangeRates() {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getTransactionFees(
+        assetIds: List<String>,
+        unitOfAccount: String
+    ): List<TransactionFee> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getDbTransactionFees(): List<TransactionFee> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun saveTransactionFees(items: List<TransactionFee>) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getDbTransactionFee(assetId: String): TransactionFee? {
         TODO("Not yet implemented")
     }
 }

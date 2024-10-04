@@ -126,7 +126,7 @@ fun SpendScreen(
 ) {
     val context = LocalContext.current
 
-    SpendLifecycleRelatedMethods(viewModel)
+    SpendLifecycleRelatedMethods(assetsViewModel)
 
     Box(modifier = modifier) {
         val isPreview = LocalInspectionMode.current
@@ -186,14 +186,14 @@ fun SpendScreen(
                         .fillMaxWidth()
                         .navigationBarsPadding(),
                     viewModel = viewModel,
-                    toBack = { commerceSessionId ->
+                    toBack = { commerceSessionId, containsAuthorization ->
                         viewModel.deleteCommerceSessionData()
                         commerceSessionId?.let { id ->
-                            CommerceSessionWorker.execute(context, id)
+                            if (!containsAuthorization)
+                                CommerceSessionWorker.execute(context, id)
                         }
                         viewModel.openLegacyCard.value = false
-                        viewModel.amount.value = null
-                        viewModel.brand.value = null
+                        viewModel.selectedBrand.value = null
                     },
                 )
                 Spacer(modifier = Modifier.height(26.dp))
@@ -514,7 +514,7 @@ fun SpendScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 spendViewModel = viewModel,
                                 viewModel = viewModel(key = "locations", initializer = {
-                                    PlacesToPayViewModel("directory/${viewModel.brand.value?.name}/locations")
+                                    PlacesToPayViewModel("directory/${viewModel.selectedBrand.value?.name}/locations")
                                 }),
                                 toBack = { closeBottomSheet() }
                             )

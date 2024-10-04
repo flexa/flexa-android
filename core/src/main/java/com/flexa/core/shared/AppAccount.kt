@@ -36,10 +36,14 @@ fun List<AppAccount>.filterAssets(assets: List<Asset>): List<AppAccount> {
     val accounts = this.distinctBy { it.accountId }
     val appAccounts = ArrayList<AppAccount>(accounts.size)
     accounts.forEach { acc ->
-        val filteredAssets = acc.availableAssets.filter { asset ->
-            assets.any { it.id == asset.assetId }
-        }
+        val filteredAssets = acc.filterAssets(assets)
         appAccounts.add(acc.copy(availableAssets = filteredAssets))
     }
     return appAccounts
+}
+
+fun AppAccount.filterAssets(assets: List<Asset>): List<AvailableAsset> {
+    return this.availableAssets.filter { asset ->
+        assets.any { it.id == asset.assetId }
+    }
 }

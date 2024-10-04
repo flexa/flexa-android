@@ -3,12 +3,11 @@ package com.flexa.core.domain.rest
 import com.flexa.core.entity.Account
 import com.flexa.core.entity.CommerceSession
 import com.flexa.core.entity.CommerceSessionEvent
-import com.flexa.core.entity.ExchangeRate
-import com.flexa.core.entity.PutAppAccountsResponse
-import com.flexa.core.entity.Quote
+import com.flexa.core.entity.ExchangeRatesResponse
+import com.flexa.core.entity.OneTimeKeyResponse
 import com.flexa.core.entity.TokenPatch
 import com.flexa.core.entity.TokensResponse
-import com.flexa.core.shared.AppAccount
+import com.flexa.core.entity.TransactionFee
 import com.flexa.core.shared.Asset
 import com.flexa.core.shared.AssetsResponse
 import com.flexa.core.shared.BrandsResponse
@@ -24,7 +23,7 @@ interface IRestRepository {
         code: String? = null, link: String? = null
     ): TokenPatch
 
-    suspend fun putAccounts(accounts: List<AppAccount>): PutAppAccountsResponse
+    suspend fun getOneTimeKeys(assetIds: List<String>): OneTimeKeyResponse
     suspend fun getAssets(pageSize: Int, startingAfter: String?): AssetsResponse
     suspend fun getAssetById(assetId: String): Asset
     suspend fun getAccount(): Account
@@ -48,6 +47,6 @@ interface IRestRepository {
 
     suspend fun getCommerceSession(sessionId: String): CommerceSession.Data
 
-    suspend fun getQuote(assetId: String, amount: String, unitOfAccount: String): Quote
-    suspend fun getExchangeRates(assetIds: List<String>, unitOfAccount: String): List<ExchangeRate>
+    suspend fun getExchangeRates(assetIds: List<String>, unitOfAccount: String): ExchangeRatesResponse
+    suspend fun getTransactionFees(assetIds: List<String>, unitOfAccount: String): List<TransactionFee>
 }

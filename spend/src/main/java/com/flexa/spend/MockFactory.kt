@@ -8,7 +8,6 @@ import com.flexa.core.entity.BalanceBundle
 import com.flexa.core.entity.CommerceSession
 import com.flexa.core.entity.ExchangeRate
 import com.flexa.core.entity.Notification
-import com.flexa.core.entity.Quote
 import com.flexa.core.shared.Asset
 import com.flexa.core.shared.Brand
 import com.flexa.core.shared.SelectedAsset
@@ -46,51 +45,12 @@ class MockFactory {
                 )
             )
 
-        fun getMockQuote(): Quote {
-            val feePrice = String.format("%.2f", Random.nextDouble(0.50, 0.70))
-            val price = String.format("%.2f", Random.nextDouble(2516.0, 2523.0))
-            val expireTime =
-                Instant.now().plusSeconds(Random.nextLong(5, 10)).toEpochMilli() / 1000
-            return json.decodeFromString<Quote>(
-                """
-                {
-                    "amount": "0.141288845675685478",
-                    "asset": "eip155:1/slip44:60",
-                    "fee": {
-                        "amount": "0.00003153",
-                        "asset": "eip155:1/slip44:60",
-                        "equivalent": "${'$'}$feePrice",
-                        "label": "0.000032 ETH",
-                        "price": {
-                            "amount": "0.000000007",
-                            "label": "6–8 gwei",
-                            "priority": "0.00000000119"
-                        },
-                        "zone": "low"
-                    },
-                    "label": "0.141288 ETH",
-                    "unit_of_account": "iso4217/USD",
-                    "value": {
-                        "amount": "251.48",
-                        "label": "${'$'}251.48",
-                        "rate": {
-                            "label": "1 ETH = ${'$'}$price",
-                            "expires_at": "$expireTime"
-                        }
-                    }
-                }
-                """.trimIndent()
-            )
-
-        }
-
         fun getMockSelectedAsset(): SelectedAsset =
             SelectedAsset(
                 accountId = "1",
                 asset = AvailableAsset(
                     assetId = "eip155:1/slip44:60",
                     balance = "0.5",
-                    label = "0.5 ETH",
                     assetData = Asset(
                         id = "eip155:1/slip44:60",
                         displayName = "ETH",
@@ -106,8 +66,9 @@ class MockFactory {
                 )
             )
 
-        fun getMockCommerceSession(): CommerceSession {
+        fun getCommerceSession(): CommerceSession {
             val price = "32.15"
+            val time = Instant.now().plusSeconds(60 * 30).epochSecond
             return json.decodeFromString<CommerceSession>(
                 """
                 {
@@ -143,7 +104,7 @@ class MockFactory {
                 "updated": 1721215290
             }
         ],
-        "id": "id",
+        "id": "id_123_789",
         "intent": "intent",
         "preferences": {
             "app": "flexa",
@@ -164,7 +125,7 @@ class MockFactory {
                     "address": "address",
                     "label": "label"
                 },
-                "expires_at": 1721218890,
+                "expires_at": $time,
                 "fee": {
                     "amount": "0.003",
                     "asset": "eip155:1/slip44:60",

@@ -205,7 +205,7 @@ fun ConfirmDetailContentPreview() {
                 .background(color = MaterialTheme.colorScheme.secondaryContainer)
         ) {
             PaymentDetailsScreen(
-                sessionFlow = MutableStateFlow(MockFactory.getMockCommerceSession()),
+                sessionFlow = MutableStateFlow(MockFactory.getCommerceSession()),
                 toBack = {},
                 toLearnMore = {}
             )

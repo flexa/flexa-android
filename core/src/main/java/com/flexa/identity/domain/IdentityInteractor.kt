@@ -5,6 +5,8 @@ import com.flexa.core.data.rest.RestRepository.Companion.json
 import com.flexa.core.data.storage.SecuredPreferences
 import com.flexa.core.domain.db.DbInteractor
 import com.flexa.core.domain.rest.RestInteractor
+import com.flexa.core.entity.Account
+import com.flexa.core.entity.AvailableAsset
 import com.flexa.core.entity.ExchangeRate
 import com.flexa.core.entity.PutAppAccountsResponse
 import com.flexa.core.entity.TokenPatch
@@ -14,11 +16,11 @@ import com.flexa.core.shared.Asset
 import com.flexa.core.shared.AssetsResponse
 import com.flexa.core.shared.Brand
 import com.flexa.core.shared.FlexaConstants
+import com.flexa.core.shared.filterAssets
 import com.flexa.identity.create_id.AccountsRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import java.util.UUID
 
 internal class IdentityInteractor(
@@ -91,7 +93,7 @@ internal class IdentityInteractor(
         assetIds: List<String>,
         unitOfAccount: String
     ): List<ExchangeRate> = withContext(Dispatchers.IO) {
-        restInteractor.getExchangeRates(assetIds, unitOfAccount)
+        restInteractor.getExchangeRates(assetIds, unitOfAccount).data
     }
 
     override suspend fun saveExchangeRates(items: List<ExchangeRate>) =
@@ -146,17 +148,47 @@ internal class IdentityInteractor(
             res
         }
 
+    override suspend fun getAccount(): Account = withContext(Dispatchers.IO) {
+        restInteractor.getAccount()
+    }
+
     override suspend fun getAppAccounts(): List<com.flexa.core.entity.AppAccount>? {
         val data = preferences.getString(FlexaConstants.APP_ACCOUNTS)
         val accounts =
-            data?.let { Json.decodeFromString<List<com.flexa.core.entity.AppAccount>>(it) }
+            data?.let { json.decodeFromString<List<com.flexa.core.entity.AppAccount>>(it) }
         return accounts
     }
 
-    override suspend fun putAppAccounts(account: List<AppAccount>): PutAppAccountsResponse =
+    override suspend fun putAppAccounts(accounts: List<AppAccount>): PutAppAccountsResponse =
         withContext(Dispatchers.IO) {
-            val response = restInteractor.putAccounts(account)
-            response
+            val appAccounts = ArrayList<com.flexa.core.entity.AppAccount>(accounts.size)
+            val account = getAccount()
+            val assets = getAllAssets(100)
+            deleteAssets()
+            saveAssets(assets)
+            for (localAccount in accounts) {
+                val filteredAssets = localAccount.filterAssets(assets)
+                val accountAssets = filteredAssets.map { localAsset ->
+                    val assetData = assets.firstOrNull { it.id == localAsset.assetId }
+                    AvailableAsset(
+                        assetId = localAsset.assetId,
+                        balance = localAsset.balance.toString(),
+                        balanceAvailable = localAsset.balanceAvailable,
+                        livemode = assetData?.livemode,
+                        assetData = assetData
+                        )
+                }
+
+                val appAccount = com.flexa.core.entity.AppAccount(
+                    accountId = localAccount.accountId,
+                    displayName = localAccount.displayName,
+                    unitOfAccount = account.limits?.firstOrNull()?.asset,
+                    icon = localAccount.icon,
+                    availableAssets = ArrayList(accountAssets)
+                )
+                appAccounts.add(appAccount)
+            }
+            PutAppAccountsResponse(date = "", accounts = appAccounts)
         }
 
     override suspend fun saveAppAccounts(account: List<com.flexa.core.entity.AppAccount>) {

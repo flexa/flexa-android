@@ -28,3 +28,15 @@ class LegacyFlexcodeConverter {
         return json.encodeToString(list)
     }
 }
+
+class ObjectConverters {
+    @TypeConverter
+    fun fromTransactionFeePrice(item: TransactionFeePrice?): String? {
+        return item?.let { json.encodeToString(it) }
+    }
+
+    @TypeConverter
+    fun toTransactionFeePrice(string: String?): TransactionFeePrice? {
+        return string?.let { json.decodeFromString<TransactionFeePrice>(it) }
+    }
+}

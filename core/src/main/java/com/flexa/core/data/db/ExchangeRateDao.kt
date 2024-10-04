@@ -13,6 +13,9 @@ internal interface ExchangeRateDao {
     @Query("SELECT * FROM exchange_rate")
     fun getAll(): List<ExchangeRate>
 
+    @Query("SELECT * FROM exchange_rate WHERE asset = :id LIMIT 1")
+    fun getByIdl(id: String): ExchangeRate?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertAll(items: List<ExchangeRate>)
 

@@ -189,7 +189,7 @@ fun NavGraphBuilder.identityNavGraph(
                         close(context, navController)
                     }
                 },
-                onClose = { account -> close(context, navController) }
+                onClose = { close(context, navController) }
             )
         }
     }

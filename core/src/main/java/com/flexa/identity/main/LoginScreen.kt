@@ -5,13 +5,12 @@ import android.content.res.Configuration
 import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.with
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -50,6 +49,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -92,7 +92,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalComposeUiApi::class, ExperimentalAnimationApi::class)
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 internal fun LoginScreen(
     modifier: Modifier = Modifier,
@@ -112,7 +112,7 @@ internal fun LoginScreen(
             .collectAsStateWithLifecycle(listOf(""))
     }
     val alpha: Float by animateFloatAsState(
-        targetValue = if (items.isEmpty()) 0f else 1f,
+        targetValue = if (items.isEmpty()) 0f else 0f,
         animationSpec = tween(durationMillis = 1000), label = "alpha",
     )
 
@@ -129,7 +129,7 @@ internal fun LoginScreen(
             val context = Flexa.requiredContext
             mutableStateOf(
                 try {
-                    @Suppress("DEPRECATION") val packageInfo = when {
+                    val packageInfo = when {
                         Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ->
                             Flexa.requiredContext.packageManager
                                 .getPackageInfo(context.packageName, 0)
@@ -204,7 +204,7 @@ internal fun LoginScreen(
                 }
             }
 
-            val depthMultiplier by remember { mutableStateOf(10) }
+            val depthMultiplier by remember { mutableIntStateOf(10) }
             val roll by remember { derivedStateOf { (data?.roll ?: 0f) * depthMultiplier } }
             val pitch by remember { derivedStateOf { (data?.pitch ?: 0f) * depthMultiplier } }
             Column(modifier = Modifier
@@ -215,7 +215,6 @@ internal fun LoginScreen(
                         y = -(pitch * .9).dp.roundToPx()
                     )
                 }
-
             ) {
                 MerchantsIconsList(
                     modifier = Modifier
@@ -244,7 +243,6 @@ internal fun LoginScreen(
                             PackageManager.ApplicationInfoFlags.of(0)
                         )
                     } else {
-                        @Suppress("DEPRECATION")
                         packageManager.getApplicationInfo(
                             context.packageName,
                             PackageManager.GET_META_DATA
@@ -448,7 +446,7 @@ internal fun LoginScreen(
             AnimatedContent(
                 targetState = progress,
                 transitionSpec = {
-                    fadeIn() with fadeOut()
+                    fadeIn() togetherWith fadeOut()
                 }, label = "Text"
             ) { state ->
                 state

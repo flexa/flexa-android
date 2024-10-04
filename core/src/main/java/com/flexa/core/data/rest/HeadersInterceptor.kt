@@ -7,13 +7,13 @@ import com.flexa.core.data.data.AppInfoProvider
 import com.flexa.core.data.data.TokenProvider
 import com.flexa.core.minutesBetween
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.withLock
 import okhttp3.Interceptor
 import okhttp3.Request
 import okhttp3.Response
 import java.net.HttpURLConnection
 import java.time.Instant
 import java.util.UUID
-import java.util.concurrent.CountDownLatch
 
 
 internal const val MINIMUM_REFRESH_MINUTES = 5
@@ -42,24 +42,17 @@ internal class HeadersInterceptor(
             userAgent = userAgent
         )
     }
-    private val countDownLatch = tokenProvider.countDownLatch
+    private val mutex = tokenProvider.mutex
 
     override fun intercept(chain: Interceptor.Chain): Response = runBlocking {
-        val tokenExpiration = tokenProvider.getTokenExpiration()
-        val tokenExpirationMinutes = Instant.now().minutesBetween(tokenExpiration)
+        mutex.withLock {
+            val tokenExpiration = tokenProvider.getTokenExpiration()
+            val tokenExpirationMinutes = Instant.now().minutesBetween(tokenExpiration)
 
-        if (tokenExpirationMinutes <= MINIMUM_REFRESH_MINUTES) {
-            synchronized(this) {
-                if (countDownLatch.get() == null) {
-                    countDownLatch.set(CountDownLatch(1))
-                    tokenProvider.getRefreshToken(headersBundle)
-                    countDownLatch.getAndSet(null)?.countDown()
-                } else {
-                    countDownLatch.get()?.await()
-                }
+            if (tokenExpirationMinutes <= MINIMUM_REFRESH_MINUTES) {
+                tokenProvider.getRefreshToken(headersBundle)
             }
         }
-
         val token = tokenProvider.getToken()
         val request = newRequestWithAccessToken(chain.request(), token)
         var response = chain.proceed(request)

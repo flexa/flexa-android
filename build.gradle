@@ -3,9 +3,9 @@ buildscript {
         kotlinVersion = '1.9.21'
 
         groupId = 'com.flexa'
-        core_version = '1.0.3'
-        scan_version = '1.0.3'
-        spend_version = '1.0.3'
+        core_version = '1.0.4'
+        scan_version = '1.0.4'
+        spend_version = '1.0.4'
 
         compose_version = '1.7.1'
         kotlin_compiler_version = '1.5.7'

@@ -51,6 +51,7 @@ import androidx.compose.material.icons.rounded.WatchLater
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -95,7 +96,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.flexa.core.theme.FlexaTheme
 import com.flexa.core.view.AutoSizeText
-import com.flexa.core.view.FlexaProgress
 import com.flexa.spend.MockFactory
 import com.flexa.spend.R
 import com.flexa.spend.Spend
@@ -137,7 +137,7 @@ internal fun InputAmountScreen(
     var sheetType by remember { mutableStateOf(SheetType.ASSETS) }
 
     val selectedAsset by rememberSelectedAsset()
-    val brand by spendViewModel.brand.collectAsStateWithLifecycle()
+    val brand by spendViewModel.selectedBrand.collectAsStateWithLifecycle()
     val amount by viewModel.formatter.dataAsFlow.collectAsStateWithLifecycle()
     val progress by spendViewModel.progress.collectAsStateWithLifecycle()
     val timeout by spendViewModel.timeout.collectAsStateWithLifecycle()
@@ -150,6 +150,7 @@ internal fun InputAmountScreen(
     val commerceSession by spendViewModel.commerceSession.collectAsStateWithLifecycle()
 
     val returnBack = {
+        spendViewModel.selectedBrand.value = null
         spendViewModel.stopProgress()
         spendViewModel.cancelTimeout()
         if (commerceSession?.containsAuthorization() == false) {
@@ -160,7 +161,7 @@ internal fun InputAmountScreen(
         toBack()
     }
 
-    SpendLifecycleRelatedMethods(spendViewModel)
+    SpendLifecycleRelatedMethods(assetsViewModel)
 
     BackHandler {
         returnBack()
@@ -256,32 +257,16 @@ internal fun InputAmountScreen(
                 )
             }
         }
-        AnimatedContent(
-            targetState = progress,
-            transitionSpec = {
-                (scaleIn(initialScale = .7F) + fadeIn()).togetherWith(scaleOut(targetScale = .7F) + fadeOut())
-            }, label = "Icon"
-        ) { progressState ->
-            if (!progressState) {
-                SpendAsyncImage(
-                    modifier = Modifier
-                        .shadow(elevation = 2.dp, shape = RoundedCornerShape(14.dp))
-                        .clip(RoundedCornerShape(14.dp))
-                        .size(60.dp),
-                    imageUrl = brand?.logoUrl,
-                    placeholder = BrushPainter(
-                        SolidColor(Color.White.copy(.3F))
-                    ),
-                    crossfadeDuration = 500
-                )
-            } else {
-                FlexaProgress(
-                    modifier = Modifier.size(60.dp),
-                    roundedCornersSize = 12.dp,
-                    borderWidth = 2.dp
-                )
-            }
-        }
+        SpendAsyncImage(
+            modifier = Modifier
+                .shadow(elevation = 2.dp, shape = RoundedCornerShape(14.dp))
+                .clip(RoundedCornerShape(14.dp))
+                .size(60.dp),
+            imageUrl = brand?.logoUrl,
+            placeholder = BrushPainter(
+                SolidColor(Color.White.copy(.3F))
+            ),
+        )
         AmountText(
             modifier = Modifier
                 .fillMaxWidth()
@@ -395,8 +380,8 @@ internal fun InputAmountScreen(
                     .height(54.dp),
                 viewModel = viewModel,
                 assetsViewModel = assetsViewModel,
+                spendViewModel = spendViewModel,
                 inputState = inputState,
-                progress = progress,
                 colors = listOf(brand?.color.toColor(), palette.primary),
                 onClick = {
                     val enabled =
@@ -539,12 +524,13 @@ internal fun PayButton(
     modifier: Modifier = Modifier,
     viewModel: InputAmountViewModel,
     assetsViewModel: AssetsViewModel,
+    spendViewModel: SpendViewModel,
     inputState: InputState,
-    progress: Boolean,
     colors: List<Color> = listOf(Color.Red, Color.Yellow),
     onClick: () -> Unit = {},
 ) {
     val context = LocalContext.current
+    val progress by spendViewModel.progress.collectAsStateWithLifecycle()
     val selectedAsset by assetsViewModel.selectedAssetWithBundles.collectAsStateWithLifecycle()
     val amount by viewModel.formatter.dataAsFlow.collectAsStateWithLifecycle()
     val totalBalanceEnough by remember {
@@ -619,6 +605,16 @@ internal fun PayButton(
             }, label = "Pay Now"
         ) { state ->
             Row(verticalAlignment = Alignment.CenterVertically) {
+                androidx.compose.animation.AnimatedVisibility(
+                    modifier = Modifier.padding(4.dp),
+                    visible = progress
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                        color = Color.White,
+                    )
+                }
                 Text(
                     modifier = Modifier,
                     text = state,
@@ -628,7 +624,7 @@ internal fun PayButton(
                 )
                 androidx.compose.animation.AnimatedVisibility(
                     modifier = Modifier.padding(4.dp),
-                    visible = wrongAvailableState
+                    visible = wrongAvailableState && !progress
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.Info,
@@ -705,7 +701,7 @@ private fun KeypadScreenPreview() {
                 formatter.append(Symbol("13.13"))
             },
             spendViewModel = SpendViewModel(FakeInteractor()).apply {
-                brand.value = MockFactory.getMockBrand()
+                selectedBrand.value = MockFactory.getMockBrand()
             },
             assetsViewModel = AssetsViewModel(
                 FakeInteractor(), MutableStateFlow(MockFactory.getMockSelectedAsset())

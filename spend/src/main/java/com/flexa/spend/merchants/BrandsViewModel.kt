@@ -1,6 +1,5 @@
 package com.flexa.spend.merchants
 
-import android.util.Log
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.lifecycle.ViewModel
@@ -9,7 +8,11 @@ import com.flexa.core.shared.Brand
 import com.flexa.spend.Spend
 import com.flexa.spend.domain.ISpendInteractor
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class BrandsViewModel(
@@ -20,7 +23,16 @@ class BrandsViewModel(
     private val _itemsB = mutableStateListOf<BrandListItem>()
     val itemsA: List<BrandListItem> = _itemsA
     val itemsB: List<BrandListItem> = _itemsB
-    var addMerchantId = MutableStateFlow<String?>(null)
+
+    private var error = false
+    private val _addMerchantId = MutableStateFlow<String?>(null)
+    val addMerchantId = _addMerchantId.asStateFlow()
+        .onStart { initBrands()  }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = null
+        )
 
     val slideStates = mutableStateMapOf<BrandListItem, SlideState>()
         .apply {
@@ -29,6 +41,10 @@ class BrandsViewModel(
 
     init {
         listenConnection()
+    }
+
+    internal fun setAddMerchantId(id: String?) {
+        _addMerchantId.value = id
     }
 
     internal fun reorderItem(currentIndex: Int, destinationIndex: Int) {
@@ -42,7 +58,7 @@ class BrandsViewModel(
 
     internal fun pinItem(item: BrandListItem) {
         viewModelScope.launch {
-            addMerchantId.value = item.id
+            _addMerchantId.value = item.id
             val newItem = item.copy(id = item.id, isDraggable = true)
             _itemsA.add(newItem)
             _itemsB.remove(item)
@@ -65,7 +81,7 @@ class BrandsViewModel(
             interactor.getConnectionListener()
                 ?.distinctUntilChanged()
                 ?.collect {
-                    initBrands()
+                    if (error) initBrands()
                 }
         }
     }
@@ -79,12 +95,12 @@ class BrandsViewModel(
                 interactor.deleteBrands()
                 interactor.saveBrands(brands)
                 brands
-            }.fold(
-                onSuccess = { populateBrands(it) },
-                onFailure = {
-                    Log.e("TAG", "initBrands: ", it)
-                }
-            )
+            }.onSuccess {
+                error = false
+                populateBrands(it)
+            }.onFailure {
+                error = true
+            }
         }
     }
 

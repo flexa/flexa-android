@@ -2,6 +2,7 @@ package com.flexa
 
 import com.flexa.core.entity.AssetValue
 import com.flexa.core.entity.AvailableAsset
+import com.flexa.core.entity.BalanceBundle
 import com.flexa.core.minutesBetween
 import com.flexa.core.toDate
 import com.flexa.core.zeroValue
@@ -10,6 +11,7 @@ import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertTrue
 import org.junit.Test
+import java.math.BigDecimal
 import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -77,7 +79,7 @@ class ExtensionsTest {
         val asset = AvailableAsset(
             assetId = "",
             balance = "",
-            value = AssetValue(asset = "", label = "$0.01 available", labelTitlecase = "")
+            balanceBundle = BalanceBundle(total = BigDecimal(0.01), totalLabel = "")
         )
         assertFalse(asset.zeroValue())
     }
@@ -92,11 +94,11 @@ class ExtensionsTest {
     }
 
     @Test
-    fun `should return zero value for any symbol`() {
+    fun `should return zero value for 0`() {
         val asset = AvailableAsset(
             assetId = "",
             balance = "",
-            value = AssetValue(asset = "", label = "&$%0.00 available", labelTitlecase = "")
+            balanceBundle = BalanceBundle(total = BigDecimal(0.0), totalLabel = "")
         )
         assertTrue(asset.zeroValue())
     }
@@ -106,7 +108,7 @@ class ExtensionsTest {
         val asset = AvailableAsset(
             assetId = "",
             balance = "",
-            value = AssetValue(asset = "", label = "@#%0.01 available", labelTitlecase = "")
+            balanceBundle = BalanceBundle(total = BigDecimal(0.01), totalLabel = "")
         )
         assertFalse(asset.zeroValue())
     }

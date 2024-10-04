@@ -97,11 +97,21 @@ object Flexa {
                 localAccounts?.availableAssets?.firstOrNull { it.assetId == asset?.assetId }
 
             val dbAsset = dbInteractor.getAssetsById(assetId).firstOrNull()
-            val assetWithData = asset?.copy(assetData = dbAsset, icon = localAsset?.icon)
+            val exchangeRate = dbInteractor.getExchangeRateById(assetId)
+            val oneTimeKey = dbInteractor.getOneTimeKeyByAssetId(assetId)
+            val assetKey = oneTimeKey?.toAssetKey()
+            val assetWithData = asset?.copy(
+                assetData = dbAsset,
+                icon = localAsset?.icon,
+                exchangeRate = exchangeRate,
+                balanceBundle = exchangeRate.toBalanceBundle(localAsset),
+                oneTimeKey = oneTimeKey,
+                key = assetKey,
+            )
             if (acc != null && assetWithData != null && !assetWithData.zeroValue()) {
                 Log.d(
-                    "TAG",
-                    "setSelectedAsset: Flexa >>> ${assetWithData.label} [${asset.value?.label}] ${assetWithData.assetData}"
+                    null,
+                    "setSelectedAsset: Flexa >>> ${assetWithData.assetData?.displayName} $assetKey"
                 )
                 _selectedAsset.emit(SelectedAsset(acc.accountId, assetWithData))
             }

@@ -14,7 +14,6 @@ import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
@@ -47,6 +46,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
@@ -91,7 +91,6 @@ import com.flexa.core.entity.CommerceSession
 import com.flexa.core.shared.ErrorDialog
 import com.flexa.core.theme.FlexaTheme
 import com.flexa.core.view.FlexaLogo
-import com.flexa.core.view.FlexaProgress
 import com.flexa.spend.MockFactory
 import com.flexa.spend.R
 import com.flexa.spend.Spend
@@ -212,40 +211,25 @@ fun ConfirmCard(
                     .size(54.dp)
                     .align(Alignment.CenterHorizontally)
             ) {
-                AnimatedContent(
-                    modifier = Modifier.align(Alignment.Center),
-                    targetState = viewModel.payProgress,
-                    transitionSpec = {
-                        scaleIn(initialScale = .7F) + fadeIn() togetherWith scaleOut(targetScale = .7F) + fadeOut()
-                    }, label = "Icon"
-                ) { progressState ->
-                    if (!progressState) {
-                        if (!previewMode) {
-                            SpendAsyncImage(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .clip(RoundedCornerShape(8.dp)),
-                                imageUrl = session?.data?.brand?.logoUrl,
-                                crossfadeDuration = 1000
-                            )
-                        } else {
-                            Box(
-                                modifier = Modifier
-                                    .size(54.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(color = palette.primary),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text(
-                                    text = "F",
-                                    style = MaterialTheme.typography.headlineLarge.copy(palette.onPrimary)
-                                )
-                            }
-                        }
-                    } else {
-                        FlexaProgress(
-                            modifier = Modifier.fillMaxSize(),
-                            roundedCornersSize = 12.dp
+                if (!previewMode) {
+                    SpendAsyncImage(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(8.dp)),
+                        imageUrl = session?.data?.brand?.logoUrl,
+                        crossfadeDuration = 1000
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(54.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(color = palette.primary),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = "F",
+                            style = MaterialTheme.typography.headlineLarge.copy(palette.onPrimary)
                         )
                     }
                 }
@@ -357,7 +341,13 @@ fun ConfirmCard(
                     }
                 )
             }
-            Spacer(modifier = Modifier.height(2.dp))
+            Spacer(modifier = Modifier.height(1.dp))
+            androidx.compose.animation.AnimatedVisibility(viewModel.payProgress) {
+                LinearProgressIndicator(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp),
+                )
+            }
+            Spacer(modifier = Modifier.height(1.dp))
             val completeButtonHeight by remember { mutableIntStateOf(34) }
             val transition = updateTransition(viewModel.completed, label = "complete button state")
             val topRadius by transition.animateDp(label = "topRadius",
@@ -442,8 +432,6 @@ fun ConfirmCard(
                 val wrongAvailableState by remember {
                     derivedStateOf { !availableBalanceEnough && hasBalanceRestrictions && totalBalanceEnough }
                 }
-
-
                 TextButton(
                     modifier = Modifier
                         .size(width, height)
@@ -576,7 +564,7 @@ private fun ConfirmDialogPreview() {
             elevation = 8.dp,
             viewModel = viewModel(initializer = {
                 ConfirmViewModel(
-                    session = MutableStateFlow(MockFactory.getMockCommerceSession()),
+                    session = MutableStateFlow(MockFactory.getCommerceSession()),
                     interactor = FakeInteractor()
                 )
             }),

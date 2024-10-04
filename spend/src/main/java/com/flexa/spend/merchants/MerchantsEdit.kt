@@ -289,7 +289,7 @@ fun MerchantOrderListItem(
         }
     }
     LaunchedEffect(merchant.id) {
-        viewModel.addMerchantId.value = null
+        viewModel.setAddMerchantId(null)
     }
 
     val m = if (merchant.isDraggable) {
@@ -419,7 +419,7 @@ fun MerchantOrderListItem(
                 IconButton(
                     modifier = Modifier.padding(end = 8.dp),
                     onClick = {
-                        viewModel.addMerchantId.value = merchant.id
+                        viewModel.setAddMerchantId(merchant.id)
                         onRemove?.invoke(merchant)
                     }) {
                     Icon(

@@ -16,7 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.flexa.core.theme.FlexaTheme
-import com.flexa.core.view.FlexaProgress
+import com.flexa.core.view.FlexaLogo
 
 @Composable
 internal fun InDevelopmentScreen(
@@ -31,9 +31,9 @@ internal fun InDevelopmentScreen(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(text = "In Development", style = MaterialTheme.typography.headlineSmall.copy(color = palette.onBackground))
             Spacer(modifier = Modifier.height(16.dp))
-            FlexaProgress(
+            FlexaLogo(
                 modifier = Modifier.size(72.dp),
-                roundedCornersSize = 16.dp,
+                shape = MaterialTheme.shapes.medium,
                 borderWidth = 2.dp
             )
         }

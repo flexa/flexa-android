@@ -12,6 +12,7 @@ import com.flexa.core.domain.data.ITokenProvider
 import com.flexa.core.entity.TokenPatch
 import com.flexa.core.shared.FlexaConstants
 import com.flexa.core.shared.FlexaConstants.Companion.EMPTY
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import okhttp3.HttpUrl
@@ -20,7 +21,6 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.logging.HttpLoggingInterceptor
 import java.util.UUID
-import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
@@ -32,7 +32,7 @@ internal class TokenProvider(
     private val tokenKey: String
 ) : ITokenProvider {
 
-    val countDownLatch = AtomicReference<CountDownLatch?>(null)
+    val mutex = Mutex()
     private val errorCounter = AtomicInteger(0)
     private val tokenExpiration = AtomicLong(Long.MIN_VALUE)
     private val token = AtomicReference(EMPTY)
@@ -72,7 +72,7 @@ internal class TokenProvider(
         this.token.set(token)
         preferences.edit()
             .putString(tokenKey, token)
-            .commit()
+            .apply()
     }
 
     override fun getRefreshToken(headersBundle: HeadersBundle): String {
@@ -114,10 +114,10 @@ internal class TokenProvider(
             }
             val token = tokenResponse.value
             if (token.isNotBlank()) {
+                saveToken(token)
+                setTokenExpiration(tokenResponse.expiration)
                 errorCounter.set(0)
                 preferences.saveStringSynchronous(FlexaConstants.VERIFIER, newVerifier)
-                setTokenExpiration(tokenResponse.expiration)
-                saveToken(token)
                 Flexa.context?.let {
                     val intent = Intent(preferences.getPublishableKey())
                     intent.putExtra(FlexaConstants.TOKEN, true)
@@ -140,7 +140,7 @@ internal class TokenProvider(
 
         Log.d(
             TokenProvider::class.java.simpleName,
-            "refreshed token: \uD83C\uDFC1: $token thread: ${Thread.currentThread().id}"
+            "refreshed token: \uD83C\uDFC1: $token thread: ${Thread.currentThread().id} hash:${hashCode()}"
         )
         return token
     }

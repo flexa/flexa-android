@@ -28,7 +28,6 @@ internal class OkHttpProvider(
                 )
                 .build()
         }
-
     internal val client by lazy {
         val tokenProvider = tokenProvider
         OkHttpClient().newBuilder()

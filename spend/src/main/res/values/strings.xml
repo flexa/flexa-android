@@ -29,6 +29,7 @@
     <string name="email">Email</string>
     <string name="security">Security</string>
     <string name="updating">Updating</string>
+    <string name="network_fee_cannot_be_loaded">Network fee cannot be loaded</string>
     <string name="back">Back</string>
     <string name="location">Location</string>
     <string name="spend">Spend</string>

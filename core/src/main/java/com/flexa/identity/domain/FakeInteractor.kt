@@ -1,5 +1,6 @@
 package com.flexa.identity.domain
 
+import com.flexa.core.entity.Account
 import com.flexa.core.entity.ExchangeRate
 import com.flexa.core.entity.PutAppAccountsResponse
 import com.flexa.core.entity.TokenPatch
@@ -71,11 +72,15 @@ internal class FakeInteractor : IIdentityInteractor {
         TODO("Not yet implemented")
     }
 
+    override suspend fun getAccount(): Account {
+        TODO("Not yet implemented")
+    }
+
     override suspend fun getAppAccounts(): List<com.flexa.core.entity.AppAccount> {
         TODO("Not yet implemented")
     }
 
-    override suspend fun putAppAccounts(account: List<AppAccount>): PutAppAccountsResponse {
+    override suspend fun putAppAccounts(accounts: List<AppAccount>): PutAppAccountsResponse {
         TODO("Not yet implemented")
     }
 

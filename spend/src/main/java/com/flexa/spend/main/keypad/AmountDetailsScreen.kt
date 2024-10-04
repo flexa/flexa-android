@@ -3,16 +3,12 @@ package com.flexa.spend.main.keypad
 import android.content.res.Configuration
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,7 +21,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.SwapHoriz
-import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -33,7 +28,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -43,7 +37,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
@@ -93,7 +86,6 @@ internal fun AmountDetailsScreen(
             }
         }
         val palette = MaterialTheme.colorScheme
-        val quote by viewModel.quote.collectAsStateWithLifecycle()
         val exchangeRateProgress by remember {
             derivedStateOf { exchangeRate == null }
         }
@@ -103,7 +95,6 @@ internal fun AmountDetailsScreen(
         LaunchedEffect(asset) {
             asset?.let {
                 viewModel.assetAmount = AssetAndAmount(it, amount)
-                viewModel.getQuote()
             }
         }
 
@@ -125,182 +116,142 @@ internal fun AmountDetailsScreen(
 
         var height by remember { mutableStateOf(200.dp) }
         val density = LocalDensity.current
-        AnimatedContent(
-            targetState = error,
-            transitionSpec = {
-                (scaleIn(
-                    initialScale = 1.2F,
-                    animationSpec = tween(700)
-                ) + fadeIn(animationSpec = tween(700))).togetherWith(
-                    scaleOut(targetScale = .8F, animationSpec = tween(700)) + fadeOut(
-                        animationSpec = tween(700)
-                    )
-                )
-            },
-            label = "error card"
-        ) { e ->
-            if (!e) {
-                Column(
-                    modifier = Modifier.onGloballyPositioned {
-                        height = with(density) { it.size.height.toDp() }
-                    }
-                ) {
-                    ListItem(
-                        colors = ListItemDefaults.colors(containerColor = color),
-                        leadingContent = {
-                            Icon(
-                                modifier = Modifier.size(24.dp),
-                                imageVector = Icons.Outlined.AccountBalanceWallet,
-                                contentDescription = null
-                            )
-                        },
-                        headlineContent = {
-                            val text by remember {
-                                derivedStateOf { (exchangeRate?.getCurrencySign() ?: "") + amount }
-                            }
-                            Text(
-                                text = text,
-                                style = TextStyle(
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.W400,
-                                    color = palette.onBackground
-                                )
-                            )
-                        },
-                        supportingContent = {
-                            val text by remember {
-                                derivedStateOf {
-                                    "${exchangeRate?.getAssetAmount(amount)} ${asset?.asset?.assetData?.displayName}"
-                                }
-                            }
-                            Text(
-                                text = text,
-                                style = TextStyle(
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.W400,
-                                    color = palette.outline
-                                )
-                            )
-                        }
-                    )
-                    ListItem(
-                        colors = ListItemDefaults.colors(containerColor = color),
-                        leadingContent = {
-                            Icon(
-                                modifier = Modifier.size(24.dp),
-                                imageVector = Icons.Outlined.SwapHoriz,
-                                contentDescription = null
-                            )
-                        },
-                        headlineContent = {
-                            val text by remember {
-                                derivedStateOf {
-                                    "1 ${asset?.asset?.assetData?.symbol ?: ""} = ${exchangeRate?.getCurrencySign() ?: ""}${exchangeRate?.price ?: ""}"
-                                }
-                            }
-                            AnimatedContent(
-                                targetState = exchangeRate?.price?.getAmount() ?: BigDecimal.ZERO,
-                                transitionSpec = {
-                                    if (targetState < initialState) {
-                                        (slideInVertically { width -> width } +
-                                                fadeIn()).togetherWith(slideOutVertically()
-                                        { width -> -width } + fadeOut())
-                                    } else {
-                                        (slideInVertically { width -> -width } +
-                                                fadeIn()).togetherWith(slideOutVertically()
-                                        { width -> width } + fadeOut())
-                                    }.using(SizeTransform(clip = false))
-                                }, label = ""
-                            ) { label ->
-                                label
-                                Text(
-                                    text = if (!exchangeRateProgress) text
-                                    else "${stringResource(R.string.updating)}...",
-                                    style = TextStyle(
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.W400,
-                                        color = palette.onBackground
-                                    )
-                                )
-
-                            }
-                        }
-                    )
-                    ListItem(
-                        colors = ListItemDefaults.colors(containerColor = color),
-                        leadingContent = {
-                            Icon(
-                                modifier = Modifier.size(24.dp),
-                                imageVector = Icons.Outlined.Language,
-                                contentDescription = null
-                            )
-                        },
-                        headlineContent = {
-                            AnimatedContent(
-                                targetState = quote?.fee?.equivalent,
-                                transitionSpec = {
-                                    if ((targetState?.length ?: 0) < (initialState?.length ?: 0)) {
-                                        (slideInVertically { width -> width } +
-                                                fadeIn()).togetherWith(slideOutVertically()
-                                        { width -> -width } + fadeOut())
-                                    } else {
-                                        (slideInVertically { width -> -width } +
-                                                fadeIn()).togetherWith(slideOutVertically()
-                                        { width -> width } + fadeOut())
-                                    }.using(SizeTransform(clip = false))
-                                }, label = ""
-                            ) { state ->
-                                Text(
-                                    text = state ?: "${stringResource(R.string.updating)}...",
-                                    style = TextStyle(
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.W400,
-                                        color = palette.onBackground
-                                    )
-                                )
-                            }
-                        },
-                        supportingContent = {
-                            Text(
-                                text = if (progress)
-                                    "${stringResource(id = R.string.updating)}..."
-                                else
-                                    stringResource(id = R.string.network_fee),
-                                style = TextStyle(
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.W400,
-                                    color = palette.outline
-                                )
-                            )
-                        }
-                    )
-                }
-            } else {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(height),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
+        Column(
+            modifier = Modifier.onGloballyPositioned {
+                height = with(density) { it.size.height.toDp() }
+            }
+        ) {
+            ListItem(
+                colors = ListItemDefaults.colors(containerColor = color),
+                leadingContent = {
                     Icon(
-                        modifier = Modifier.size(36.dp),
-                        imageVector = Icons.Rounded.WarningAmber,
-                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(24.dp),
+                        imageVector = Icons.Outlined.AccountBalanceWallet,
                         contentDescription = null
                     )
+                },
+                headlineContent = {
+                    val text by remember {
+                        derivedStateOf { (exchangeRate?.getCurrencySign() ?: "") + amount }
+                    }
                     Text(
-                        "Can't retrieve ${assetBundle.asset.assetData?.displayName} data!",
-                        color = MaterialTheme.colorScheme.onSurface,
-                        style = MaterialTheme.typography.titleMedium
+                        text = text,
+                        style = TextStyle(
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.W400,
+                            color = palette.onBackground
+                        )
                     )
-                    Spacer(modifier = Modifier.height(14.dp))
-                    OutlinedButton(
-                        onClick = { viewModel.getQuote() }
-                    ) { Text(stringResource(R.string.retry).uppercase()) }
+                },
+                supportingContent = {
+                    val text by remember {
+                        derivedStateOf {
+                            "${exchangeRate?.getAssetAmount(amount)} ${asset?.asset?.assetData?.displayName}"
+                        }
+                    }
+                    Text(
+                        text = text,
+                        style = TextStyle(
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.W400,
+                            color = palette.outline
+                        )
+                    )
                 }
-            }
+            )
+            ListItem(
+                colors = ListItemDefaults.colors(containerColor = color),
+                leadingContent = {
+                    Icon(
+                        modifier = Modifier.size(24.dp),
+                        imageVector = Icons.Outlined.SwapHoriz,
+                        contentDescription = null
+                    )
+                },
+                headlineContent = {
+                    val text by remember {
+                        derivedStateOf {
+                            "1 ${asset?.asset?.assetData?.symbol ?: ""} = ${exchangeRate?.getCurrencySign() ?: ""}${exchangeRate?.price ?: ""}"
+                        }
+                    }
+                    AnimatedContent(
+                        targetState = exchangeRate?.price?.getAmount() ?: BigDecimal.ZERO,
+                        transitionSpec = {
+                            if (targetState < initialState) {
+                                (slideInVertically { width -> width } +
+                                        fadeIn()).togetherWith(slideOutVertically()
+                                { width -> -width } + fadeOut())
+                            } else {
+                                (slideInVertically { width -> -width } +
+                                        fadeIn()).togetherWith(slideOutVertically()
+                                { width -> width } + fadeOut())
+                            }.using(SizeTransform(clip = false))
+                        }, label = ""
+                    ) { label ->
+                        label
+                        Text(
+                            text = if (!exchangeRateProgress) text
+                            else "${stringResource(R.string.updating)}...",
+                            style = TextStyle(
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.W400,
+                                color = palette.onBackground
+                            )
+                        )
+
+                    }
+                }
+            )
+            ListItem(
+                colors = ListItemDefaults.colors(containerColor = color),
+                leadingContent = {
+                    Icon(
+                        modifier = Modifier.size(24.dp),
+                        imageVector = Icons.Outlined.Language,
+                        contentDescription = null
+                    )
+                },
+                headlineContent = {
+                    AnimatedContent(
+                        targetState = asset?.asset?.fee?.equivalent,
+                        transitionSpec = {
+                            if ((targetState?.length ?: 0) < (initialState?.length ?: 0)) {
+                                (slideInVertically { width -> width } +
+                                        fadeIn()).togetherWith(slideOutVertically()
+                                { width -> -width } + fadeOut())
+                            } else {
+                                (slideInVertically { width -> -width } +
+                                        fadeIn()).togetherWith(slideOutVertically()
+                                { width -> width } + fadeOut())
+                            }.using(SizeTransform(clip = false))
+                        }, label = ""
+                    ) { state ->
+                        Text(
+                            text = state ?: stringResource(R.string.network_fee_cannot_be_loaded),
+                            style = TextStyle(
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.W400,
+                                color = palette.onBackground
+                            )
+                        )
+                    }
+                },
+                supportingContent = {
+                    Text(
+                        text = if (progress)
+                            "${stringResource(id = R.string.updating)}..."
+                        else
+                            stringResource(id = R.string.network_fee),
+                        style = TextStyle(
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.W400,
+                            color = palette.outline
+                        )
+                    )
+                }
+            )
         }
+
         Spacer(modifier = Modifier.height(8.dp))
         HorizontalDivider(
             modifier = Modifier.padding(horizontal = 16.dp),
@@ -332,7 +283,6 @@ private fun AmountDetailsPreview() {
                 .background(color = MaterialTheme.colorScheme.background),
             assetBundle = MockFactory.getMockSelectedAsset(),
             viewModel = AmountDetailViewModel(FakeInteractor()).apply {
-                quote.value = MockFactory.getMockQuote()
                 exchangeRates.value = MockFactory.getExchangeRates()
             },
             assetsViewModel = AssetsViewModel(FakeInteractor()),

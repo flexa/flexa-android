@@ -27,7 +27,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import java.security.MessageDigest
 
 @Composable
-fun AppImage(
+internal fun AppImage(
     modifier: Modifier = Modifier,
     @DrawableRes resource: Int,
     colorFilter: ColorFilter? = null
@@ -54,7 +54,7 @@ fun Context.getActivity(): ComponentActivity? = when (this) {
 }
 
 @Stable
-fun Modifier.mirror(
+internal fun Modifier.mirror(
     @IntRange(
         LayoutDirection.LTR.toLong(),
         LayoutDirection.RTL.toLong()
@@ -68,7 +68,7 @@ fun Modifier.mirror(
 
 @Stable
 @OptIn(ExperimentalComposeUiApi::class)
-fun Modifier.autofill(
+internal fun Modifier.autofill(
     autofillTypes: List<AutofillType>,
     onFill: ((String) -> Unit),
     onFocusChanged: ((FocusState) -> Unit)? = null

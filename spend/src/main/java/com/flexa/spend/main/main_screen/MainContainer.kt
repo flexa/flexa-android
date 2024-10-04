@@ -11,8 +11,6 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -156,7 +154,10 @@ fun Spend(
                 }
 
                 val pagerState = rememberPagerState(
-                    initialPage = 0,
+                    initialPage = assets.indexOfFirst {
+                        it.accountId == selectedAsset?.accountId &&
+                                it.asset.assetId == selectedAsset?.asset?.assetId
+                    }.coerceAtLeast(0),
                     pageCount = { assets.size.coerceAtLeast(1) }
                 )
 
@@ -191,7 +192,7 @@ fun Spend(
                         page = page,
                         assetsSize = assets.size,
                         asset = asset,
-                        viewModel = viewModel,
+                        viewModel = assetsViewModel,
                         toAssetInfo = {
                             Log.d(null, "Spend: toAssetInfo root: $selectedAsset")
                             asset?.let { toAssetInfo.invoke(it) }
@@ -223,8 +224,8 @@ fun Spend(
         AnimatedContent(
             targetState = showNotifications,
             transitionSpec = {
-                (slideInVertically(tween(700)) + fadeIn(tween(700))).togetherWith(
-                    slideOutVertically(tween(700)) + fadeOut(tween(700))
+                (expandVertically() + fadeIn()).togetherWith(
+                    shrinkVertically() + fadeOut()
                 )
             }, label = "notifications"
         ) { state ->
@@ -322,7 +323,7 @@ fun Spend(
                 viewModel = brandsViewModel,
                 toEdit = { toEdit.invoke() },
                 onClick = { brand ->
-                    viewModel.brand.value = brand
+                    viewModel.selectedBrand.value = brand
                     toInputAmount()
                 }
             )

@@ -6,6 +6,8 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
@@ -16,7 +18,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -39,6 +41,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalInspectionMode
@@ -50,6 +53,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.flexa.core.theme.FlexaTheme
 import com.flexa.core.view.FlexaLogo
 import com.flexa.spend.MockFactory
+import com.flexa.spend.containsAuthorization
 import com.flexa.spend.domain.FakeInteractor
 import com.flexa.spend.getAmount
 import com.flexa.spend.getAmountLabel
@@ -66,15 +70,18 @@ import kotlinx.coroutines.flow.MutableStateFlow
 fun LegacyFlexcode(
     modifier: Modifier = Modifier,
     viewModel: SpendViewModel,
-    toBack: (commerceSessionId: String?) -> Unit,
+    toBack: (commerceSessionId: String?, containsAuthorization: Boolean) -> Unit,
 ) {
     val previewMode = LocalInspectionMode.current
-    val brand by viewModel.brand.collectAsStateWithLifecycle()
     val commerceSession by if (!previewMode) viewModel.commerceSession.collectAsStateWithLifecycle()
     else MutableStateFlow(MockFactory.getMockCommerceSessionCompleted()).collectAsState()
+    val brand by remember { derivedStateOf { commerceSession?.data?.brand } }
+    val containsAuthorization by remember {
+        derivedStateOf { commerceSession?.containsAuthorization() == true }
+    }
 
     BackHandler {
-        toBack.invoke(commerceSession?.data?.id)
+        toBack.invoke(commerceSession?.data?.id, containsAuthorization)
     }
     Card(
         modifier = modifier,
@@ -102,7 +109,7 @@ fun LegacyFlexcode(
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold)
                 )
             }
-            IconButton(onClick = { toBack(commerceSession?.data?.id) }) {
+            IconButton(onClick = { toBack(commerceSession?.data?.id, containsAuthorization) }) {
                 Icon(imageVector = Icons.Filled.Close, contentDescription = null)
             }
         }
@@ -114,7 +121,6 @@ fun LegacyFlexcode(
                     .clip(RoundedCornerShape(8.dp))
                     .size(54.dp),
                 imageUrl = brand?.logoUrl,
-                crossfadeDuration = 500,
             )
         } else {
             Box(
@@ -164,24 +170,52 @@ fun LegacyFlexcode(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1.4f)
-                .padding(horizontal = 31.dp)
+                .padding(horizontal = 32.dp)
         ) {
             val code by remember {
                 derivedStateOf {
                     commerceSession?.data?.authorization?.number?.ifBlank { ZERO } ?: ZERO
                 }
             }
-            val asset by rememberSelectedAsset()
-            FlexcodeLayout(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .aspectRatio(1.14f),
-                code = code,
-                color = asset?.asset?.assetData?.color?.toColor() ?: Color.Magenta
-            )
+            AnimatedContent(
+                containsAuthorization, label = "",
+                transitionSpec = {
+                    scaleIn(initialScale = 1.2F) + fadeIn() togetherWith scaleOut(targetScale = .8F) + fadeOut()
+                }
+            ) { targetState ->
+                if (targetState) {
+                    val asset by rememberSelectedAsset()
+                    FlexcodeLayout(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(1.14f),
+                        code = code,
+                        color = asset?.asset?.assetData?.color?.toColor() ?: Color.Magenta
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(1.14f),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        FlexcodeLayout(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(1.14f)
+                                .alpha(.02F),
+                            code = code,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        CircularProgressIndicator()
+                    }
+                }
+            }
         }
         Spacer(modifier = Modifier.height(26.dp))
-        if (!commerceSession?.data?.authorization?.instructions.isNullOrEmpty()) {
+        androidx.compose.animation.AnimatedVisibility(
+            !commerceSession?.data?.authorization?.instructions.isNullOrEmpty()
+        ) {
             MarkdownText(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -193,7 +227,9 @@ fun LegacyFlexcode(
                 )
             )
         }
-        if (!commerceSession?.data?.authorization?.details.isNullOrEmpty()) {
+        androidx.compose.animation.AnimatedVisibility(
+            !commerceSession?.data?.authorization?.details.isNullOrEmpty()
+        ) {
             Text(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -222,10 +258,9 @@ fun LegacyFlexcodePreview() {
                         .padding(horizontal = 24.dp)
                         .navigationBarsPadding(),
                     viewModel = SpendViewModel(FakeInteractor()).apply {
-                        brand.value = MockFactory.getMockBrand()
-                        amount.value = "13.9"
+                        selectedBrand.value = MockFactory.getMockBrand()
                     },
-                    toBack = { },
+                    toBack = { _, _ -> },
                 )
             }
         }

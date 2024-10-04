@@ -2,10 +2,13 @@ package com.flexa.core.domain.rest
 
 import com.flexa.core.entity.Account
 import com.flexa.core.entity.CommerceSessionEvent
-import com.flexa.core.entity.PutAppAccountsResponse
+import com.flexa.core.entity.ExchangeRate
+import com.flexa.core.entity.ExchangeRatesResponse
+import com.flexa.core.entity.OneTimeKey
+import com.flexa.core.entity.OneTimeKeyResponse
 import com.flexa.core.entity.TokenPatch
 import com.flexa.core.entity.TokensResponse
-import com.flexa.core.shared.AppAccount
+import com.flexa.core.entity.TransactionFee
 import com.flexa.core.shared.Asset
 import com.flexa.core.shared.AssetsResponse
 import com.flexa.identity.create_id.AccountsRequest
@@ -28,8 +31,17 @@ class RestInteractor(
             code = code, link = link
         )
 
-    suspend fun putAccounts(accounts: List<AppAccount>): PutAppAccountsResponse {
-        return repository.putAccounts(accounts)
+    suspend fun getOneTimeKeys(assetIds: List<String>): OneTimeKeyResponse {
+        var startingAfter: String? = null
+        val items = ArrayList<OneTimeKey>(assetIds.size)
+        var date: String? = null
+        do {
+            val response = repository.getOneTimeKeys(assetIds)
+            startingAfter = response.startingAfter
+            date = response.date
+            items.addAll(response.data)
+        } while (startingAfter != null)
+        return OneTimeKeyResponse(date = date ?: "", data = items)
     }
 
     suspend fun getAssets(pageSize: Int, startingAfter: String?): AssetsResponse =
@@ -75,9 +87,32 @@ class RestInteractor(
     suspend fun getCommerceSession(sessionId: String) =
         repository.getCommerceSession(sessionId)
 
-    suspend fun getQuote(assetId: String, amount: String, unitOfAccount: String) =
-        repository.getQuote(assetId, amount, unitOfAccount)
+    suspend fun getExchangeRates(
+        assetIds: List<String>,
+        unitOfAccount: String
+    ): ExchangeRatesResponse {
+        val res = ArrayList<ExchangeRate>(assetIds.size)
+        val chunkedCollections = assetIds.chunked(20)
+        var date: String? = null
+        chunkedCollections.forEach { collection ->
+            val exchangeRates = repository.getExchangeRates(collection, unitOfAccount)
+            date = exchangeRates.date
+            res.addAll(exchangeRates.data)
+        }
+        return ExchangeRatesResponse(date = date, data = res)
+    }
 
-    suspend fun getExchangeRates(assetIds: List<String>, unitOfAccount: String) =
-        repository.getExchangeRates(assetIds, unitOfAccount)
+    suspend fun getTransactionFees(
+        assetIds: List<String>,
+        unitOfAccount: String
+    ): List<TransactionFee> {
+        val res = ArrayList<TransactionFee>(assetIds.size)
+        val chunkedCollections = assetIds.chunked(20)
+        chunkedCollections.forEach { collection ->
+            val response = repository.getTransactionFees(collection, unitOfAccount)
+            res.addAll(response)
+        }
+        return res
+    }
+
 }

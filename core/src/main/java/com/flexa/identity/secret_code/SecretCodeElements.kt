@@ -2,13 +2,12 @@ package com.flexa.identity.secret_code
 
 import android.content.res.Configuration
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
-import androidx.compose.animation.with
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.border
@@ -17,8 +16,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -66,6 +65,8 @@ fun SecretCode(
     val focusRequester = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
     val clipboardManager: ClipboardManager = LocalClipboardManager.current
+    val palette = MaterialTheme.colorScheme
+    val shapes = MaterialTheme.shapes
 
     TextField(
         value = TextFieldValue(
@@ -97,20 +98,21 @@ fun SecretCode(
     ) {
         repeat(length) { times ->
             val strokeColor by animateColorAsState(
-                targetValue = if (times == value.length) Color.Magenta else Color.Gray,
+                targetValue = if (times == value.length) palette.tertiary else palette.outline,
                 animationSpec = tween(durationMillis = 500), label = ""
             )
             val strokeSize by animateDpAsState(
                 targetValue = if (times == value.length) 2.dp else 1.dp,
                 animationSpec = tween(durationMillis = 500), label = ""
             )
+            val shape = shapes.small
             InputItem(
                 modifier = Modifier
                     .size(width = 45.dp, height = 60.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(shape)
                     .border(
                         border = BorderStroke(width = strokeSize, strokeColor),
-                        shape = RoundedCornerShape(8.dp)
+                        shape = shape
                     )
                     .combinedClickable(
                         onClick = {
@@ -139,7 +141,6 @@ fun SecretCode(
     }
 }
 
-@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun InputItem(
     modifier: Modifier,
@@ -165,7 +166,7 @@ fun InputItem(
             modifier = Modifier.align(Alignment.Center),
             targetState = if (isCursorVisible) cursorSymbol else value,
             transitionSpec = {
-                scaleIn(initialScale = .0F) with scaleOut(targetScale = .0F)
+                scaleIn(initialScale = .0F) togetherWith scaleOut(targetScale = .0F)
             }, label = ""
         ) { target ->
             Text(
@@ -185,6 +186,7 @@ private fun SecretCodePreview() {
     FlexaTheme {
         Surface {
             SecretCode(
+                modifier = Modifier.padding(16.dp),
                 value = "123",
                 onValueChanged = {},
                 onFulfilled = {}

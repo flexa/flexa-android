@@ -23,6 +23,9 @@ class Asset(
     @SerialName("display_name")
     val displayName: String? = null,
 
+    @SerialName("livemode")
+    val livemode: Boolean? = null,
+
     @SerialName("id")
     val id: String,
 ) {

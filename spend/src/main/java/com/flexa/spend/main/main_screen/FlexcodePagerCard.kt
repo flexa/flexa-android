@@ -41,6 +41,7 @@ import com.flexa.core.theme.FlexaTheme
 import com.flexa.spend.BuildConfig
 import com.flexa.spend.MockFactory
 import com.flexa.spend.domain.FakeInteractor
+import com.flexa.spend.main.assets.AssetsViewModel
 import com.flexa.spend.main.flexcode.FlexcodeLayout
 import com.flexa.spend.rememberTOTP
 import com.flexa.spend.toColor
@@ -55,7 +56,7 @@ fun FlexcodePagerCard(
     page: Int,
     assetsSize: Int,
     asset: SelectedAsset?,
-    viewModel: SpendViewModel,
+    viewModel: AssetsViewModel,
     toAssetInfo: (SelectedAsset) -> Unit
 ) {
     val radiusStart by remember(page, assetsSize) {
@@ -108,9 +109,7 @@ fun FlexcodePagerCard(
                 },
             contentAlignment = Alignment.Center,
         ) {
-            val assetKey by remember(asset) {
-                mutableStateOf(asset?.asset?.key)
-            }
+            val assetKey by remember(asset) { mutableStateOf(asset?.asset?.key) }
             val totpGenerator by rememberTOTP(
                 assetKey?.secret
                     ?: BuildConfig.LIBRARY_PACKAGE_NAME,
@@ -120,7 +119,7 @@ fun FlexcodePagerCard(
             val code = remember {
                 mutableStateOf("${assetKey?.prefix ?: ""}${totpGenerator.generate()}")
             }
-            val codeProgress = remember { mutableStateOf(false) }
+            val codeProgress = remember { mutableStateOf(assetKey == null) }
             LaunchedEffect(assetKey, duration) {
                 if (assetKey != null) {
                     while (isActive) {
@@ -135,7 +134,7 @@ fun FlexcodePagerCard(
                         code.value = newCode
                         Log.d(
                             "TAG",
-                            "Spend: newCode [${code.value}] date: $date [${date.toEpochMilli()}] prefix: ${assetKey?.prefix} code: $totp secret: ${assetKey?.secret} asset: ${asset?.asset?.label} ${asset?.asset?.assetData?.displayName}"
+                            "Spend: newCode [${code.value}] date: $date [${date.toEpochMilli()}] prefix: ${assetKey?.prefix} code: $totp secret: ${assetKey?.secret} asset: ${asset?.asset?.assetData?.displayName}"
                         )
                         val counter = totpGenerator.counter(date)
                         val endEpochMillis =
@@ -153,7 +152,7 @@ fun FlexcodePagerCard(
             }
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
                 val blur by animateDpAsState(
-                    if (codeProgress.value) 2.dp else 0.dp, label = "blur"
+                    if (codeProgress.value) 2.dp else 0.dp, label = "blur",
                 )
                 FlexcodeLayout(
                     modifier = Modifier
@@ -212,7 +211,7 @@ fun FlexcodePagerCardPreview() {
             page = 0,
             assetsSize = 1,
             asset = MockFactory.getMockSelectedAsset(),
-            viewModel = SpendViewModel(FakeInteractor()),
+            viewModel = AssetsViewModel(FakeInteractor()),
             toAssetInfo = {}
         )
     }

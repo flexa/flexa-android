@@ -5,6 +5,8 @@ import androidx.room.Room
 import com.flexa.BuildConfig
 import com.flexa.core.domain.db.IDbRepository
 import com.flexa.core.entity.ExchangeRate
+import com.flexa.core.entity.OneTimeKey
+import com.flexa.core.entity.TransactionFee
 import com.flexa.core.shared.Asset
 import com.flexa.core.shared.Brand
 
@@ -39,15 +41,51 @@ class DbRepository(
     override suspend fun saveBrands(items: List<Brand>) =
         db.brandsDao().insertAll(items.map { it.toDao() })
 
-    override suspend fun hasOutdatedExchangeRates(): Boolean =
-        db.exchangeRateDao().hasOutdatedItems()
+    override suspend fun hasOutdatedExchangeRates(): Boolean {
+        val empty = db.exchangeRateDao().getAll().isEmpty()
+        val outdated = db.exchangeRateDao().hasOutdatedItems()
+        return empty || outdated
+    }
 
 
     override suspend fun getExchangeRates(): List<ExchangeRate> =
         db.exchangeRateDao().getAll().map { it.toObject() }
 
+    override suspend fun getExchangeRateById(id: String): ExchangeRate? =
+        db.exchangeRateDao().getByIdl(id)?.run { toObject() }
+
     override suspend fun saveExchangeRates(items: List<ExchangeRate>) =
         db.exchangeRateDao().insertAll(items.map { it.toDao() })
+
+    override suspend fun hasOutdatedOneTimeKeys(): Boolean {
+        val empty = db.oneTimeKeyDao().getAll().isEmpty()
+        val outdated = db.oneTimeKeyDao().hasOutdatedItems()
+        return empty || outdated
+    }
+
+    override suspend fun getOneTimeKeys(): List<OneTimeKey> =
+        db.oneTimeKeyDao().getAll().map { it.toObject() }
+
+    override suspend fun getOneTimeKeyByAssetId(id: String): OneTimeKey? =
+        db.oneTimeKeyDao().getByAssetId(id)?.run { toObject() }
+
+    override suspend fun saveOneTimeKeys(items: List<OneTimeKey>) =
+        db.oneTimeKeyDao().insertAll(items.map { it.toDao() })
+
+    override suspend fun deleteOneTimeKeys() =
+        db.oneTimeKeyDao().deleteAll()
+
+    override suspend fun getTransactionFees(): List<TransactionFee> =
+        db.transactionFeeDao().getAll().map { it.toObject() }
+
+    override suspend fun getTransactionFeeByAssetId(id: String): TransactionFee? =
+        db.transactionFeeDao().getByAssetId(id)?.run { toObject() }
+
+    override suspend fun saveTransactionFees(items: List<TransactionFee>) =
+        db.transactionFeeDao().insertAll(items.map { it.toDao() })
+
+    override suspend fun deleteTransactionFees() =
+        db.transactionFeeDao().deleteAll()
 
     override suspend fun deleteExchangeRates() = db.exchangeRateDao().deleteAll()
 

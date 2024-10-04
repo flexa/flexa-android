@@ -27,10 +27,10 @@ import com.flexa.core.data.db.BrandSession
 import com.flexa.core.entity.AppAccount
 import com.flexa.core.entity.AssetKey
 import com.flexa.core.entity.AvailableAsset
-import com.flexa.core.entity.BalanceBundle
 import com.flexa.core.entity.CommerceSession
 import com.flexa.core.entity.ExchangeRate
 import com.flexa.core.shared.SelectedAsset
+import com.flexa.core.toCurrencySign
 import com.flexa.identity.getActivity
 import com.flexa.spend.data.totp.HmacAlgorithm
 import com.flexa.spend.data.totp.TimeBasedOneTimePasswordConfig
@@ -48,13 +48,6 @@ import java.time.Instant
 import java.util.concurrent.TimeUnit
 import kotlin.math.roundToInt
 import kotlin.math.sign
-
-internal fun String?.toCurrencySign(): String =
-    when (this) {
-        "iso4217/USD" -> "\$"
-        "iso4217/EUR" -> "€"
-        else -> "¤"
-    }
 
 internal fun String?.toColor(): Color {
     return if (this.isNullOrEmpty()) Color.Gray else
@@ -136,7 +129,11 @@ fun rememberTOTP(secret: String, length: Int): State<TimeBasedOneTimePasswordGen
 }
 
 fun CommerceSession.isCompleted(): Boolean {
-    return this.data?.status == "completed"
+    return this.data?.isCompleted() == true
+}
+
+fun CommerceSession.Data?.isCompleted(): Boolean {
+    return this?.status == "completed"
 }
 
 fun CommerceSession?.isValid(): Boolean {
@@ -169,6 +166,10 @@ fun CommerceSession.Data.Transaction?.notExpired(): Boolean {
         val currentTimestamp = System.currentTimeMillis() / 1000L
         expiresAt > currentTimestamp
     }
+}
+
+fun CommerceSession.Data?.hasAnotherAsset(assetId: String): Boolean {
+    return this?.transaction()?.asset != assetId
 }
 
 fun CommerceSession?.containsAuthorization() =
@@ -229,37 +230,6 @@ fun CommerceSession.Data?.toBrandSession(): BrandSession? {
     }
 }
 
-fun ExchangeRate?.toBalanceBundle(
-    asset: com.flexa.core.shared.AvailableAsset?
-): BalanceBundle {
-    return if (this == null) {
-        BalanceBundle(
-            total = BigDecimal.ZERO, available = BigDecimal.ZERO,
-            totalLabel = "", availableLabel = ""
-        )
-    } else {
-        val scale = 2
-        val roundingMode = RoundingMode.DOWN
-        val balance = BigDecimal.valueOf(asset?.balance ?: 0.0)
-        val balanceAvailable = asset?.balanceAvailable?.run { BigDecimal.valueOf(this) }
-        val total = (price?.toBigDecimalOrNull() ?: BigDecimal.ZERO).multiply(balance)
-            .setScale(scale, roundingMode)
-        val available = balanceAvailable?.run {
-            (price?.toBigDecimalOrNull() ?: BigDecimal.ZERO).multiply(this)
-                .setScale(scale, roundingMode)
-        }
-        val currencySign = unitOfAccount?.toCurrencySign()
-        val totalLabel = currencySign + total
-        val availableLabel = available?.run { currencySign + this }
-        BalanceBundle(
-            total = total,
-            available = available,
-            totalLabel = totalLabel,
-            availableLabel = availableLabel
-        )
-    }
-}
-
 internal fun ExchangeRate.getCurrencySign(): String? {
     return this.unitOfAccount?.toCurrencySign()
 }
@@ -275,19 +245,19 @@ internal fun ExchangeRate.getAssetAmountValue(amount: String): BigDecimal {
     return res
 }
 
-fun List<ExchangeRate>.getMinimumExpireTime(): Long {
-    return this.minOfOrNull { it.expiresAt ?: 0L } ?: 0L
+fun List<Long?>.getMinimum(): Long {
+    return this.minOfOrNull { it ?: 0L } ?: 0L
 }
 
 fun List<ExchangeRate>.getByAssetId(id: String): ExchangeRate? {
     return this.firstOrNull { it.asset == id }
 }
 
-fun List<ExchangeRate>.getExpireTimeMills(
+fun List<Long?>.getExpireTimeMills(
     currentTimestamp: Long,
     plusMillis: Long = 0,
 ): Long {
-    val minimumExpireTime = this.getMinimumExpireTime()
+    val minimumExpireTime = this.getMinimum()
     val rateTimestamp = minimumExpireTime * 1000
     val diff = rateTimestamp + plusMillis - currentTimestamp
     return diff

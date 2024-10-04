@@ -2,6 +2,7 @@ package com.flexa.identity.secret_code
 
 import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -9,27 +10,28 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.LockReset
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -39,6 +41,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -49,55 +53,45 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.flexa.R
-import com.flexa.core.entity.AppAccount
 import com.flexa.core.shared.ErrorDialog
 import com.flexa.core.theme.FlexaTheme
-import com.flexa.core.view.FlexaProgress
 import com.flexa.identity.domain.FakeInteractor
 import com.flexa.identity.mirror
 
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalMaterial3Api::class)
 @Composable
 internal fun SecretCodeScreen(
     modifier: Modifier = Modifier,
     viewModel: SecretCodeViewModel,
     onBack: () -> Unit = {},
-    onClose: (List<AppAccount>?) -> Unit = {}
+    onClose: () -> Unit = {}
 ) {
     val palette = MaterialTheme.colorScheme
     var showDialog by remember { mutableStateOf(false) }
     val result by viewModel.result.collectAsStateWithLifecycle(initialValue = null)
+    val scrollBehavior =
+        TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
 
     LaunchedEffect(result) {
-        if (result != null) onClose(result)
+        if (result != null) onClose()
     }
 
     BackHandler { onBack() }
 
-    Column(modifier = modifier) {
-        IconButton(onClick = { onBack() }) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = null,
-                tint = palette.onBackground
-            )
-        }
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 22.dp)
-                .weight(1F),
-        ) {
-            val progress by viewModel.progress.collectAsStateWithLifecycle()
-
-            Spacer(modifier = Modifier.height(30.dp))
-            Box {
-                androidx.compose.animation.AnimatedVisibility(
-                    visible = !progress,
-                    enter = scaleIn(initialScale = .7F) + fadeIn(),
-                    exit = scaleOut(targetScale = .7F) + fadeOut()
-                ) {
+    Scaffold(
+        modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = {
+            LargeTopAppBar(
+                navigationIcon = {
+                    IconButton(onClick = { onBack() }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = null,
+                            tint = palette.onBackground
+                        )
+                    }
+                },
+                title = {
                     Icon(
                         modifier = Modifier
                             .size(42.dp)
@@ -107,53 +101,64 @@ internal fun SecretCodeScreen(
                         contentDescription = null,
                         tint = palette.primary
                     )
+                },
+                scrollBehavior = scrollBehavior
+            )
+        },
+        bottomBar = {
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                TextButton(
+                    modifier = Modifier.padding(vertical = 16.dp),
+                    onClick = { showDialog = true }) {
+                    Text(text = stringResource(id = R.string.didnt_get_a_code))
                 }
-                androidx.compose.animation.AnimatedVisibility(
-                    visible = progress,
-                    enter = scaleIn(initialScale = .7F) + fadeIn(),
-                    exit = scaleOut(targetScale = .7F) + fadeOut()
-                ) {
-                    FlexaProgress(
-                        modifier = Modifier
-                            .size(70.dp)
-                            .fillMaxSize()
-                            .padding(8.dp),
-                        roundedCornersSize = 12.dp,
-                        borderWidth = 2.dp
+            }
+        },
+    ) { padding ->
+        Box(modifier = Modifier
+            .padding(padding)
+            .fillMaxSize()) {
+            val secretCode by viewModel.secretCode.collectAsStateWithLifecycle()
+            val progress by viewModel.progress.collectAsStateWithLifecycle()
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+            ) {
+                val context = LocalContext.current
+                AnimatedContent(
+                    targetState = progress, label = ""
+                ) { prg ->
+                    val text = if (!prg) context.getString(R.string.enter_your_verification_code)
+                    else context.getString(R.string.processing) + "..."
+                    Text(
+                        modifier = Modifier.padding(vertical = 30.dp),
+                        text = text,
+                        style = TextStyle(fontSize = 28.sp, fontWeight = FontWeight.Normal),
+                        color = palette.onBackground
+                    )
+                }
+                AnimatedVisibility(visible = !progress) {
+                    SecretCode(
+                        modifier = Modifier.fillMaxWidth(),
+                        clickable = !progress,
+                        value = secretCode ?: "",
+                        onValueChanged = { viewModel.secretCode.value = it },
+                        onFulfilled = {
+                            viewModel.loginWithMagicCode(it)
+                        }
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(24.dp))
-            Text(
-                text = if (!progress) stringResource(id = R.string.enter_your_verification_code)
-                else stringResource(id = R.string.processing) + "...",
-                style = TextStyle(fontSize = 28.sp, fontWeight = FontWeight.Normal),
-                color = palette.onBackground
-            )
-            Spacer(modifier = Modifier.height(24.dp))
-            val secretCode by viewModel.secretCode.collectAsStateWithLifecycle()
-            AnimatedVisibility(visible = !progress) {
-                SecretCode(
-                    modifier = Modifier.fillMaxWidth(),
-                    clickable = !progress,
-                    value = secretCode?:"",
-                    onValueChanged = { viewModel.secretCode.value = it },
-                    onFulfilled = {
-                        viewModel.loginWithMagicCode(it)
-                    }
-                )
+            AnimatedVisibility(
+                modifier = Modifier.align(Alignment.Center),
+                visible = progress,
+                enter = scaleIn(initialScale = 1.2F) + fadeIn(),
+                exit = scaleOut(targetScale = .8F) + fadeOut()
+            ) {
+                CircularProgressIndicator()
             }
         }
-        TextButton(
-            modifier = Modifier.align(Alignment.CenterHorizontally),
-            onClick = { showDialog = true }) {
-            Text(text = stringResource(id = R.string.didnt_get_a_code))
-        }
-        Spacer(
-            modifier = Modifier
-                .navigationBarsPadding()
-                .padding(24.dp)
-        )
     }
     if (showDialog) {
         AlertDialog(
@@ -173,7 +178,11 @@ internal fun SecretCodeScreen(
             text = {
                 Text(
                     text = stringResource(id = R.string.secret_code_description),
-                    style = TextStyle(textAlign = TextAlign.Center, fontWeight = FontWeight.Medium, lineHeight = 20.sp)
+                    style = TextStyle(
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.Medium,
+                        lineHeight = 20.sp
+                    )
                 )
             },
             confirmButton = {

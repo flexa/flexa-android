@@ -7,7 +7,6 @@ import kotlinx.serialization.Transient
 import java.math.BigDecimal
 
 class PutAppAccountsResponse(
-    val hasMore: Boolean,
     val date: String,
     val accounts: List<AppAccount>
 )
@@ -16,9 +15,11 @@ class PutAppAccountsResponse(
 data class AppAccount(
     @SerialName("account_id")
     val accountId: String,
-    @Transient
-    var displayName: String? = null,
-    @Transient
+    @SerialName("displayName")
+    val displayName: String? = null,
+    @SerialName("unitOfAccount")
+    val unitOfAccount: String? = null,
+    @SerialName("icon")
     val icon: String? = null,
     @SerialName("assets")
     val availableAssets: ArrayList<AvailableAsset> = arrayListOf(),
@@ -32,20 +33,22 @@ data class AvailableAsset(
     val balance: String,
     @SerialName("key")
     val key: AssetKey? = null,
-    @SerialName("label")
-    val label: String? = null,
     @SerialName("value")
     val value: AssetValue? = null,
     @SerialName("livemode")
     val livemode: Boolean? = null,
-    @SerialName("assetData")
-    val assetData: Asset? = null,
     @SerialName("icon")
     val icon: String? = null,
+    @SerialName("assetData")
+    val assetData: Asset? = null,
     @SerialName("balanceAvailable")
     val balanceAvailable: Double? = null,
     @SerialName("exchangeRate")
     val exchangeRate: ExchangeRate? = null,
+    @SerialName("oneTimeKey")
+    val oneTimeKey: OneTimeKey? = null,
+    @SerialName("fee")
+    val fee: TransactionFee? = null,
     @Transient
     val balanceBundle: BalanceBundle? = null,
 )

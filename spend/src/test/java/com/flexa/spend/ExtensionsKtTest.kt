@@ -6,6 +6,7 @@ import com.flexa.core.entity.AvailableAsset
 import com.flexa.core.entity.BalanceBundle
 import com.flexa.core.entity.ExchangeRate
 import com.flexa.core.shared.SelectedAsset
+import com.flexa.core.toBalanceBundle
 import junit.framework.TestCase
 import junit.framework.TestCase.assertFalse
 import org.junit.Assert.assertEquals
@@ -164,10 +165,10 @@ class ExtensionsKtTest {
         )
         val balanceBundle = exchangeRate.toBalanceBundle(asset)
 
-        TestCase.assertEquals(358.64, balanceBundle.total.toDouble())
-        TestCase.assertEquals("\$358.64", balanceBundle.totalLabel)
-        TestCase.assertNull(balanceBundle.available)
-        TestCase.assertNull(balanceBundle.availableLabel)
+        TestCase.assertEquals(358.64, balanceBundle?.total?.toDouble())
+        TestCase.assertEquals("\$358.64", balanceBundle?.totalLabel)
+        TestCase.assertNull(balanceBundle?.available)
+        TestCase.assertNull(balanceBundle?.availableLabel)
     }
 
     @Test
@@ -198,7 +199,7 @@ class ExtensionsKtTest {
             ExchangeRate(asset = "2", expiresAt = minimumTimestamp + 1),
             ExchangeRate(asset = "3", expiresAt = minimumTimestamp + 2),
         )
-        val res = exchangeRates.getMinimumExpireTime()
+        val res = exchangeRates.map { it.expiresAt }.getMinimum()
         assertEquals(minimumTimestamp, res)
     }
 
@@ -211,7 +212,7 @@ class ExtensionsKtTest {
             ExchangeRate(asset = "2", expiresAt = baseTimestamp.plusSeconds(24L).epochSecond),
             ExchangeRate(asset = "3", expiresAt = baseTimestamp.plusSeconds(27L).epochSecond),
             ExchangeRate(asset = "3", expiresAt = baseTimestamp.plusSeconds(17L).epochSecond),
-        )
+        ).map { it.expiresAt }
         val res = exchangeRates.getExpireTimeMills(deviceTimestamp)
         assertEquals(17L * 1000, res)
     }
@@ -225,7 +226,7 @@ class ExtensionsKtTest {
             ExchangeRate(asset = "2", expiresAt = baseTimestamp.plusSeconds(24L).epochSecond),
             ExchangeRate(asset = "3", expiresAt = baseTimestamp.plusSeconds(27L).epochSecond),
             ExchangeRate(asset = "3", expiresAt = baseTimestamp.plusSeconds(17L).epochSecond),
-        )
+        ).map { it.expiresAt }
         val additionalTimeMillis = 2000L
         val res = exchangeRates.getExpireTimeMills(deviceTimestamp, plusMillis = additionalTimeMillis)
         assertEquals(additionalTimeMillis + 17L * 1000, res)

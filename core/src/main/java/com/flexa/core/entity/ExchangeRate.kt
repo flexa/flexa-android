@@ -3,6 +3,11 @@ package com.flexa.core.entity
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+class ExchangeRatesResponse(
+    val date: String? = null,
+    val data: List<ExchangeRate>,
+)
+
 @Serializable
 data class ExchangeRate(
     @SerialName("asset")

@@ -5,13 +5,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flexa.core.Flexa
 import com.flexa.core.entity.AppAccount
+import com.flexa.core.entity.ExchangeRate
 import com.flexa.core.getAssetIds
-import com.flexa.core.getUnitOfAccount
 import com.flexa.core.shared.ApiErrorHandler
 import com.flexa.core.shared.Asset
 import com.flexa.core.shared.FlexaConstants.Companion.RETRY_COUNT
 import com.flexa.core.shared.FlexaConstants.Companion.RETRY_DELAY
-import com.flexa.core.shared.filterAssets
 import com.flexa.identity.domain.IIdentityInteractor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -20,9 +19,12 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 private const val ASSETS_PAGE_SIZE = 100
 
@@ -42,30 +44,12 @@ internal class SecretCodeViewModel(
     }
 
     internal fun loginWithMagicCode(magicCode: String) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             flow {
-                interactor.tokenPatch(code = magicCode)
-
-                val assets = try {
-                    getAndSaveAssets()
-                } catch (e: Exception) {
-                    emptyList()
-                }
-
-                val acc = interactor.putAppAccounts(Flexa.appAccounts.value.filterAssets(assets))
-                interactor.saveAppAccounts(acc.accounts)
-
-                async { retrieveAndSaveBrands() }.await()
-                async {
-                    val unitOfAccount = acc.accounts.getUnitOfAccount() ?: ""
-                    val assetIds = acc.accounts.getAssetIds()
-                    retrieveAndSaveExchangeRates(
-                        assetIds = assetIds, unitOfAccount = unitOfAccount
-                    )
-                }.await()
-
-                emit(acc.accounts)
-            }.retryWhen { _, attempt ->
+                emit(interactor.tokenPatch(code = magicCode))
+            }.map { getAppAccounts() }
+                .flowOn(Dispatchers.IO)
+                .retryWhen { _, attempt ->
                 delay(RETRY_DELAY)
                 attempt < RETRY_COUNT
             }.onStart { progress.value = true }
@@ -79,23 +63,12 @@ internal class SecretCodeViewModel(
     }
 
     private fun loginWithDeepLink(deepLink: String) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             flow {
-                interactor.tokenPatch(link = deepLink)
-
-                val assets = try {
-                    getAndSaveAssets()
-                } catch (e: Exception) {
-                    emptyList()
-                }
-
-                val acc = interactor.putAppAccounts(Flexa.appAccounts.value.filterAssets(assets))
-                interactor.saveAppAccounts(acc.accounts)
-
-                kotlin.runCatching { retrieveAndSaveBrands() }
-
-                emit(acc.accounts)
-            }.retryWhen { _, attempt ->
+                emit(interactor.tokenPatch(link = deepLink))
+            }.map { getAppAccounts() }
+                .flowOn(Dispatchers.IO)
+                .retryWhen { _, attempt ->
                 delay(RETRY_DELAY)
                 attempt < RETRY_COUNT
             }.onStart { progress.value = true }
@@ -107,6 +80,25 @@ internal class SecretCodeViewModel(
         }
     }
 
+    private suspend fun getAppAccounts(): List<AppAccount> = runBlocking {
+        val acc = interactor.putAppAccounts(Flexa.appAccounts.value)
+        interactor.saveAppAccounts(acc.accounts)
+
+        val brands = async { runCatching { getAndSaveBrands() } }
+        val exchangeRates = async {
+            runCatching {
+                val unitOfAccount = interactor.getAccount().limits?.firstOrNull()?.asset ?: ""
+                val assetIds = acc.accounts.getAssetIds()
+                getAndSaveExchangeRates(
+                    assetIds = assetIds, unitOfAccount = unitOfAccount
+                )
+            }
+        }
+        brands.await()
+        exchangeRates.await()
+        acc.accounts
+    }
+
     private suspend fun getAndSaveAssets(): List<Asset> {
         val assets = interactor.getAllAssets(ASSETS_PAGE_SIZE)
         interactor.deleteAssets()
@@ -114,18 +106,19 @@ internal class SecretCodeViewModel(
         return assets
     }
 
-    private suspend fun retrieveAndSaveBrands() {
+    private suspend fun getAndSaveBrands() {
         val brands = interactor.getBrands(true)
         interactor.deleteBrands()
         interactor.saveBrands(brands)
     }
 
-    private suspend fun retrieveAndSaveExchangeRates(
+    private suspend fun getAndSaveExchangeRates(
         assetIds: List<String>,
         unitOfAccount: String
-    ) {
+    ): List<ExchangeRate> {
         val items = interactor.getExchangeRates(assetIds, unitOfAccount)
         interactor.deleteExchangeRates()
         interactor.saveExchangeRates(items)
+        return items
     }
 }

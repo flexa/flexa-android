@@ -6,25 +6,23 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.util.Log
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.State
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.navigation.NavController
 import com.flexa.BuildConfig
 import com.flexa.R
 import com.flexa.core.data.data.AppInfoProvider
 import com.flexa.core.entity.Account
+import com.flexa.core.entity.AssetKey
 import com.flexa.core.entity.AvailableAsset
+import com.flexa.core.entity.BalanceBundle
+import com.flexa.core.entity.ExchangeRate
+import com.flexa.core.entity.OneTimeKey
 import com.flexa.core.shared.AppAccount
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
+import java.math.BigDecimal
+import java.math.RoundingMode
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.text.ParseException
@@ -37,36 +35,19 @@ import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
 
-fun NavController.navigate(route: String, vararg params: Pair<String, String>) {
-    val urlBuilder = StringBuilder()
-    urlBuilder.append(route)
-    for (param in params) {
-        urlBuilder.append(param.first)
-        urlBuilder.append(param.second.toNavArgument())
-    }
-    navigate(urlBuilder.toString())
-}
-
 fun String.toNavArgument(): String = try {
     URLEncoder.encode(this, StandardCharsets.UTF_8.name())
 } catch (e: java.lang.Exception) {
     ""
 }
 
-@Composable
-fun Lifecycle.observeAsState(): State<Lifecycle.Event> {
-    val state = remember { mutableStateOf(Lifecycle.Event.ON_ANY) }
-    DisposableEffect(this) {
-        val observer = LifecycleEventObserver { _, event ->
-            state.value = event
-        }
-        this@observeAsState.addObserver(observer)
-        onDispose {
-            this@observeAsState.removeObserver(observer)
-        }
+fun String?.toCurrencySign(): String =
+    when (this) {
+        "iso4217/USD" -> "\$"
+        "iso4217/EUR" -> "€"
+        else -> "¤"
     }
-    return state
-}
+
 
 fun Instant.minutesBetween(timestamp: Long): Long {
     runCatching {
@@ -87,9 +68,7 @@ fun List<AppAccount>.toJsonObject(): JsonObject =
     }
 
 fun List<com.flexa.core.entity.AppAccount>.getUnitOfAccount(): String? {
-    return this.firstOrNull { it.availableAssets.isNotEmpty() }
-        ?.availableAssets?.firstOrNull { !it.value?.asset.isNullOrEmpty() }
-        ?.value?.asset
+    return this.firstOrNull { !it.unitOfAccount.isNullOrBlank() }?.unitOfAccount
 }
 
 fun List<com.flexa.core.entity.AppAccount>.getAssetIds(): List<String> {
@@ -122,19 +101,46 @@ fun String.toDate(dateFormat: String = "EEE, dd MMM yyyy HH:mm:ss z"): Date =
     try {
         SimpleDateFormat(dateFormat, Locale.US).parse(this) ?: Date()
     } catch (e: ParseException) {
-        Log.e("TAG", "toDate:", e)
+        Log.e(null, "String.toDate:", e)
         Date()
     }
 
 fun AvailableAsset.zeroValue(): Boolean {
-    return if (this.value == null) {
-        true
-    } else {
-        val regex = Regex(pattern = """\d+\.\d{2}""")
-        val matchResult = regex.find(this.value.label)
-        val extractedValue = matchResult?.value
-        extractedValue?.toDoubleOrNull() == 0.0
+    return this.balanceBundle?.total?.let { it == BigDecimal.ZERO } ?: true
+}
+
+fun ExchangeRate?.toBalanceBundle(
+    asset: com.flexa.core.shared.AvailableAsset?
+): BalanceBundle? {
+    return this?.run {
+        val scale = 2
+        val roundingMode = RoundingMode.DOWN
+        val balance = BigDecimal.valueOf(asset?.balance ?: 0.0)
+        val balanceAvailable = asset?.balanceAvailable?.run { BigDecimal.valueOf(this) }
+        val total = (price?.toBigDecimalOrNull() ?: BigDecimal.ZERO).multiply(balance)
+            .setScale(scale, roundingMode)
+        val available = balanceAvailable?.run {
+            (price?.toBigDecimalOrNull() ?: BigDecimal.ZERO).multiply(this)
+                .setScale(scale, roundingMode)
+        }
+        val currencySign = unitOfAccount?.toCurrencySign()
+        val totalLabel = currencySign + total
+        val availableLabel = available?.run { currencySign + this }
+        BalanceBundle(
+            total = total,
+            available = available,
+            totalLabel = totalLabel,
+            availableLabel = availableLabel
+        )
     }
+}
+
+fun OneTimeKey.toAssetKey(): AssetKey {
+    return AssetKey(
+        prefix = this.prefix ?: "",
+        secret = this.secret ?: "",
+        length = this.length ?: 1
+    )
 }
 
 fun com.flexa.core.entity.AppAccount.nonZeroAssets(): List<AvailableAsset> =

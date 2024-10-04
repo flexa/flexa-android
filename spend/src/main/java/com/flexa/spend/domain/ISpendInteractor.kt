@@ -7,8 +7,11 @@ import com.flexa.core.entity.AvailableAsset
 import com.flexa.core.entity.CommerceSession
 import com.flexa.core.entity.CommerceSessionEvent
 import com.flexa.core.entity.ExchangeRate
+import com.flexa.core.entity.ExchangeRatesResponse
+import com.flexa.core.entity.OneTimeKey
+import com.flexa.core.entity.OneTimeKeyResponse
 import com.flexa.core.entity.PutAppAccountsResponse
-import com.flexa.core.entity.Quote
+import com.flexa.core.entity.TransactionFee
 import com.flexa.core.shared.Asset
 import com.flexa.core.shared.AssetsResponse
 import com.flexa.core.shared.Brand
@@ -33,7 +36,7 @@ interface ISpendInteractor {
     suspend fun getCommerceSession(sessionId: String): CommerceSession.Data
     suspend fun saveLastEventId(eventId: String)
     suspend fun getLastEventId(): String?
-    suspend fun putAccounts(account: List<com.flexa.core.shared.AppAccount>): PutAppAccountsResponse
+    suspend fun putAccounts(accounts: List<com.flexa.core.shared.AppAccount>): PutAppAccountsResponse
     suspend fun getAccount(): Account
     suspend fun deleteNotification(id: String)
     suspend fun getEmail(): String?
@@ -63,13 +66,26 @@ interface ISpendInteractor {
         commerceSessionId: String, paymentAssetId: String
     ): String
 
-    suspend fun getQuote(assetId: String, amount: String, unitOfAccount: String): Quote
     suspend fun deleteToken(): Int
     suspend fun deleteAccount(): Int
+
     suspend fun hasOutdatedExchangeRates(): Boolean
+    suspend fun getDbExchangeRate(id: String): ExchangeRate?
     suspend fun getDbExchangeRates(): List<ExchangeRate>
-    suspend fun getExchangeRates(assetIds: List<String>, unitOfAccount: String): List<ExchangeRate>
-    suspend fun getExchangeRatesSmart(assetIds: List<String>, unitOfAccount: String): List<ExchangeRate>
+    suspend fun getExchangeRates(assetIds: List<String>, unitOfAccount: String): ExchangeRatesResponse
+    suspend fun getExchangeRatesSmart(assetIds: List<String>, unitOfAccount: String): ExchangeRatesResponse
     suspend fun saveExchangeRates(items: List<ExchangeRate>)
+
+    suspend fun hasOutdatedOneTimeKeys(): Boolean
+    suspend fun getDbOneTimeKey(assetId: String): OneTimeKey?
+    suspend fun getDbOneTimeKeys(): List<OneTimeKey>
+    suspend fun getOneTimeKeys(assetIds: List<String>): OneTimeKeyResponse
+    suspend fun getOneTimeKeysSmart(assetIds: List<String>): List<OneTimeKey>
+    suspend fun saveOneTimeKeys(items: List<OneTimeKey>)
     suspend fun deleteExchangeRates()
+
+    suspend fun getTransactionFees(assetIds: List<String>, unitOfAccount: String): List<TransactionFee>
+    suspend fun getDbTransactionFees(): List<TransactionFee>
+    suspend fun saveTransactionFees(items: List<TransactionFee>)
+    suspend fun getDbTransactionFee(assetId: String): TransactionFee?
 }

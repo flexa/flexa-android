@@ -60,7 +60,7 @@ fun AssetItemCompose(
 
     val assetName by remember {
         mutableStateOf(
-            asset.assetData?.displayName ?: asset.label?.substringAfter(" ") ?: ""
+            asset.assetData?.displayName ?: ""
         )
     }
 

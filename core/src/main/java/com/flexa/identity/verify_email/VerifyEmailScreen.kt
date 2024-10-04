@@ -19,14 +19,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.MarkEmailUnread
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -42,6 +42,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -91,8 +92,8 @@ internal fun VerifyEmail(
     val scrollBehavior =
         TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     val shadowHeight by remember { mutableStateOf(10.dp) }
-    var cardPosition by remember { mutableStateOf(0F) }
-    var bottomBarPosition by remember { mutableStateOf(0F) }
+    var cardPosition by remember { mutableFloatStateOf(0F) }
+    var bottomBarPosition by remember { mutableFloatStateOf(0F) }
 
 
     Scaffold(
@@ -102,7 +103,7 @@ internal fun VerifyEmail(
                 navigationIcon = {
                     IconButton(onClick = { toBack() }) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = null,
                             tint = palette.onBackground
                         )
@@ -139,7 +140,7 @@ internal fun VerifyEmail(
                             )
                         )
                 )
-                Divider()
+                HorizontalDivider()
                 Spacer(modifier = Modifier.height(dividerHeight))
                 Row(
                     modifier = Modifier
@@ -163,7 +164,7 @@ internal fun VerifyEmail(
         Column(
             modifier = modifier
                 .padding(padding)
-                .offset(y = shadowHeight)
+                .offset { IntOffset(0, shadowHeight.roundToPx()) }
                 .verticalScroll(scrollState),
         ) {
             val context = LocalContext.current
