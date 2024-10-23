@@ -9,6 +9,7 @@ import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.TypeConverters
 import com.flexa.core.shared.LegacyFlexcode
+import com.flexa.core.shared.Promotion
 
 @Dao
 internal interface BrandDao {
@@ -31,8 +32,10 @@ internal class Brand(
     @ColumnInfo(name = "color")
     val color: String? = null,
     @ColumnInfo(name = "legacy_flexcodes")
-    @TypeConverters(LegacyFlexcodeConverter::class)
+    @TypeConverters(ObjectListsConverter::class)
     val legacyFlexcodes: List<LegacyFlexcode>? = null,
+    @TypeConverters(ObjectListsConverter::class)
+    val promotions: List<Promotion>? = null,
     @ColumnInfo(name = "logo_url")
     val logoUrl: String? = null,
     @ColumnInfo(name = "name")
@@ -47,6 +50,7 @@ internal fun Brand.toObject(): com.flexa.core.shared.Brand =
     com.flexa.core.shared.Brand(
         id = id, categoryName = categoryName,
         color = color, legacyFlexcodes = legacyFlexcodes,
+        promotions = promotions,
         logoUrl = logoUrl, name = name, slug = slug, status = status
     )
 
@@ -54,5 +58,6 @@ internal fun com.flexa.core.shared.Brand.toDao(): Brand =
     Brand(
         id = id, categoryName = categoryName,
         color = color, legacyFlexcodes = legacyFlexcodes,
+        promotions = promotions,
         logoUrl = logoUrl, name = name, slug = slug, status = status
     )

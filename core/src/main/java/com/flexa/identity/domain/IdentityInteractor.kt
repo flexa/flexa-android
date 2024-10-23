@@ -11,8 +11,8 @@ import com.flexa.core.entity.ExchangeRate
 import com.flexa.core.entity.PutAppAccountsResponse
 import com.flexa.core.entity.TokenPatch
 import com.flexa.core.entity.TokensResponse
-import com.flexa.core.shared.AppAccount
 import com.flexa.core.shared.Asset
+import com.flexa.core.shared.AssetAccount
 import com.flexa.core.shared.AssetsResponse
 import com.flexa.core.shared.Brand
 import com.flexa.core.shared.FlexaConstants
@@ -159,7 +159,7 @@ internal class IdentityInteractor(
         return accounts
     }
 
-    override suspend fun putAppAccounts(accounts: List<AppAccount>): PutAppAccountsResponse =
+    override suspend fun putAppAccounts(accounts: List<AssetAccount>): PutAppAccountsResponse =
         withContext(Dispatchers.IO) {
             val appAccounts = ArrayList<com.flexa.core.entity.AppAccount>(accounts.size)
             val account = getAccount()
@@ -180,7 +180,7 @@ internal class IdentityInteractor(
                 }
 
                 val appAccount = com.flexa.core.entity.AppAccount(
-                    accountId = localAccount.accountId,
+                    accountId = localAccount.assetAccountHash,
                     displayName = localAccount.displayName,
                     unitOfAccount = account.limits?.firstOrNull()?.asset,
                     icon = localAccount.icon,

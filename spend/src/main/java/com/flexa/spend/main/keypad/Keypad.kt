@@ -14,7 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,6 +33,7 @@ class Backspace(val image: ImageVector = Icons.AutoMirrored.Outlined.Backspace) 
 @Composable
 fun Keypad(
     modifier: Modifier = Modifier,
+    aspectRatio: Float? = null,
     onClick: (KeypadButton) -> Unit = {}
 ) {
 
@@ -43,20 +44,20 @@ fun Keypad(
             for (i in 1..9) {
                 item {
                     val b = Symbol(i.toString())
-                    KeypadButton(button = b, onClick = { onClick.invoke(b) })
+                    KeypadButton(button = b, aspectRatio = aspectRatio, onClick = { onClick.invoke(b) })
                 }
             }
             item {
                 val b = Point()
-                KeypadButton(button = b, onClick = { onClick.invoke(b) })
+                KeypadButton(button = b, aspectRatio = aspectRatio, onClick = { onClick.invoke(b) })
             }
             item {
                 val b = Symbol("0")
-                KeypadButton(button = b, onClick = { onClick.invoke(b) })
+                KeypadButton(button = b, aspectRatio = aspectRatio, onClick = { onClick.invoke(b) })
             }
             item {
                 val b = Backspace(Icons.AutoMirrored.Outlined.Backspace)
-                KeypadButton(button = b, onClick = { onClick.invoke(b) })
+                KeypadButton(button = b, aspectRatio = aspectRatio, onClick = { onClick.invoke(b) })
             }
         })
 }
@@ -64,9 +65,10 @@ fun Keypad(
 @Composable
 fun KeypadButton(
     button: KeypadButton,
+    aspectRatio: Float? = null,
     onClick: (KeypadButton) -> Unit
 ) {
-    val aspectRatio by remember { mutableStateOf(1.5f) }
+    val ratio by remember { mutableFloatStateOf(aspectRatio ?: 1.5f) }
     when (button) {
         is Symbol, is Point -> {
             val symbol = when (button) {
@@ -76,7 +78,7 @@ fun KeypadButton(
             }
             TextButton(
                 modifier = Modifier
-                    .aspectRatio(aspectRatio)
+                    .aspectRatio(ratio)
                     .clip(CircleShape),
                 onClick = { onClick.invoke(button) }) {
                 Text(
@@ -88,7 +90,7 @@ fun KeypadButton(
         is Backspace ->
             TextButton(
                 modifier = Modifier
-                    .aspectRatio(aspectRatio)
+                    .aspectRatio(ratio)
                     .clip(CircleShape),
                 onClick = { onClick.invoke(button) }) {
                 Icon(

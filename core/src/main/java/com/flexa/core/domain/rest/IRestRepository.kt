@@ -48,5 +48,5 @@ interface IRestRepository {
     suspend fun getCommerceSession(sessionId: String): CommerceSession.Data
 
     suspend fun getExchangeRates(assetIds: List<String>, unitOfAccount: String): ExchangeRatesResponse
-    suspend fun getTransactionFees(assetIds: List<String>, unitOfAccount: String): List<TransactionFee>
+    suspend fun getTransactionFees(assetIds: List<String>): List<TransactionFee>
 }

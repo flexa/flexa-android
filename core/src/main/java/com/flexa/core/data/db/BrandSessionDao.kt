@@ -35,4 +35,6 @@ class BrandSession(
     val transactionId: String,
     @ColumnInfo(name = "date")
     val date: Long,
+    @ColumnInfo(name = "legacy")
+    val legacy: Boolean = true,
 )

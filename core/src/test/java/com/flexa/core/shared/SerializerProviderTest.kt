@@ -64,8 +64,8 @@ class SerializerProviderTest {
 
     @Test
     fun testDoubleToStringConversion() {
-        val clazz = com.flexa.core.shared.AppAccount(
-            accountId = "123", custodyModel = CustodyModel.LOCAL,  availableAssets = listOf(
+        val clazz = com.flexa.core.shared.AssetAccount(
+            assetAccountHash = "123", custodyModel = CustodyModel.LOCAL,  availableAssets = listOf(
                 AvailableAsset(assetId = "4567", balance = 0.034)
             )
         )

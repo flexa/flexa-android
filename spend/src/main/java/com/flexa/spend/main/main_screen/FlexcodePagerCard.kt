@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -28,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.BlurredEdgeTreatment
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -95,7 +97,7 @@ fun FlexcodePagerCard(
         Spacer(modifier = Modifier.height(20.dp))
         Box(
             modifier = Modifier
-                .padding(horizontal = 34.dp)
+                .padding(horizontal = 28.dp)
                 .graphicsLayer {
                     val pageOffset = (
                             (pagerState.currentPage - page) + pagerState
@@ -150,15 +152,20 @@ fun FlexcodePagerCard(
                     }
                 }
             }
+            val alpha by animateFloatAsState(
+                if (assetKey == null) .03F else 1F, label = "alpha"
+            )
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
                 val blur by animateDpAsState(
-                    if (codeProgress.value) 2.dp else 0.dp, label = "blur",
+                    if (codeProgress.value || assetKey == null) 2.dp else 0.dp, label = "blur",
                 )
                 FlexcodeLayout(
                     modifier = Modifier
                         .fillMaxWidth()
                         .aspectRatio(1.14f)
-                        .blur(blur, BlurredEdgeTreatment.Rectangle),
+                        .alpha(alpha)
+                        .blur(blur, BlurredEdgeTreatment.Rectangle)
+                        .padding(2.dp),
                     code = code.value,
                     color = asset?.asset?.assetData?.color?.toColor() ?: Color.Magenta
                 )
@@ -170,7 +177,8 @@ fun FlexcodePagerCard(
                     FlexcodeLayout(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .aspectRatio(1.14f),
+                            .aspectRatio(1.14f)
+                            .alpha(alpha),
                         code = codeString,
                         color = asset?.asset?.assetData?.color?.toColor() ?: Color.Magenta
                     )
@@ -178,7 +186,7 @@ fun FlexcodePagerCard(
             }
         }
         Spacer(modifier = Modifier.height(1.dp))
-        FlexcodeButtonV2(
+        FlexcodeButton(
             modifier = Modifier
                 .widthIn(min = 140.dp)
                 .graphicsLayer {

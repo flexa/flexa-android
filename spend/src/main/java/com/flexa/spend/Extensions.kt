@@ -4,6 +4,7 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.util.Log
 import androidx.compose.animation.core.Animatable
@@ -24,18 +25,19 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.unit.IntOffset
 import com.flexa.core.data.db.BrandSession
-import com.flexa.core.entity.AppAccount
-import com.flexa.core.entity.AssetKey
 import com.flexa.core.entity.AvailableAsset
 import com.flexa.core.entity.CommerceSession
 import com.flexa.core.entity.ExchangeRate
+import com.flexa.core.entity.FeeBundle
+import com.flexa.core.entity.TransactionFee
+import com.flexa.core.shared.Brand
+import com.flexa.core.shared.Promotion
 import com.flexa.core.shared.SelectedAsset
 import com.flexa.core.toCurrencySign
 import com.flexa.identity.getActivity
 import com.flexa.spend.data.totp.HmacAlgorithm
 import com.flexa.spend.data.totp.TimeBasedOneTimePasswordConfig
 import com.flexa.spend.data.totp.TimeBasedOneTimePasswordGenerator
-import com.flexa.spend.main.main_screen.SpendViewModel
 import com.flexa.spend.merchants.BrandListItem
 import com.flexa.spend.merchants.SlideState
 import kotlinx.coroutines.coroutineScope
@@ -49,6 +51,24 @@ import java.util.concurrent.TimeUnit
 import kotlin.math.roundToInt
 import kotlin.math.sign
 
+internal val flexaDomains = listOf("flexa.link", "flexa.co")
+
+internal fun String.needToModify(): Boolean {
+    val uri = Uri.parse(this)
+    val host = uri.host ?: ""
+    val parts = host.split(".")
+    return parts.size > 2 && (host.endsWith(flexaDomains[0]) || host.endsWith(flexaDomains[1]))
+}
+
+internal fun String.isInternal(): Boolean {
+    val uri = Uri.parse(this)
+    val host = uri.host
+    return if (host == null) false
+    else {
+        host.endsWith(flexaDomains[0]) || host.endsWith(flexaDomains[1])
+    }
+}
+
 internal fun String?.toColor(): Color {
     return if (this.isNullOrEmpty()) Color.Gray else
         try {
@@ -61,20 +81,6 @@ internal fun String?.toColor(): Color {
 internal fun Color.toCssRgba(): String =
     "rgba(${(red * 255).toInt()}, ${(green * 255).toInt()}, ${(blue * 255).toInt()}," +
             " ${BigDecimal.valueOf(alpha.toDouble()).round(MathContext(2))})"
-
-internal fun List<AppAccount>.getKey(asset: SelectedAsset?): AssetKey? {
-    return when {
-        asset == null -> null
-        asset.asset.key != null -> asset.asset.key
-        else -> {
-            this.flatMap { it.availableAssets }
-                .firstOrNull { it.key != null && it.livemode == asset.asset.livemode }
-                ?.key ?: if (asset.asset.livemode == true)
-                SpendViewModel.livemodeAsset?.key
-            else SpendViewModel.testmodeAsset?.key
-        }
-    }
-}
 
 internal fun SelectedAsset.isSelected(accountId: String, assetId: String): Boolean {
     return this.accountId == accountId && this.asset.assetId == assetId
@@ -199,7 +205,7 @@ fun CommerceSession?.toTransaction(): Transaction? {
         Transaction(
             commerceSessionId = this.data?.id ?: "",
             amount = currentTransaction?.amount ?: "",
-            appAccountId = Spend.selectedAsset.value?.accountId ?: "",
+            assetAccountHash = Spend.selectedAsset.value?.accountId ?: "",
             assetId = currentTransaction?.asset ?: "",
             destinationAddress = currentTransaction?.destination?.address ?: "",
             feeAmount = currentTransaction?.fee?.amount ?: "",
@@ -214,7 +220,7 @@ fun CommerceSession?.toTransaction(): Transaction? {
     }
 }
 
-fun CommerceSession.Data?.toBrandSession(): BrandSession? {
+fun CommerceSession.Data?.toBrandSession(legacy: Boolean = true): BrandSession? {
     return if (this == null) {
         null
     } else {
@@ -226,7 +232,33 @@ fun CommerceSession.Data?.toBrandSession(): BrandSession? {
         val transactionId = transaction?.id ?: ""
         val date =
             transaction?.expiresAt ?: (Instant.now().toEpochMilli() / 1000)
-        BrandSession(sessionId = sessionId, transactionId = transactionId, date = date)
+        BrandSession(
+            sessionId = sessionId,
+            transactionId = transactionId,
+            date = date,
+            legacy = legacy
+        )
+    }
+}
+
+fun ExchangeRate?.toFeeBundle(
+    transactionFee: TransactionFee?
+): FeeBundle? {
+    return this?.run {
+        val scale = 2
+        val roundingMode = RoundingMode.DOWN
+
+        val ratePrice = price?.toBigDecimalOrNull() ?: BigDecimal.ZERO
+        val currencySign = unitOfAccount?.toCurrencySign()
+
+        val feeLabel = transactionFee?.let {
+            val feeAmount = it.amount?.toBigDecimalOrNull() ?: BigDecimal.ZERO
+            val label = currencySign + ratePrice.multiply(feeAmount)
+                .setScale(scale, roundingMode).toPlainString()
+            label
+        }
+
+        FeeBundle(label = feeLabel)
     }
 }
 
@@ -235,13 +267,13 @@ internal fun ExchangeRate.getCurrencySign(): String? {
 }
 
 internal fun ExchangeRate.getAssetAmount(amount: String): String {
-    return getAssetAmountValue(amount).toString()
+    return getAssetAmountValue(amount).toPlainString()
 }
 
 internal fun ExchangeRate.getAssetAmountValue(amount: String): BigDecimal {
     val amountD = amount.toBigDecimalOrNull() ?: BigDecimal.ZERO
     val priceD = price?.toBigDecimalOrNull() ?: BigDecimal(1)
-    val res = amountD.divide(priceD, precision?:0, RoundingMode.DOWN).stripTrailingZeros()
+    val res = amountD.divide(priceD, precision ?: 0, RoundingMode.DOWN).stripTrailingZeros()
     return res
 }
 
@@ -308,6 +340,73 @@ internal fun Context.openEmail() {
             Log.e(null, "openEmail", e)
         }
     }
+}
+
+internal fun Brand?.getPromotion(livemode: Boolean?): Promotion? =
+    this?.promotions?.getPromotion(livemode)
+
+internal fun List<Promotion>?.getPromotion(livemode: Boolean?): Promotion? {
+    return this?.firstOrNull {
+        it.livemode == livemode
+    }
+}
+
+internal fun Promotion.positive(amount: String): Boolean {
+    val amountValue = amount.getAmount()
+    val discount = getAmountWithDiscount(amount)
+    return amountValue - discount > BigDecimal.ZERO
+}
+
+internal fun Promotion.getAmountWithDiscount(amount: String): BigDecimal {
+    val amountValue = amount.toBigDecimalOrNull() ?: BigDecimal.ZERO
+    val discount = getDiscount(amount)
+    return when {
+        amountOff != null -> {
+            if (amountValue >= (restrictions?.minimumAmount?.toBigDecimalOrNull()
+                    ?: BigDecimal.ZERO)
+            ) {
+                amountValue.subtract(discount).coerceAtLeast(BigDecimal.ZERO).setScale(2)
+            } else {
+                amountValue
+            }
+        }
+
+        percentOff != null -> {
+            amountValue.subtract(discount)
+        }
+
+        else -> amountValue.setScale(2)
+    }
+}
+
+internal fun Promotion.getDiscount(amount: String): BigDecimal {
+    val amountValue = amount.getAmount()
+    return when {
+        amountOff != null -> {
+            if (amountValue < (restrictions?.minimumAmount?.toBigDecimalOrNull()
+                    ?: BigDecimal.ZERO)
+            ) {
+                BigDecimal.ZERO.setScale(2)
+            } else {
+                (amountOff?.toBigDecimalOrNull() ?: BigDecimal.ZERO).setScale(2)
+            }
+        }
+
+        percentOff != null -> {
+            this.getPercentAmount(amount).coerceAtMost(
+                restrictions?.maximumDiscount?.toBigDecimalOrNull() ?: amountValue
+            ).setScale(2)
+        }
+
+        else -> BigDecimal.ZERO.setScale(2)
+    }
+}
+
+internal fun Promotion.getPercentAmount(amount: String): BigDecimal {
+    val amountValue = amount.getAmount()
+    val percent = percentOff?.toBigDecimalOrNull()?.coerceAtLeast(BigDecimal.ZERO)
+        ?.coerceAtMost(BigDecimal(100)) ?: BigDecimal.ZERO
+    return amountValue.multiply(percent).divide(BigDecimal(100), 2, RoundingMode.DOWN)
 }
 
 @Suppress(names = ["ModifierFactoryUnreferencedReceiver"])

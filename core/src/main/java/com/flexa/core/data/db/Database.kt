@@ -9,10 +9,10 @@ import androidx.room.TypeConverters
     entities = [
         Asset::class, Brand::class, BrandSession::class, ExchangeRate::class,
         OneTimeKey::class, TransactionFee::class
-    ], version = 9,
+    ], version = 11,
     exportSchema = false
 )
-@TypeConverters(StringListConverter::class, LegacyFlexcodeConverter::class, ObjectConverters::class)
+@TypeConverters(StringListConverter::class, ObjectListsConverter::class, ObjectConverters::class)
 internal abstract class Database : RoomDatabase() {
 
     abstract fun assetsDao(): AssetDao

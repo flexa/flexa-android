@@ -11,22 +11,26 @@ import com.flexa.R
 import com.flexa.core.Flexa
 import java.util.Locale
 
-sealed class ApiError(open val traceId: String? = null) {
+sealed class ApiError(
+    open val traceId: String? = null,
+    open val message: String? = null,
+) {
 
     class InfoEntity(
         val title: String? = null,
-        val message: String? = null,
+        override val message: String? = null,
         override val traceId: String? = null,
-        val statusCode: String? = null,
-        val localizedMessageCode: String? = null,
-    ) : ApiError(traceId)
+    ) : ApiError(traceId = traceId, message = message)
 
     class ReportEntity(
         val data: String? = null,
+        override val message: String? = null,
         override val traceId: String? = null,
-    ) : ApiError(traceId) {
+    ) : ApiError(traceId = traceId, message = message) {
         val title get() = Flexa.requiredContext.resources.getString(R.string.something_went_wrong)
-        val text get() = Flexa.requiredContext.resources.getString(R.string.we_are_sorry_we_encountered_a_problem)
+        val text
+            get() = message
+                ?: Flexa.requiredContext.resources.getString(R.string.we_are_sorry_we_encountered_a_problem)
 
         fun sendEmailReport(activity: Activity) {
             activity.run {
@@ -34,7 +38,7 @@ sealed class ApiError(open val traceId: String? = null) {
 
                 val messageBody = StringBuilder()
                 messageBody.append(getString(R.string.report_email_message_body))
-                messageBody.append("\n• $errorType")
+                messageBody.append("\n• Trace id: $errorType")
                 messageBody.append("\n• ${
                     FlexaConstants.ANDROID.replaceFirstChar {
                         it.uppercase(Locale.getDefault())

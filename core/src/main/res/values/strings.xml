@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="connection_problem">Connection problem</string>
-    <string name="something_went_wrong">Something went wrong.</string>
+    <string name="something_went_wrong">Something went wrong</string>
     <string name="we_are_sorry_we_encountered_a_problem">We’re sorry, we encountered a problem while connecting to Flexa. You can submit a report to help us fix the problem, or simply try again later.</string>
     <string name="client_error">Client error</string>
     <string name="send_email">Send email</string>
@@ -61,4 +61,6 @@
     <public type="string" name="logout_description" />
     <string name="logout_description">Are you sure you want to disconnect your Flexa ID?</string>
     <string name="get_started">Get Started</string>
+    <string name="report">Report</string>
+    <string name="close">Close</string>
 </resources>

@@ -47,7 +47,6 @@ android {
     compileOptions {
         sourceCompatibility rootProject.sourceCompatibility
         targetCompatibility rootProject.targetCompatibility
-        coreLibraryDesugaringEnabled true
     }
     kotlinOptions {
         jvmTarget = rootProject.jvmTarget
@@ -70,8 +69,6 @@ dependencies {
 
     implementation "com.flexa:spend:$spend_version"
     implementation "com.flexa:scan:$scan_version"
-
-    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.2'
 
     /*Compose*/
     implementation "androidx.compose.ui:ui:$compose_version"

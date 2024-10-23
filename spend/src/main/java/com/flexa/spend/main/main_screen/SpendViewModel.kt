@@ -12,7 +12,6 @@ import androidx.lifecycle.viewModelScope
 import com.flexa.core.Flexa
 import com.flexa.core.entity.Account
 import com.flexa.core.entity.AppAccount
-import com.flexa.core.entity.AvailableAsset
 import com.flexa.core.entity.CommerceSession
 import com.flexa.core.entity.CommerceSessionEvent
 import com.flexa.core.entity.ExchangeRate
@@ -21,6 +20,7 @@ import com.flexa.core.entity.OneTimeKey
 import com.flexa.core.shared.ApiErrorHandler
 import com.flexa.core.shared.Brand
 import com.flexa.core.shared.ConnectionState
+import com.flexa.core.shared.FlexaConstants
 import com.flexa.core.shared.SelectedAsset
 import com.flexa.spend.Spend
 import com.flexa.spend.containsAuthorization
@@ -38,6 +38,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -50,6 +51,8 @@ import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 internal const val ZERO = "0"
 private const val RETRY_COUNT = 5
@@ -63,20 +66,31 @@ class SpendViewModel(
 
     companion object {
         val eventFlow = MutableSharedFlow<Event>()
-        var livemodeAsset: AvailableAsset? = null
-        var testmodeAsset: AvailableAsset? = null
     }
 
     val confirmViewModelStore = ViewModelStore()
-    val selectedBrand = MutableStateFlow<Brand?>(null)
+    private val _selectedBrand = MutableStateFlow<Brand?>(null)
+    val selectedBrand = _selectedBrand
+        .onStart {
+            listenFlexaAppAccounts()
+            listenCommerceSession()
+            listenTransactionSent()
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = null
+        )
     private val _progress = MutableStateFlow(false)
     val progress: StateFlow<Boolean> = _progress
     private val _timeout = MutableStateFlow(false)
     val timeout: StateFlow<Boolean> = _timeout
+    private val _unitOfAccount = MutableStateFlow<String>("iso4217/USD")
+    val unitOfAccount = _unitOfAccount.asStateFlow()
     private val _account = MutableStateFlow<Account?>(null)
     val account: StateFlow<Account?> = _account
     private val _notifications = mutableStateListOf<Notification>()
     val notifications: List<Notification> = _notifications
+    val mutex = Mutex()
 
     private val _commerceSession = MutableStateFlow<CommerceSession?>(null)
     val commerceSession = _commerceSession
@@ -92,16 +106,17 @@ class SpendViewModel(
     var openLegacyCard = MutableStateFlow(false)
 
     init {
-        listenFlexaAppAccounts()
-        listenCommerceSession()
-        listenTransactionSent()
-        emitCachedAppAccount()
+
     }
 
     override fun onCleared() {
         cancelTimeout()
         confirmViewModelStore.clear()
         super.onCleared()
+    }
+
+    internal fun setBrand(brand: Brand?) {
+        _selectedBrand.value = brand
     }
 
     internal fun stopProgress() {
@@ -113,17 +128,19 @@ class SpendViewModel(
         _commerceSession.value = null
     }
 
-    private var brandSessionId: String? = null
+    private var brandSessionId = MutableStateFlow<String?>(null)
 
     internal fun createCommerceSession(
-        brandId: String, amount: String,
-        assetId: String, paymentAssetId: String
+        brandId: String,
+        amount: String,
+        paymentAssetId: String
     ) {
         viewModelScope.launch {
             flow {
+                val unitOfAccount = interactor.getUnitOfAccount()
                 emit(
                     interactor.createCommerceSession(
-                        brandId, amount, assetId, paymentAssetId
+                        brandId, amount, unitOfAccount, paymentAssetId
                     )
                 )
             }
@@ -135,7 +152,7 @@ class SpendViewModel(
                 }
                 .onStart { _progress.value = true }
                 .onEach { session ->
-                    brandSessionId = session.id
+                    brandSessionId.value = session.id
                     interactor.deleteOutdatedSessions()
                     initCloseSessionTimeout()
                 }
@@ -172,21 +189,33 @@ class SpendViewModel(
     }
 
     internal fun removeNotification(notification: Notification) {
-        _notifications.remove(notification)
         viewModelScope.launch {
+            mutex.withLock {
+                _notifications.remove(notification)
+            }
             interactor.deleteNotification(notification.id ?: "")
         }
     }
 
     internal suspend fun getAccount() {
-        runCatching {
-            interactor.getAccount()
-        }.onFailure { Log.e(null, "getAccount: ", it) }
-            .onSuccess { account ->
+        flow {
+            emit(interactor.getAccountCached())
+            emit(interactor.getAccount().apply {
+                _unitOfAccount.value = interactor.getUnitOfAccount()
+            })
+        }.retryWhen { _, attempt ->
+            delay(FlexaConstants.RETRY_DELAY)
+            attempt < FlexaConstants.RETRY_COUNT
+        }.catch { Log.e(null, "getAccount: ", it) }
+            .filter { account -> account != null }
+            .onEach { _unitOfAccount.value = interactor.getUnitOfAccount() }
+            .collect { account ->
                 _account.value = account
-                account.notifications?.let { n ->
-                    _notifications.clear()
-                    _notifications.addAll(n)
+                mutex.withLock {
+                    account?.notifications?.let { n ->
+                        _notifications.clear()
+                        _notifications.addAll(n)
+                    }
                 }
             }
     }
@@ -195,7 +224,7 @@ class SpendViewModel(
         commerceSession: CommerceSession.Data?
     ): Boolean {
         val brandSession = interactor.getBrandSession(commerceSession?.id ?: "")
-        return brandSession != null
+        return brandSession?.legacy == true
     }
 
     private var listenEventsJob: Job? = null
@@ -235,15 +264,10 @@ class SpendViewModel(
     }
 
     private suspend fun proceedCommerceSession(session: CommerceSession.Data) {
-        if (!session.isLegacy && session.isCompleted()) {
-            // Close Next-Gen session card
-            deleteCommerceSessionData()
-        } else {
-            val updatedSessionEvent = CommerceSession(
-                data = session.copy(isLegacy = isLegacy(session))
-            )
-            _commerceSession.emit(updatedSessionEvent)
-        }
+        val updatedSessionEvent = CommerceSession(
+            data = session.copy(isLegacy = isLegacy(session))
+        )
+        _commerceSession.emit(updatedSessionEvent)
     }
 
     private var listenConnectionJob: Job? = null
@@ -263,14 +287,10 @@ class SpendViewModel(
         }
     }
 
-    private fun emitCachedAppAccount() {
-        viewModelScope.launch {
-            eventFlow.emit(Event.AppAccountsUpdate(interactor.getLocalAppAccounts()))
-        }
-    }
-
     private fun listenFlexaAppAccounts() {
         viewModelScope.launch {
+            eventFlow.emit(Event.AppAccountsUpdate(interactor.getLocalAppAccounts(), true))
+
             Flexa.appAccounts.collect { appAccounts ->
                 runCatching {
                     val putAccount = interactor.putAccounts(appAccounts)
@@ -296,6 +316,10 @@ class SpendViewModel(
                     }
                     saveLastSessionId(sessionId)
                 }
+                .retryWhen { _, attempt ->
+                    delay(RETRY_DELAY)
+                    attempt < RETRY_COUNT
+                }
                 .catch { }
                 .collect { cs ->
                     val legacy = cs.data?.isLegacy ?: false
@@ -306,10 +330,10 @@ class SpendViewModel(
                         (legacy && !containsAuthorization && inputAmountClosed)
                                 || (legacy && containsAuthorization)
 
-                    val sendTransactionRequest = brandSessionId == cs.data?.id
+                    val sendTransactionRequest = brandSessionId.value == cs.data?.id
                     if (legacy && sendTransactionRequest) {
                         cs.toTransaction()?.let { transaction ->
-                            brandSessionId = null
+                            brandSessionId.value = null
                             Log.d(null, "CS>>>: onTransactionRequest ${cs.data?.id}")
                             Spend.onTransactionRequest?.invoke(Result.success(transaction))
                         }
@@ -407,7 +431,11 @@ sealed class SheetScreen {
 }
 
 sealed class Event {
-    class AppAccountsUpdate(val accounts: List<AppAccount>) : Event()
+    class AppAccountsUpdate(
+        val accounts: List<AppAccount>,
+        val cached: Boolean = false
+    ) : Event()
+
     class ExchangeRatesUpdate(val items: List<ExchangeRate>) : Event()
     class OneTimeKeysUpdate(val items: List<OneTimeKey>) : Event()
 }

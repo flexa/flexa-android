@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.text.KeyboardActions
@@ -39,10 +38,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.ContactMail
 import androidx.compose.material.icons.outlined.Event
 import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.rounded.AccountCircle
-import androidx.compose.material.icons.rounded.ErrorOutline
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -98,6 +93,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.flexa.R
 import com.flexa.core.data.data.AppInfoProvider
+import com.flexa.core.shared.ErrorDialog
 import com.flexa.core.theme.FlexaTheme
 import com.flexa.identity.autofill
 import com.flexa.identity.coppa.CoppaHelper
@@ -154,12 +150,8 @@ internal fun CreateId(
     var birthdayError by remember { mutableStateOf(false) }
 
     val state by viewModel.state.collectAsStateWithLifecycle()
-
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
-
     var showDatePicker by remember { mutableStateOf(false) }
-
-    val error by viewModel.error.collectAsStateWithLifecycle()
 
     LaunchedEffect(state) {
         when (state) {
@@ -167,8 +159,6 @@ internal fun CreateId(
                 toContinue()
                 viewModel.state.value = CreateIdViewModel.State.General
             }
-
-            is CreateIdViewModel.State.Error -> {}
             else -> {}
         }
     }
@@ -517,59 +507,8 @@ internal fun CreateId(
             onDismiss = { showDatePicker = false }
         )
     }
-    if (error) {
-        AlertDialog(
-            onDismissRequest = { viewModel.clearError() },
-            shape = RoundedCornerShape(25.dp),
-            icon = {
-                Box {
-                    Icon(
-                        imageVector = Icons.Rounded.AccountCircle,
-                        contentDescription = null
-                    )
-                    Icon(
-                        modifier = Modifier
-                            .size(12.dp)
-                            .clip(CircleShape)
-                            .background(AlertDialogDefaults.containerColor)
-                            .align(Alignment.BottomEnd),
-                        imageVector = Icons.Rounded.ErrorOutline,
-                        contentDescription = null
-                    )
-                }
-            },
-            title = {
-                Text(
-                    modifier = Modifier.fillMaxWidth(),
-                    text = "Something went wrong",
-                    style = TextStyle(
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Medium,
-                    )
-                )
-            },
-            text = {
-                Text(
-                    text = "Sorry, something went wrong when creating your Flexa account. Please try again later or send us a report",
-                    style = TextStyle(
-                        fontWeight = FontWeight.Medium,
-                        lineHeight = 20.sp
-                    )
-                )
-            },
-            dismissButton = {
-                TextButton(onClick = { viewModel.clearError() }) {
-                    Text(text = "Close")
-                }
-            },
-            confirmButton = {
-                Button(onClick = {
-                    viewModel.sendFlexaReport(context, userData)
-                }) {
-                    Text(text = stringResource(R.string.report_an_issue))
-                }
-            }
-        )
+    ErrorDialog(viewModel.errorHandler) {
+        viewModel.clearError()
     }
 }
 

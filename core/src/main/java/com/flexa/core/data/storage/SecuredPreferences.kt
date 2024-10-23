@@ -5,7 +5,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
+import androidx.security.crypto.MasterKeys
 import com.flexa.core.domain.data.IDataRepository
 import com.flexa.core.shared.FlexaConstants
 import com.flexa.core.shared.FlexaConstants.Companion.EMPTY
@@ -14,29 +14,29 @@ import com.google.gson.JsonSyntaxException
 import java.lang.reflect.Type
 
 internal class SecuredPreferences(
-    application: Application,
+    private val application: Application,
     private val serializerProvider: SerializerProvider,
-    fileName: String,
+    private val fileName: String,
 ) : IDataRepository {
 
 
     private val preferences: SharedPreferences by lazy {
         try {
-            val masterKey = MasterKey.Builder(application, MasterKey.DEFAULT_MASTER_KEY_ALIAS)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build()
-            EncryptedSharedPreferences.create(
-                application, fileName, masterKey,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-            )
+            val masterKey = getMasterKey()
+            getEncryptedSharedPreferences(application.applicationContext, fileName, masterKey)
         } catch (ex: Exception) {
-            Log.e("Spend", ex.message, ex)
-            application.getSharedPreferences(fileName, Context.MODE_PRIVATE)
+            Log.e(null, ex.message, ex)
+            runCatching {
+                application.deleteSharedPreferences(fileName)
+                val masterKey = getMasterKey()
+                getEncryptedSharedPreferences(application.applicationContext, fileName, masterKey)
+            }.getOrElse {
+                Log.e(null, it.message, it)
+                throw Error("EncryptedSharedPreferences error")
+            }
         }
     }
 
-    // todo temporary
     internal fun savePlacesToPayTheme(data: String?) {
         if (data != null) {
             preferences.edit().putString(
@@ -112,7 +112,7 @@ internal class SecuredPreferences(
     }
 
     override suspend fun clearPreferences() {
-        preferences.edit().clear().commit()
+        application.getSharedPreferences(fileName, Context.MODE_PRIVATE).edit().clear().commit()
     }
 
     override suspend fun saveSet(key: String, value: Set<String>) {
@@ -125,5 +125,21 @@ internal class SecuredPreferences(
         preferences.getStringSet(key, emptySet()) ?: emptySet()
 
     override fun edit(): SharedPreferences.Editor = preferences.edit()
+
+    private fun getMasterKey(): String {
+        return MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
+    }
+
+    private fun getEncryptedSharedPreferences(
+        context: Context, fileName: String, masterKeyAlias: String
+    ): SharedPreferences {
+        return EncryptedSharedPreferences.create(
+            fileName,
+            masterKeyAlias,
+            context,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
+    }
 }
 

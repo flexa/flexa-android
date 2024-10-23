@@ -1,9 +1,10 @@
-package com.flexa.spend.main.web_view
+package com.flexa.identity.main
 
 import android.annotation.SuppressLint
 import android.util.Xml.Encoding
 import android.view.ViewGroup
 import android.webkit.WebView
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -22,6 +23,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.webkit.WebViewClientCompat
@@ -35,6 +37,7 @@ fun WebView(
     url: String,
     toBack: () -> Unit = {},
 ) {
+    val previewMode = LocalInspectionMode.current
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
     val title = remember { mutableStateOf("") }
     Scaffold(
@@ -55,34 +58,42 @@ fun WebView(
             )
         }
     ) { padding ->
-        AndroidView(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize(),
-            factory = { context ->
-                WebView(context).apply {
-                    layoutParams = ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT
-                    )
-                    webViewClient = object : WebViewClientCompat() {
-                        override fun onPageFinished(view: WebView?, url: String?) {
-                            super.onPageFinished(view, url)
-                            title.value = view?.title ?: ""
+        if (!previewMode) {
+            AndroidView(
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize(),
+                factory = { context ->
+                    WebView(context).apply {
+                        layoutParams = ViewGroup.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT
+                        )
+                        webViewClient = object : WebViewClientCompat() {
+                            override fun onPageFinished(view: WebView?, url: String?) {
+                                super.onPageFinished(view, url)
+                                title.value = view?.title ?: ""
+                            }
                         }
+                        settings.javaScriptEnabled = true
+                        settings.domStorageEnabled = true
+                        settings.loadWithOverviewMode = true
+                        settings.useWideViewPort = true
+                        settings.builtInZoomControls = true
+                        settings.displayZoomControls = false
+                        settings.setSupportZoom(true)
+                        settings.defaultTextEncodingName = Encoding.UTF_8.name
                     }
-                    settings.javaScriptEnabled = true
-                    settings.domStorageEnabled = true
-                    settings.loadWithOverviewMode = true
-                    settings.useWideViewPort = true
-                    settings.builtInZoomControls = true
-                    settings.displayZoomControls = false
-                    settings.setSupportZoom(true)
-                    settings.defaultTextEncodingName = Encoding.UTF_8.name
-                }
-            },
-            update = { it.loadUrl(url) }
-        )
+                },
+                update = { it.loadUrl(url) }
+            )
+        } else {
+            Box(
+                Modifier
+                    .padding(padding)
+                    .fillMaxSize()
+            )
+        }
     }
 }
 

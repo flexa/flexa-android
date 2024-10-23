@@ -12,6 +12,7 @@ import com.flexa.core.getUnitOfAccount
 import com.flexa.core.nonZeroAssets
 import com.flexa.core.shared.ApiErrorHandler
 import com.flexa.core.shared.SelectedAsset
+import com.flexa.core.toAssetKey
 import com.flexa.core.toBalanceBundle
 import com.flexa.core.toDate
 import com.flexa.spend.MockFactory
@@ -19,10 +20,9 @@ import com.flexa.spend.Spend
 import com.flexa.spend.domain.FakeInteractor
 import com.flexa.spend.domain.ISpendInteractor
 import com.flexa.spend.getExpireTimeMills
-import com.flexa.spend.getKey
 import com.flexa.spend.main.main_screen.Event
-import com.flexa.spend.main.main_screen.SpendViewModel
 import com.flexa.spend.main.main_screen.SpendViewModel.Companion.eventFlow
+import com.flexa.spend.toFeeBundle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -55,8 +55,8 @@ class AssetsViewModel(
         mutableStateListOf()
     val assets: List<SelectedAsset> = _assets
 
-    private val _selectedAssetWithBundles = MutableStateFlow(selectedAsset.value)
-    val selectedAssetWithBundles = _selectedAssetWithBundles.asStateFlow()
+    private val _selectedAssetBundle = MutableStateFlow(selectedAsset.value)
+    val selectedAssetBundle = _selectedAssetBundle.asStateFlow()
 
     private val _assetsScreen = MutableStateFlow<AssetsScreen>(AssetsScreen.Assets)
     val assetsScreen = _assetsScreen.asStateFlow()
@@ -90,7 +90,7 @@ class AssetsViewModel(
     private fun subscribeSelectedAsset() {
         viewModelScope.launch {
             selectedAsset.collect { sa ->
-                _selectedAssetWithBundles.value =
+                _selectedAssetBundle.value =
                     _assets.firstOrNull {
                         it.accountId == sa?.accountId && it.asset.assetId == sa.asset.assetId
                     }
@@ -103,10 +103,11 @@ class AssetsViewModel(
         if (subscribeAppAccountsJob?.isActive == true) return
 
         subscribeAppAccountsJob = viewModelScope.launch {
-            eventFlow.collect {
-                when (it) {
+            eventFlow.collect { event ->
+                when (event) {
                     is Event.AppAccountsUpdate -> {
-                        compileAccountsAssets(it.accounts)
+                        compileAccountsAssets(event.accounts)
+                        if (!event.cached) unsubscribePoll(0L) { poll() }
                     }
 
                     is Event.ExchangeRatesUpdate -> {
@@ -127,30 +128,33 @@ class AssetsViewModel(
             updateAccountJob?.cancel()
         }
         updateAccountJob = viewModelScope.launch(Dispatchers.IO) {
-            updateAssetsKeys()
             try {
                 val dbAssets = interactor.getDbAssets()
                 val assets = dbAssets.ifEmpty { interactor.getAllAssets() }
 
                 accounts.forEach { account ->
                     val localAccount = Flexa.appAccounts.value
-                        .firstOrNull { it.accountId == account.accountId }
+                        .firstOrNull { it.assetAccountHash == account.accountId }
                     val accAssets = ArrayList<AvailableAsset>(account.availableAssets.size)
                     for (availableAsset in account.availableAssets) {
-                        ensureActive()
                         val localAsset =
                             localAccount?.availableAssets?.firstOrNull { it.assetId == availableAsset.assetId }
                         val assetData = assets.firstOrNull { it.id == availableAsset.assetId }
                         val exchangeRate = interactor.getDbExchangeRate(availableAsset.assetId)
-                        val oneTimeKey = interactor.getDbOneTimeKey(availableAsset.assetId)
+                        val oneTimeKey = interactor.getDbOneTimeKey(availableAsset.assetId, availableAsset.livemode)
+                        val assetKey = oneTimeKey?.toAssetKey()
+                        val fee = interactor.getDbFeeByTransactionAssetID(availableAsset.assetId)
+                        val feeExchangeRate = interactor.getDbExchangeRate(fee?.asset ?: "")
+                        val feeBundle = feeExchangeRate.toFeeBundle(transactionFee = fee)
                         accAssets.add(
                             availableAsset.copy(
                                 assetData = assetData,
                                 icon = localAsset?.icon,
-                                balanceAvailable = localAsset?.balanceAvailable,
-                                exchangeRate = exchangeRate,
+                                key = assetKey,
                                 oneTimeKey = oneTimeKey,
-                                balanceBundle = exchangeRate.toBalanceBundle(localAsset)
+                                exchangeRate = exchangeRate,
+                                balanceBundle = exchangeRate.toBalanceBundle(localAsset),
+                                feeBundle = feeBundle
                             )
                         )
                     }
@@ -165,9 +169,7 @@ class AssetsViewModel(
                 compileAssets(accounts)
                 verifyAssetState(accounts)
                 verifySelectedAsset(accounts)
-
             } catch (e: Exception) {
-                Log.e(null, "checkAccountsAssets: ", e)
                 withContext(Dispatchers.Main) {
                     errorHandler.setError(e)
                 }
@@ -178,36 +180,20 @@ class AssetsViewModel(
     private suspend fun compileAssets(appAccounts: List<AppAccount>) {
         val list = ArrayList<SelectedAsset>(appAccounts.sumOf { it.availableAssets.size })
         for (appAccount in appAccounts) {
-            val localAccount = Flexa.appAccounts.value
-                .firstOrNull { it.accountId == appAccount.accountId }
             for (asset in appAccount.availableAssets) {
-                val localAsset =
-                    localAccount?.availableAssets?.firstOrNull { it.assetId == asset.assetId }
-                val assetKey = appAccounts.getKey(SelectedAsset(appAccount.accountId, asset))
-                val exchangeRate = interactor.getDbExchangeRate(asset.assetId)
-                val balanceBundle = exchangeRate.toBalanceBundle(asset = localAsset)
-                val oneTimeKey = interactor.getDbOneTimeKey(asset.assetId)
-                val fee = interactor.getDbTransactionFee(asset.assetId)
                 list.add(
                     SelectedAsset(
-                        appAccount.accountId,
-                        asset.copy(
-                            key = assetKey,
-                            exchangeRate = exchangeRate,
-                            balanceBundle = balanceBundle,
-                            oneTimeKey = oneTimeKey,
-                            fee = fee
-                        )
+                        accountId = appAccount.accountId,
+                        asset = asset
                     )
                 )
             }
         }
-
         mutex.withLock {
             _assets.clear()
             _assets.addAll(list)
         }
-        _selectedAssetWithBundles.value =
+        _selectedAssetBundle.value =
             _assets.firstOrNull {
                 it.accountId == selectedAsset.value?.accountId && it.asset.assetId == selectedAsset.value?.asset?.assetId
             }
@@ -224,7 +210,7 @@ class AssetsViewModel(
     private fun verifySelectedAsset(appAccounts: List<AppAccount>) {
         when {
             selectedAsset.value == null -> selectFirst(appAccounts)
-            selectedAsset.value != null -> checkSelectedAssetRepresented(appAccounts)
+            else -> checkSelectedAssetRepresented(appAccounts)
         }
     }
 
@@ -245,43 +231,49 @@ class AssetsViewModel(
         }
     }
 
-    private suspend fun updateAssetsKeys() {
-        val livemodeAsset = interactor.getAssetWithKey(true)
-        val testmodeAsset = interactor.getAssetWithKey(false)
-        SpendViewModel.livemodeAsset = livemodeAsset
-        SpendViewModel.testmodeAsset = testmodeAsset
-    }
-
     private var exchangeRatesJob: Job? = null
     private var oneTimeKeysJob: Job? = null
     private var unsubscribePollJob: Job? = null
-    internal fun unsubscribePoll() {
+    internal fun unsubscribePoll(
+        delay: Long = 3000,
+        listener: (() -> Unit)? = null
+    ) {
         unsubscribePollJob = viewModelScope.launch {
-            delay(3000)
+            delay(delay)
             exchangeRatesJob?.cancel()
             oneTimeKeysJob?.cancel()
+            listener?.invoke()
         }
     }
 
-    private val minimumUpdateTime = 20_000L
+    private val minimumUpdateTime = 10_000L
     private fun pollExchangeRates() {
         if (exchangeRatesJob?.isActive == true) {
             unsubscribePollJob?.cancel()
             return
         }
         exchangeRatesJob = viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                val acc = interactor.getLocalAppAccounts()
+                val assetIds = acc.getAssetIds()
+                interactor.getExchangeRatesSmart(assetIds, acc.getUnitOfAccount() ?: "")
+            }.onSuccess {
+                eventFlow.emit(Event.ExchangeRatesUpdate(it.data))
+            }
+
             while (isActive) {
                 val acc = interactor.getLocalAppAccounts()
                 val assetIds = acc.getAssetIds()
 
-                runCatching {
-                    interactor.getTransactionFees(assetIds, acc.getUnitOfAccount() ?: "")
-                }.onSuccess {
-                    interactor.saveTransactionFees(it)
-                }
+                val fees = runCatching { interactor.getTransactionFees(assetIds) }
+                    .onSuccess { fees -> interactor.saveTransactionFees(fees) }
+                    .getOrElse { emptyList() }
+                val additionalRatesIDs =
+                    fees.filter { it.asset != it.transactionAsset }.map { it.asset }
+                val ids = assetIds.plus(additionalRatesIDs).distinct()
 
                 runCatching {
-                    interactor.getExchangeRatesSmart(assetIds, acc.getUnitOfAccount() ?: "")
+                    interactor.getExchangeRatesSmart(ids, acc.getUnitOfAccount() ?: "")
                 }.onSuccess { res ->
                     res.date?.let { date ->
                         this@AssetsViewModel.duration.value = getDuration(date)
@@ -305,16 +297,10 @@ class AssetsViewModel(
         }
         oneTimeKeysJob = viewModelScope.launch(Dispatchers.IO) {
             while (isActive) {
+                val acc = interactor.getLocalAppAccounts()
                 kotlin.runCatching {
-                    if (interactor.hasOutdatedOneTimeKeys()) {
-                        val acc = interactor.getLocalAppAccounts()
-                        val assetIds = acc.getAssetIds()
-                        val res = interactor.getOneTimeKeys(assetIds)
-                        interactor.saveOneTimeKeys(res.data)
-                        res.data
-                    } else {
-                        interactor.getDbOneTimeKeys()
-                    }
+                    val assetIds = acc.getAssetIds()
+                    interactor.getOneTimeKeysSmart(assetIds)
                 }.onSuccess { items ->
                     eventFlow.emit(Event.OneTimeKeysUpdate(items))
                     val diff = items.map { it.expiresAt }

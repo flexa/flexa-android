@@ -1,143 +1,23 @@
 package com.flexa.spend
 
-import com.flexa.core.entity.AppAccount
-import com.flexa.core.entity.AssetKey
-import com.flexa.core.entity.AvailableAsset
 import com.flexa.core.entity.BalanceBundle
 import com.flexa.core.entity.ExchangeRate
-import com.flexa.core.shared.SelectedAsset
+import com.flexa.core.shared.Promotion
 import com.flexa.core.toBalanceBundle
 import junit.framework.TestCase
 import junit.framework.TestCase.assertFalse
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import java.math.BigDecimal
 import java.time.Instant
 
+@Config(sdk = [28])
+@RunWith(RobolectricTestRunner::class)
 class ExtensionsKtTest {
-
-    val appAccounts = listOf(
-        AppAccount(
-            accountId = "123", availableAssets = arrayListOf(
-                AvailableAsset(
-                    assetId = "eip155:1/erc20:0x4d224452801ACEd8B2F0aebE155379bb5D594381",
-                    balance = ".5",
-                    key = AssetKey(prefix = "cxvxcv",secret = "123",length = 5)
-                ),
-                AvailableAsset(
-                    assetId = "eip155:42220/erc20:0x765DE816845861e75A25fCA122bb6898B8B1282a",
-                    balance = ".5",
-                    key = AssetKey(prefix = "ewr",secret = "456",length = 5)
-                ),
-                AvailableAsset(
-                    assetId = "eip155:1/erc20:0xdAC17F958D2ee523a2206206994597C13D831ec7",
-                    balance = ".5",
-                    key = AssetKey(prefix = "ewr",secret = "789",length = 5)
-                ),
-                AvailableAsset(
-                    assetId = "eip155:1/erc20:0xdeFA4e8a7bcBA345F687a2f1456F5Edd9CE97202",
-                    balance = ".5",
-                    key = AssetKey(prefix = "ewr",secret = "101",length = 5)
-                ),
-                AvailableAsset(
-                    assetId = "eip155:1/erc20:0xaA7a9CA87d3694B5755f213B5D04094b8d0F0A6F",
-                    balance = ".5",
-                    key = AssetKey(prefix = "ewr",secret = "112",length = 5)
-                ),
-                AvailableAsset(
-                    assetId = "eip155:43113/slip44:9000\"",
-                    balance = ".5",
-                    livemode = false,
-                    key = AssetKey(prefix = "qac,hjh",secret = "131",length = 5)
-                ),
-                AvailableAsset(
-                    assetId = "eip155:11155111/slip44:60",
-                    balance = ".5",
-                    livemode = false
-                ),
-            )
-        ),
-        AppAccount(
-            accountId = "111", availableAssets = arrayListOf(
-                AvailableAsset(
-                    assetId = "eip155:1/erc20:0x4d224452801ACEd8B2F0aebE155379bb5D594381",
-                    balance = ".5",
-                    key = AssetKey(prefix = "cxvxcv",secret = "001",length = 5)
-                ),
-                AvailableAsset(
-                    assetId = "eip155:42220/erc20:0x765DE816845861e75A25fCA122bb6898B8B1282a",
-                    balance = ".5",
-                ),
-                AvailableAsset(
-                    assetId = "eip155:1/erc20:0xdAC17F958D2ee523a2206206994597C13D831ec7",
-                    balance = ".5",
-                    key = AssetKey(prefix = "ewr",secret = "002",length = 5)
-                ),
-                AvailableAsset(
-                    assetId = "eip155:1/erc20:0xdeFA4e8a7bcBA345F687a2f1456F5Edd9CE97202",
-                    balance = ".5",
-                ),
-                AvailableAsset(
-                    assetId = "eip155:1/erc20:0xaA7a9CA87d3694B5755f213B5D04094b8d0F0A6F",
-                    balance = ".5",
-                    key = AssetKey(prefix = "ewr",secret = "005",length = 5)
-                ),
-                AvailableAsset(
-                    assetId = "eip155:43113/slip44:9000\"",
-                    balance = ".5",
-                    livemode = false,
-                    key = AssetKey(prefix = "qac,hjh",secret = "006",length = 5)
-                ),
-                AvailableAsset(
-                    assetId = "eip155:11155111/slip44:60",
-                    balance = ".5",
-                    livemode = false
-                ),
-            )
-        ),
-
-    )
-
-    @Test
-    fun `pick asset with a key`() {
-        val selectedAsset = SelectedAsset(
-            appAccounts[1].accountId,
-            appAccounts[1].availableAssets[2]
-        )
-        val res = appAccounts.getKey(selectedAsset)
-        assertEquals("002", res?.secret)
-    }
-
-    @Test
-    fun `should find the first asset with a key`() {
-        val selectedAsset = SelectedAsset(
-            appAccounts[1].accountId,
-            appAccounts[1].availableAssets[1]
-        )
-        val res = appAccounts.getKey(selectedAsset)
-        assertEquals("123", res?.secret)
-    }
-
-    @Test
-    fun `should find the first asset with a key by livemode`() {
-        val selectedAsset = SelectedAsset(
-            appAccounts[1].accountId,
-            appAccounts[1].availableAssets[6]
-        )
-        val res = appAccounts.getKey(selectedAsset)
-        assertEquals("131", res?.secret)
-    }
-
-    @Test
-    fun `should search into the right account`() {
-        val selectedAsset = SelectedAsset(
-            appAccounts[0].accountId,
-            appAccounts[0].availableAssets[6]
-        )
-        val res = appAccounts.getKey(selectedAsset)
-        assertEquals("131", res?.secret)
-    }
 
     @Test
     fun `double from string`() {
@@ -167,6 +47,27 @@ class ExtensionsKtTest {
 
         TestCase.assertEquals(358.64, balanceBundle?.total?.toDouble())
         TestCase.assertEquals("\$358.64", balanceBundle?.totalLabel)
+        TestCase.assertNull(balanceBundle?.available)
+        TestCase.assertNull(balanceBundle?.availableLabel)
+    }
+
+    @Test
+    fun toBalanceBundleFaultTolerance() {
+        val exchangeRate = ExchangeRate(
+            asset = "eip155:1/slip44:60",
+            expiresAt = 1727433147,
+            label = "\$2,538.39",
+            precision = 6,
+            unitOfAccount = "iso4217/USD"
+        )
+        val asset = com.flexa.core.shared.AvailableAsset(
+            assetId = "eip155:1/slip44:60",
+            balance = 0.141288818710019324,
+        )
+        val balanceBundle = exchangeRate.toBalanceBundle(asset)
+
+        TestCase.assertEquals(0.0, balanceBundle?.total?.toDouble())
+        TestCase.assertEquals("\$0.00", balanceBundle?.totalLabel)
         TestCase.assertNull(balanceBundle?.available)
         TestCase.assertNull(balanceBundle?.availableLabel)
     }
@@ -230,5 +131,141 @@ class ExtensionsKtTest {
         val additionalTimeMillis = 2000L
         val res = exchangeRates.getExpireTimeMills(deviceTimestamp, plusMillis = additionalTimeMillis)
         assertEquals(additionalTimeMillis + 17L * 1000, res)
+    }
+
+    @Test
+    fun `amount off calculation`() {
+        val promotion = Promotion(
+            id = "", amountOff = "20"
+        )
+        val amount = "23.15"
+        val res = promotion.getAmountWithDiscount(amount)
+        assertEquals("3.15", res.toPlainString())
+    }
+
+    @Test
+    fun `big amount off calculation`() {
+        val promotion = Promotion(
+            id = "", amountOff = "40"
+        )
+        val amount = "23.15"
+        val res = promotion.getAmountWithDiscount(amount)
+        assertEquals("0.00", res.toPlainString())
+    }
+
+    @Test
+    fun `amount boundaries calculation`() {
+        val promotion = Promotion(
+            id = "", amountOff = "15", restrictions = Promotion.Restrictions(
+                minimumAmount = "10"
+            )
+        )
+        val amount = "5.15"
+        val res = promotion.getAmountWithDiscount(amount)
+        assertEquals("5.15", res.toPlainString())
+    }
+
+    @Test
+    fun `negative amount off calculation`() {
+        val promotion = Promotion(
+            id = "", amountOff = "-1"
+        )
+        val amount = "23.15"
+        val res = promotion.getAmountWithDiscount(amount)
+        assertEquals("24.15", res.toPlainString())
+    }
+
+    @Test
+    fun `percent off calculation`() {
+        val promotion = Promotion(
+            id = "", percentOff = "20"
+        )
+        val amount = "23.15"
+        val res = promotion.getPercentAmount(amount)
+        assertEquals("4.63", res.toPlainString())
+    }
+
+    @Test
+    fun `percent fault tolerance`() {
+        val promotion = Promotion(
+            id = "", percentOff = "0"
+        )
+        val amount = "23.15"
+        val res = promotion.getPercentAmount(amount)
+        assertEquals("0.00", res.toPlainString())
+    }
+
+    @Test
+    fun `negative percent fault tolerance`() {
+        val promotion = Promotion(
+            id = "", percentOff = "-20"
+        )
+        val amount = "23.15"
+        val res = promotion.getPercentAmount(amount)
+        assertEquals("0.00", res.toPlainString())
+    }
+
+    @Test
+    fun `percent boundaries`() {
+        val promotion = Promotion(
+            id = "", percentOff = "50", restrictions = Promotion.Restrictions(
+                maximumDiscount = "20"
+            )
+        )
+        val amount = "50"
+        val res = promotion.getAmountWithDiscount(amount)
+        assertEquals("30.00", res.toPlainString())
+    }
+
+    @Test
+    fun `amount off priority`() {
+        val promotion = Promotion(
+            id = "", percentOff = "20", amountOff = "10"
+        )
+        val amount = "23.15"
+        val res = promotion.getAmountWithDiscount(amount)
+        assertEquals("13.15", res.toPlainString())
+    }
+
+    @Test
+    fun `internal url`() {
+        val data = "https://brand.flexa.link/explore/pay"
+        val isInternal = data.isInternal()
+        assertTrue(isInternal)
+    }
+
+    @Test
+    fun `external url`() {
+        val data = "https://brand.spend.link/explore/pay"
+        val isInternal = data.isInternal()
+        assertFalse(isInternal)
+    }
+
+    @Test
+    fun `need to modify`() {
+        val data = "https://brand.flexa.link/explore/pay"
+        val needToModify = data.needToModify()
+        assertTrue(needToModify)
+    }
+
+    @Test
+    fun `no need to modify`() {
+        val data = "https://flexa.link/explore/pay"
+        val needToModify = data.needToModify()
+        assertFalse(needToModify)
+    }
+
+    @Test
+    fun `no need to modify co`() {
+        val data = "https://flexa.co/explore/pay"
+        val needToModify = data.needToModify()
+        assertFalse(needToModify)
+    }
+
+    @Test
+    fun `no need to modify www`() {
+        val data = "https://www.example.com"
+        val needToModify = data.needToModify()
+        assertFalse(needToModify)
     }
 }

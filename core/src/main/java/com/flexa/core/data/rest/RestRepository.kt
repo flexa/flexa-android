@@ -19,6 +19,7 @@ import com.flexa.core.shared.AssetsResponse
 import com.flexa.core.shared.Brand
 import com.flexa.core.shared.BrandsResponse
 import com.flexa.core.shared.FlexaConstants
+import com.flexa.core.toApiException
 import com.flexa.identity.create_id.AccountsRequest
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.awaitClose
@@ -46,6 +47,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import okhttp3.sse.EventSource
 import okhttp3.sse.EventSourceListener
 import okhttp3.sse.EventSources
+import java.net.HttpURLConnection
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -138,7 +140,18 @@ internal class RestRepository(
                 .url(url).post(body).build()
 
             runCatching { okHttpProvider.loginClient.newCall(req).execute() }
-                .onSuccess { response -> cont.resume(response.code) }
+                .onSuccess { response ->
+                    when {
+                        response.isSuccessful -> {
+                            cont.resume(response.code)
+                        }
+
+                        else -> {
+                            val apiException = response.toApiException()
+                            cont.resumeWithException(apiException)
+                        }
+                    }
+                }
                 .onFailure { ex -> cont.resumeWithException(ex) }
         }
 
@@ -642,18 +655,20 @@ internal class RestRepository(
                 .patch(body).build()
 
             runCatching { okHttpProvider.client.newCall(request).execute() }
-                .fold(
-                    onSuccess = { response ->
-                        runCatching {
+                .onFailure { ex -> it.resumeWithException(ex) }
+                .onSuccess { response ->
+                    when {
+                        response.code == HttpURLConnection.HTTP_OK -> {
                             val raw = response.body?.string().toString()
-                            raw
-                        }.fold(
-                            onSuccess = { res -> it.resume(res) },
-                            onFailure = { ex -> it.resumeWithException(ex) }
-                        )
-                    },
-                    onFailure = { ex -> it.resumeWithException(ex) }
-                )
+                            it.resume(raw)
+                        }
+
+                        else -> {
+                            val apiException = response.toApiException()
+                            it.resumeWithException(apiException)
+                        }
+                    }
+                }
         }
 
     override suspend fun getCommerceSession(sessionId: String): CommerceSession.Data =
@@ -671,7 +686,7 @@ internal class RestRepository(
                     onSuccess = { response ->
                         runCatching {
                             val res = response.body?.string().toString()
-                            if (response.code != 200) {
+                            if (response.code != HttpURLConnection.HTTP_OK) {
                                 Result.failure(NullPointerException())
                             } else {
                                 val dto = json.decodeFromString<CommerceSession.Data>(res)
@@ -712,7 +727,7 @@ internal class RestRepository(
         runCatching { okHttpProvider.client.newCall(request).execute() }
             .onSuccess { response ->
                 runCatching {
-                    if (response.code != 200) {
+                    if (response.code != HttpURLConnection.HTTP_OK) {
                         Result.failure(NullPointerException())
                     } else {
                         val raw = response.body?.string().toString()
@@ -721,7 +736,7 @@ internal class RestRepository(
                         val date = response.header("date", null) ?: ""
                         val dto = data?.let { json.decodeFromJsonElement<List<ExchangeRate>>(it) }
                             ?: emptyList()
-                        Result.success(ExchangeRatesResponse(date= date, data = dto))
+                        Result.success(ExchangeRatesResponse(date = date, data = dto))
                     }
                 }.onSuccess { res ->
                     if (res.isSuccess) {
@@ -735,43 +750,41 @@ internal class RestRepository(
             }.onFailure { ex -> it.resumeWithException(ex) }
     }
 
-    override suspend fun getTransactionFees(
-        assetIds: List<String>,
-        unitOfAccount: String
-    ): List<TransactionFee> = suspendCancellableCoroutine {
-        val ids = assetIds.joinToString(",")
-        val url = HttpUrl.Builder()
-            .scheme(SCHEME).host(host)
-            .addPathSegment("transaction_fees")
-            .addEncodedQueryParameter("assets", ids)
-            .addEncodedQueryParameter("unit_of_account", unitOfAccount)
-            .build()
+    override suspend fun getTransactionFees(assetIds: List<String>): List<TransactionFee> =
+        suspendCancellableCoroutine {
+            val ids = assetIds.joinToString(",")
+            val url = HttpUrl.Builder()
+                .scheme(SCHEME).host(host)
+                .addPathSegment("transaction_fees")
+                .addEncodedQueryParameter("transaction_assets", ids)
+                .build()
 
-        val request: Request = Request.Builder().url(url)
-            .get().build()
+            val request: Request = Request.Builder().url(url)
+                .get().build()
 
-        runCatching { okHttpProvider.client.newCall(request).execute() }
-            .onSuccess { response ->
-                runCatching {
-                    if (response.code != 200) {
-                        Result.failure(NullPointerException())
-                    } else {
-                        val raw = response.body?.string().toString()
-                        val jsonElement = json.parseToJsonElement(raw)
-                        val data = jsonElement.jsonObject["data"]
-                        val dto = data?.let { json.decodeFromJsonElement<List<TransactionFee>>(it) }
-                            ?: emptyList()
-                        Result.success(dto)
-                    }
-                }.onSuccess { res ->
-                    if (res.isSuccess) {
-                        res.getOrNull()?.let { r -> it.resume(r) }
-                    } else {
-                        res.exceptionOrNull()?.let { e ->
-                            it.resumeWithException(e)
+            runCatching { okHttpProvider.client.newCall(request).execute() }
+                .onSuccess { response ->
+                    runCatching {
+                        if (response.code != HttpURLConnection.HTTP_OK) {
+                            Result.failure(NullPointerException())
+                        } else {
+                            val raw = response.body?.string().toString()
+                            val jsonElement = json.parseToJsonElement(raw)
+                            val data = jsonElement.jsonObject["data"]
+                            val dto =
+                                data?.let { json.decodeFromJsonElement<List<TransactionFee>>(it) }
+                                    ?: emptyList()
+                            Result.success(dto)
                         }
-                    }
+                    }.onSuccess { res ->
+                        if (res.isSuccess) {
+                            res.getOrNull()?.let { r -> it.resume(r) }
+                        } else {
+                            res.exceptionOrNull()?.let { e ->
+                                it.resumeWithException(e)
+                            }
+                        }
+                    }.onFailure { ex -> it.resumeWithException(ex) }
                 }.onFailure { ex -> it.resumeWithException(ex) }
-            }.onFailure { ex -> it.resumeWithException(ex) }
-    }
+        }
 }

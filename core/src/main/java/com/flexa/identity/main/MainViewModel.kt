@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-
 internal class MainViewModel(
     private val interactor: IIdentityInteractor = com.flexa.identity.Identity.identityInteractor
 ) : ViewModel() {
@@ -64,8 +63,8 @@ internal class MainViewModel(
     }
 
     sealed class State {
-        object Info : State()
-        object General : State()
+        data object Info : State()
+        data object General : State()
         class Success(val data: TokensResponse.Success) : State()
         class Error(val data: TokensResponse.Error) : State()
     }

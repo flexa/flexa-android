@@ -3,7 +3,6 @@ package com.flexa.spend.main.keypad
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flexa.core.entity.ExchangeRate
-import com.flexa.core.shared.SelectedAsset
 import com.flexa.spend.domain.ISpendInteractor
 import com.flexa.spend.main.main_screen.Event
 import com.flexa.spend.main.main_screen.SpendViewModel
@@ -15,9 +14,6 @@ internal class AmountDetailViewModel(
     val interactor: ISpendInteractor,
 ) : ViewModel() {
 
-    var assetAmount: AssetAndAmount? = null
-    val progress = MutableStateFlow(false)
-    val error = MutableStateFlow(false)
     val exchangeRates = MutableStateFlow<List<ExchangeRate>>(emptyList())
 
     var percentJob: Job? = null
@@ -45,8 +41,3 @@ internal class AmountDetailViewModel(
         }
     }
 }
-
-internal class AssetAndAmount(
-    val asset: SelectedAsset,
-    val amount: String
-)

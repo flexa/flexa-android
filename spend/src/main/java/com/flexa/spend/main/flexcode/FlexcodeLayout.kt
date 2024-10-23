@@ -7,6 +7,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,9 +15,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
@@ -44,6 +46,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.flexa.core.theme.FlexaTheme
 import com.flexa.spend.R
+import com.flexa.spend.shiftHue
 
 
 @Composable
@@ -160,26 +163,26 @@ fun FlexcodeLayout(
                         .fillMaxHeight()
                         .rotate(180F)
                         .offset {
-                            IntOffset(x = -(rootSize.width * 0.004).toInt(), y = 0)
+                            IntOffset(x = (rootSize.width * -0.004F).toInt(), y = 0)
                         },
                     code = code,
                     rows = 23,
                     columns = 1
                 )
             }
+            val imgWidth by remember {
+                derivedStateOf {
+                    with(density) { (rootSize.width * (0.42F)).toDp() }
+                }
+            }
             val multiplier by remember {
                 derivedStateOf { parentWidth.toFloat() / parentHeight }
             }
-            val imgWidth by remember {
-                derivedStateOf {
-                    with(density) { ((parentWidth / (multiplier * 1.393f))).toDp() }
-                }
-            }
             val imgOffset by remember {
-                derivedStateOf { (parentWidth * (multiplier / 7.19)).toInt() }
+                derivedStateOf { (rootSize.width / (5.16F * multiplier)).toInt() }
             }
             val imgHeight by remember {
-                derivedStateOf { with(density) { (rootSize.height * 0.0555f).toDp() } }
+                derivedStateOf { with(density) { (rootSize.height * 0.055f).toDp() } }
             }
             Image(
                 modifier = Modifier
@@ -189,9 +192,10 @@ fun FlexcodeLayout(
                     .offset {
                         IntOffset(
                             x = imgOffset,
-                            y = (rootSize.height * 0.028f).toInt()
+                            y = (rootSize.height * 0.0275f).toInt()
                         )
-                    }.animateContentSize(),
+                    }
+                    .animateContentSize(),
                 painter = painterResource(R.drawable.c1),
                 contentDescription = null,
                 contentScale = ContentScale.FillBounds
@@ -204,9 +208,10 @@ fun FlexcodeLayout(
                     .offset {
                         IntOffset(
                             x = imgOffset,
-                            y = (rootSize.height * -0.028f).toInt()
+                            y = (rootSize.height * (-0.0275f)).toInt()
                         )
-                    }.animateContentSize(),
+                    }
+                    .animateContentSize(),
                 painter = painterResource(R.drawable.c2),
                 contentDescription = null,
                 contentScale = ContentScale.FillBounds
@@ -228,8 +233,9 @@ fun FlexcodeLayout(
             drawRect(
                 brush = Brush.verticalGradient(
                     colors = listOf(
+                        color.shiftHue(10f),
                         color,
-                        Color(0xFF3F51B5),
+                        color.shiftHue(-10f),
                     ),
                 )
             )
@@ -254,7 +260,9 @@ fun FlexcodeLayout(
     }
 }
 
-@Preview(showBackground = true, showSystemUi = false, backgroundColor = 0xFFCCCCCC)
+@Preview(showBackground = true, showSystemUi = false, backgroundColor = 0xFFCCCCCC,
+    device = "spec:parent=pixel_5,orientation=portrait"
+)
 @Preview(
     showBackground = true, showSystemUi = false,
     uiMode = Configuration.UI_MODE_NIGHT_YES or Configuration.UI_MODE_TYPE_NORMAL,
@@ -268,11 +276,15 @@ fun FlexcodeLayout(
 @Composable
 private fun FlexcodeLayoutPreview() {
     FlexaTheme {
-        Box(modifier = Modifier.padding(20.dp)) {
+        Column(modifier = Modifier
+            .padding(20.dp)
+            .padding(top = 100.dp)
+            .fillMaxSize().verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
             FlexcodeLayout(
                 modifier = Modifier
+                    .fillMaxWidth()
                     .aspectRatio(1.14f)
-                    .size(300.dp),
+                ,
                 code = "123456789012",
                 color = Color.Magenta
             )

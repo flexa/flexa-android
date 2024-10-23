@@ -1,6 +1,9 @@
 package com.flexa.spend.main.main_screen
 
+import android.app.Activity
+import android.content.Intent
 import android.content.res.Configuration
+import android.net.Uri
 import android.util.Log
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -49,8 +52,8 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -61,21 +64,25 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.flexa.core.entity.Notification
+import com.flexa.core.getPathSegments
 import com.flexa.core.shared.SelectedAsset
 import com.flexa.core.theme.FlexaTheme
 import com.flexa.core.zeroValue
 import com.flexa.spend.MockFactory
 import com.flexa.spend.R
 import com.flexa.spend.domain.FakeInteractor
+import com.flexa.spend.isInternal
 import com.flexa.spend.main.NoAssetsCard
 import com.flexa.spend.main.assets.AssetsState
 import com.flexa.spend.main.assets.AssetsViewModel
 import com.flexa.spend.main.ui_utils.rememberSelectedAsset
 import com.flexa.spend.merchants.BrandsViewModel
+import com.flexa.spend.needToModify
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import java.util.UUID
 import kotlin.math.absoluteValue
+
 
 @Composable
 fun Spend(
@@ -89,7 +96,7 @@ fun Spend(
     toAssetInfo: (SelectedAsset) -> Unit,
     toEdit: () -> Unit,
     toInputAmount: () -> Unit,
-    toUrl: (@ParameterName("url") String) -> Unit,
+    toLinkRoute: (@ParameterName("linkRoute") LinkRoute) -> Unit
 ) {
 
     Column(
@@ -116,10 +123,10 @@ fun Spend(
                     onClick = { toAssets.invoke() },
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp)
                 ) {
-                    val angle by animateFloatAsState(
-                        targetValue = if (sheetStateVisible
-                            && viewModel.sheetScreen is SheetScreen.Assets
-                        ) -180F else 0F, label = "assets button angle"
+                    val rotate by animateFloatAsState(
+                        targetValue = if (sheetStateVisible && viewModel.sheetScreen is SheetScreen.Assets) 180f else 0f,
+                        animationSpec = tween(500),
+                        label = "assets button angle"
                     )
                     Text(
                         modifier = Modifier
@@ -136,7 +143,7 @@ fun Spend(
                     Icon(
                         modifier = Modifier
                             .size(20.dp)
-                            .rotate(angle),
+                            .graphicsLayer { rotationX = rotate },
                         imageVector = Icons.Rounded.KeyboardArrowDown,
                         contentDescription = null
                     )
@@ -146,7 +153,7 @@ fun Spend(
                 val assets by remember {
                     derivedStateOf {
                         if (!previewMode) {
-                            assetsViewModel.assets.filter { !it.asset.zeroValue() }
+                            assetsViewModel.assets.toList().filter { !it.asset.zeroValue() }
                         } else {
                             listOf(MockFactory.getMockSelectedAsset())
                         }
@@ -217,9 +224,7 @@ fun Spend(
         }
 
         val notifications = viewModel.notifications
-        val showNotifications by remember {
-            derivedStateOf { notifications.isNotEmpty() }
-        }
+        val showNotifications by remember { derivedStateOf { notifications.isNotEmpty() } }
         Spacer(modifier = Modifier.height(10.dp))
         AnimatedContent(
             targetState = showNotifications,
@@ -241,18 +246,49 @@ fun Spend(
                         rememberPagerState(pageCount = { notifications.size }, initialPage = 0)
                     Spacer(modifier = Modifier.height(10.dp))
                     HorizontalPager(
+                        modifier = Modifier.animateContentSize(),
                         state = pagerState,
+                        verticalAlignment = Alignment.Top,
                         key = { notifications[it].id ?: UUID.randomUUID().toString() }
                     ) { page ->
                         val item: Notification = notifications[page]
                         var close by remember { mutableStateOf(false) }
+                        val context = LocalContext.current
                         AppNotification(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp)
                                 .clip(RoundedCornerShape(24.dp)),
                             appNotification = item,
-                            toUrl = { url -> toUrl(url) },
+                            toUrl = { notificationUrl ->
+                                val segments = notificationUrl.getPathSegments().joinToString("/")
+                                when {
+                                    segments == "account" -> toLinkRoute(LinkRoute.Account)
+                                    segments.startsWith("explore") ||
+                                            segments.startsWith("guides") -> {
+                                        val fixedUrl = if (notificationUrl.needToModify())
+                                            "https://flexa.co/$segments" else notificationUrl
+                                        Log.d(null, "Spend: fixedUrl:$fixedUrl")
+                                        if (notificationUrl.isInternal()) {
+                                            toLinkRoute(LinkRoute.Url(fixedUrl))
+                                        } else {
+                                            runCatching {
+                                                if (context is Activity)
+                                                    context.startActivity(
+                                                        Intent(
+                                                            Intent.ACTION_VIEW,
+                                                            Uri.parse(fixedUrl)
+                                                        )
+                                                    )
+                                            }
+                                        }
+                                    }
+
+                                    else -> {
+                                        toLinkRoute(LinkRoute.Url(notificationUrl))
+                                    }
+                                }
+                            },
                             onClose = { n ->
                                 if (notifications.size == 1) {
                                     viewModel.removeNotification(notifications[0])
@@ -274,33 +310,33 @@ fun Spend(
                     AnimatedVisibility(notifications.size == 1) {
                         Spacer(modifier = Modifier.height(10.dp))
                     }
-                    AnimatedVisibility(notifications.size > 1) {
+                    AnimatedVisibility(visible = notifications.size > 1) {
                         val palette = MaterialTheme.colorScheme
                         LazyRow(
                             modifier = Modifier
                                 .height(14.dp)
-                                .padding(top = 10.dp),
+                                .padding(top = 12.dp),
                             userScrollEnabled = false,
                         ) {
                             repeat(pagerState.pageCount) { page ->
                                 item(key = notifications[page].id) {
                                     Canvas(
                                         modifier = Modifier
-                                            .width(30.dp)
                                             .animateItem()
+                                            .width(20.dp)
                                             .graphicsLayer {
                                                 val pageOffset =
                                                     (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
                                                 alpha =
-                                                    (1.3F - pageOffset.absoluteValue).coerceAtLeast(
+                                                    (1.2F - pageOffset.absoluteValue).coerceAtLeast(
                                                         .3F
                                                     )
                                                 scaleX =
-                                                    (1.3F - pageOffset.absoluteValue / 5).coerceAtLeast(
+                                                    (1.2F - pageOffset.absoluteValue / 5).coerceAtLeast(
                                                         1.0F
                                                     )
                                                 scaleY =
-                                                    (1.3F - pageOffset.absoluteValue / 5).coerceAtLeast(
+                                                    (1.2F - pageOffset.absoluteValue / 5).coerceAtLeast(
                                                         1.0F
                                                     )
                                             }
@@ -323,7 +359,7 @@ fun Spend(
                 viewModel = brandsViewModel,
                 toEdit = { toEdit.invoke() },
                 onClick = { brand ->
-                    viewModel.selectedBrand.value = brand
+                    viewModel.setBrand(brand)
                     toInputAmount()
                 }
             )
@@ -355,8 +391,13 @@ private fun PayPreview() {
             toAddAssets = {},
             toAssetInfo = {},
             toEdit = {},
-            toUrl = {},
-            toInputAmount = {}
+            toInputAmount = {},
+            toLinkRoute = {}
         )
     }
+}
+
+sealed class LinkRoute {
+    data object Account : LinkRoute()
+    data class Url(val url: String) : LinkRoute()
 }

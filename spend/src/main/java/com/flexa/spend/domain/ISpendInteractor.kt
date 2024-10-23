@@ -3,7 +3,6 @@ package com.flexa.spend.domain
 import com.flexa.core.data.db.BrandSession
 import com.flexa.core.entity.Account
 import com.flexa.core.entity.AppAccount
-import com.flexa.core.entity.AvailableAsset
 import com.flexa.core.entity.CommerceSession
 import com.flexa.core.entity.CommerceSessionEvent
 import com.flexa.core.entity.ExchangeRate
@@ -23,8 +22,6 @@ interface ISpendInteractor {
     suspend fun getConnectionListener(): Flow<ConnectionState>?
     suspend fun getLocalAppAccounts(): List<AppAccount>
     suspend fun getAllAssets(pageSize: Int = 100): List<Asset>
-    suspend fun backupAssetWithKey(asset: AvailableAsset)
-    suspend fun getAssetWithKey(livemode: Boolean): AvailableAsset?
     suspend fun getAssets(pageSize: Int, nextPageToken: String? = null): AssetsResponse
     suspend fun getAssetById(assetId: String): Asset
     suspend fun getBrandSession(sessionId: String): BrandSession?
@@ -36,8 +33,10 @@ interface ISpendInteractor {
     suspend fun getCommerceSession(sessionId: String): CommerceSession.Data
     suspend fun saveLastEventId(eventId: String)
     suspend fun getLastEventId(): String?
-    suspend fun putAccounts(accounts: List<com.flexa.core.shared.AppAccount>): PutAppAccountsResponse
+    suspend fun putAccounts(accounts: List<com.flexa.core.shared.AssetAccount>): PutAppAccountsResponse
     suspend fun getAccount(): Account
+    suspend fun getAccountCached(): Account?
+    suspend fun getUnitOfAccount(): String
     suspend fun deleteNotification(id: String)
     suspend fun getEmail(): String?
     suspend fun getPublishableKey(): String
@@ -77,15 +76,16 @@ interface ISpendInteractor {
     suspend fun saveExchangeRates(items: List<ExchangeRate>)
 
     suspend fun hasOutdatedOneTimeKeys(): Boolean
-    suspend fun getDbOneTimeKey(assetId: String): OneTimeKey?
+    suspend fun getDbOneTimeKey(assetId: String, livemode: Boolean?): OneTimeKey?
     suspend fun getDbOneTimeKeys(): List<OneTimeKey>
     suspend fun getOneTimeKeys(assetIds: List<String>): OneTimeKeyResponse
     suspend fun getOneTimeKeysSmart(assetIds: List<String>): List<OneTimeKey>
     suspend fun saveOneTimeKeys(items: List<OneTimeKey>)
     suspend fun deleteExchangeRates()
 
-    suspend fun getTransactionFees(assetIds: List<String>, unitOfAccount: String): List<TransactionFee>
+    suspend fun getTransactionFees(assetIds: List<String>): List<TransactionFee>
     suspend fun getDbTransactionFees(): List<TransactionFee>
     suspend fun saveTransactionFees(items: List<TransactionFee>)
-    suspend fun getDbTransactionFee(assetId: String): TransactionFee?
+    suspend fun getDbFeeByTransactionAssetID(assetId: String): TransactionFee?
+    suspend fun getDbFeeByAssetID(assetId: String): TransactionFee?
 }

@@ -1,24 +1,26 @@
 package com.flexa.core.shared
 
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import com.flexa.core.entity.error.ApiException
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 class ApiErrorHandler {
 
-    var error by mutableStateOf<ApiError?>(null)
-    val hasError by derivedStateOf { error != null }
+    private val _error = MutableStateFlow<ApiError?>(null)
+    val error = _error.asStateFlow()
 
     fun setError(e:  Throwable?) {
-        error = ApiErrorAdapter.parseError(e)
+        _error.value = ApiErrorAdapter.parseError(e)
     }
 
-    fun setApiError(e: ApiError) {
-        error = e
+    fun setApiError(e: ApiException) {
+        _error.value = ApiError.ReportEntity(
+            message = e.message,
+            traceId = e.traceId
+        )
     }
 
     fun clearError() {
-        error = null
+        _error.value = null
     }
 }

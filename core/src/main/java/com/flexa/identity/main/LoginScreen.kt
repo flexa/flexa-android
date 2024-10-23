@@ -101,6 +101,7 @@ internal fun LoginScreen(
     toBack: () -> Unit,
     toContinue: () -> Unit,
     toSignIn: () -> Unit,
+    toUrl: (@ParameterName("url") String) -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val palette = MaterialTheme.colorScheme
@@ -358,7 +359,7 @@ internal fun LoginScreen(
                     )
                     TextButton(
                         modifier = Modifier.padding(start = 4.dp),
-                        onClick = { }) {
+                        onClick = { toUrl("https://flexa.co/legal/privacy") }) {
                         Text(text = stringResource(id = R.string.about_flexa_and_privacy))
                     }
                 }
@@ -510,7 +511,8 @@ private fun LoginPreview() {
                 viewModel = MainViewModel(FakeInteractor()),
                 toBack = {},
                 toContinue = {},
-                toSignIn = {}
+                toSignIn = {},
+                toUrl = {}
             )
         }
     }

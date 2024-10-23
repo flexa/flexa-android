@@ -53,19 +53,19 @@ dependencyResolutionManagement {
 **Identity** module:
 
 ```groovy
-implementation "com.flexa:core:1.0.4"
+implementation "com.flexa:core:1.0.5"
 ```
 
 **Scan** module:
 
 ```groovy
-implementation "com.flexa:scan:1.0.4"
+implementation "com.flexa:scan:1.0.5"
 ```
 
 **Spend** module:
 
 ```groovy
-implementation "com.flexa:spend:1.0.4"
+implementation "com.flexa:spend:1.0.5"
 ```
 
 ### Remote repository
@@ -107,19 +107,19 @@ implementation "com.flexa:spend:1.0.4"
     **Identity** module:
 
     ```groovy
-    implementation "com.flexa:core:1.0.4"
+    implementation "com.flexa:core:1.0.5"
     ```
 
     **Scan** module:
 
     ```groovy
-    implementation "com.flexa:scan:1.0.4"
+    implementation "com.flexa:scan:1.0.5"
     ```
 
     **Spend** module:
 
     ```groovy
-    implementation "com.flexa:spend:1.0.4"
+    implementation "com.flexa:spend:1.0.5"
     ```
 
 
@@ -139,9 +139,9 @@ implementation "com.flexa:spend:1.0.4"
             theme = FlexaTheme(
                 useDynamicColorScheme = true,
             ),
-            appAccounts = arrayListOf(
-                AppAccount(
-                    accountId = accountIdSha256,
+            assetAccounts = arrayListOf(
+                AssetAccount(
+                    assetAccountHash = accountIdSha256,
                     displayName = "My Wallet",
                     icon = "https://flexa.network/static/4bbb1733b3ef41240ca0f0675502c4f7/d8419/flexa-logo%403x.png",
                     availableAssets = emptyList()
@@ -253,7 +253,7 @@ implementation "com.flexa:spend:1.0.4"
 
 7. Scan the flexcode from the spend module main screen dialog
 
-### Transaction bundle   
+### Transaction bundle
 
 ```kt
 data class Transaction(
@@ -262,7 +262,7 @@ data class Transaction(
     val brandLogo: String,
     val brandName: String,
     val brandColor: String,
-    val appAccountId: String,
+    val assetAccountHash: String,
     val assetId: String,
     val destinationAddress: String,
     val feeAmount: String,
@@ -311,7 +311,7 @@ data class Transaction(
 
 ### Requirements
 
-Minimum SDK version 21
+Minimum SDK version 26
 
 ### Authentication
 

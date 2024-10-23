@@ -444,7 +444,7 @@ fun MerchantOrderListItem(
 )
 fun MerchantOrderListItemDraggablePreview() {
     val item = BrandListItem(
-        "", true, MockFactory.getMockBrand()
+        "", true, MockFactory.getBrand()
     )
     FlexaTheme {
         MerchantOrderListItem(
@@ -471,7 +471,7 @@ fun MerchantOrderListItemDraggablePreview() {
 )
 fun MerchantOrderListItemPreview() {
     val item = BrandListItem(
-        "", false, MockFactory.getMockBrand()
+        "", false, MockFactory.getBrand()
     )
     FlexaTheme {
         MerchantOrderListItem(

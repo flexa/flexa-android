@@ -1,6 +1,5 @@
 package com.flexa
 
-import com.flexa.core.entity.AssetValue
 import com.flexa.core.entity.AvailableAsset
 import com.flexa.core.entity.BalanceBundle
 import com.flexa.core.minutesBetween
@@ -69,7 +68,6 @@ class ExtensionsTest {
         val asset = AvailableAsset(
             assetId = "",
             balance = "",
-            value = AssetValue(asset = "", label = "$0.00 available", labelTitlecase = "")
         )
         assertTrue(asset.zeroValue())
     }

@@ -4,11 +4,11 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class AppAccountKtTest {
+class AssetAccountKtTest {
 
     val appAccounts = listOf(
-        AppAccount(
-            accountId = "123",
+        AssetAccount(
+            assetAccountHash = "123",
             CustodyModel.LOCAL,
             availableAssets = listOf(
                 AvailableAsset(
@@ -25,8 +25,8 @@ class AppAccountKtTest {
                 ),
             )
         ),
-        AppAccount(
-            accountId = "123",
+        AssetAccount(
+            assetAccountHash = "123",
             CustodyModel.LOCAL,
             availableAssets = listOf(
                 AvailableAsset(

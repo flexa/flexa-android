@@ -347,7 +347,6 @@ fun ManageAccount(
         if (signOutDialog.value) {
             AlertDialog(
                 onDismissRequest = { signOutDialog.value = false },
-                shape = RoundedCornerShape(25.dp),
                 title = {
                     Text(
                         modifier = Modifier.fillMaxWidth(),

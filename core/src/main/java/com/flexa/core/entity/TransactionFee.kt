@@ -4,21 +4,22 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class TransactionFee(
-    @SerialName("asset")
-    val asset: String,
     @SerialName("amount")
     val amount: String? = null,
-    @SerialName("equivalent")
-    val equivalent: String? = null,
+    @SerialName("asset")
+    val asset: String,
+    @SerialName("expires_at")
+    val expiresAt: Long? = null,
     @SerialName("label")
     val label: String? = null,
     @SerialName("price")
     val price: TransactionFeePrice? = null,
-    @SerialName("unit_of_account")
-    val unitOfAccount: String? = null,
+    @SerialName("transaction_asset")
+    val transactionAsset: String,
     @SerialName("zone")
     val zone: String? = null
 )
+
 @Serializable
 data class TransactionFeePrice(
     @SerialName("amount")

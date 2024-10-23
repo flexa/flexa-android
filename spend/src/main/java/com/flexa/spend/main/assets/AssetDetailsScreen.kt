@@ -59,7 +59,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.flexa.core.entity.TransactionFee
+import com.flexa.core.entity.FeeBundle
 import com.flexa.core.shared.SelectedAsset
 import com.flexa.core.theme.FlexaTheme
 import com.flexa.spend.MockFactory
@@ -84,14 +84,7 @@ internal fun AssetDetailsScreen(
 
     val density = LocalDensity.current
     var height by remember { mutableStateOf(200.dp) }
-    val error by viewModel.error.collectAsStateWithLifecycle()
-    val asset by remember {
-        derivedStateOf {
-            assetsViewModel.assets.firstOrNull {
-                it.accountId == assetBundle.accountId && it.asset.assetId == assetBundle.asset.assetId
-            }
-        }
-    }
+    val asset by assetsViewModel.selectedAssetBundle.collectAsStateWithLifecycle()
 
     LaunchedEffect(asset) {
         asset?.let {
@@ -270,7 +263,7 @@ internal fun AssetDetailsScreen(
                 },
                 headlineContent = {
                     AnimatedContent(
-                        targetState = asset?.asset?.fee?.equivalent,
+                        targetState = asset?.asset?.feeBundle?.label,
                         transitionSpec = {
                             if ((targetState?.length ?: 0) < (initialState?.length ?: 0)) {
                                 slideInVertically { width -> width } +
@@ -285,7 +278,7 @@ internal fun AssetDetailsScreen(
                     ) { state ->
                         state
                         Text(
-                            text = state ?: stringResource(R.string.network_fee_cannot_be_loaded),
+                            text = (state?:"").ifBlank { "${stringResource(R.string.updating)}..." },
                             style = TextStyle(
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.W400,
@@ -390,7 +383,7 @@ fun AssetDetailContentPreview() {
                 asset = MockFactory.getMockSelectedAsset().asset.copy(
                     exchangeRate = MockFactory.getExchangeRate(),
                     balanceBundle = MockFactory.getBalanceBundle(),
-                    fee = TransactionFee(equivalent = "$0.53", asset = "")
+                    feeBundle = FeeBundle(label = "$1.50")
                 )
             ),
             assetsViewModel = AssetsViewModel(

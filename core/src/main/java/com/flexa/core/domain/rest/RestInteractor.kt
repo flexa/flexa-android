@@ -102,14 +102,11 @@ class RestInteractor(
         return ExchangeRatesResponse(date = date, data = res)
     }
 
-    suspend fun getTransactionFees(
-        assetIds: List<String>,
-        unitOfAccount: String
-    ): List<TransactionFee> {
+    suspend fun getTransactionFees(assetIds: List<String>): List<TransactionFee> {
         val res = ArrayList<TransactionFee>(assetIds.size)
         val chunkedCollections = assetIds.chunked(20)
         chunkedCollections.forEach { collection ->
-            val response = repository.getTransactionFees(collection, unitOfAccount)
+            val response = repository.getTransactionFees(collection)
             res.addAll(response)
         }
         return res

@@ -18,6 +18,8 @@ data class Brand(
     val color: String? = null,
     @SerialName("legacy_flexcodes")
     val legacyFlexcodes: List<LegacyFlexcode>? = null,
+    @SerialName("promotions")
+    val promotions: List<Promotion>? = null,
     @SerialName("logo_url")
     val logoUrl: String? = null,
     @SerialName("name")
@@ -41,5 +43,35 @@ data class LegacyFlexcode(
         val maximum: String? = null,
         @SerialName("minimum")
         val minimum: String? = null
+    )
+}
+
+@Serializable
+data class Promotion(
+    @SerialName("id")
+    val id: String? = null,
+    @SerialName("object")
+    val objectX: String? = null,
+    @SerialName("amount_off")
+    val amountOff: String? = null,
+    @SerialName("asset")
+    val asset: String? = null,
+    @SerialName("label")
+    val label: String? = null,
+    @SerialName("livemode")
+    val livemode: Boolean? = null,
+    @SerialName("percent_off")
+    val percentOff: String? = null,
+    @SerialName("restrictions")
+    val restrictions: Restrictions? = null,
+    @SerialName("url")
+    val url: String? = null,
+) {
+    @Serializable
+    data class Restrictions(
+        @SerialName("maximum_discount")
+        val maximumDiscount: String? = null,
+        @SerialName("minimum_amount")
+        val minimumAmount: String? = null
     )
 }

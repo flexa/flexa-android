@@ -3,7 +3,6 @@ package com.flexa.spend.domain
 import com.flexa.core.data.db.BrandSession
 import com.flexa.core.entity.Account
 import com.flexa.core.entity.AppAccount
-import com.flexa.core.entity.AvailableAsset
 import com.flexa.core.entity.CommerceSession
 import com.flexa.core.entity.CommerceSessionEvent
 import com.flexa.core.entity.ExchangeRate
@@ -40,14 +39,6 @@ internal class FakeInteractor : ISpendInteractor {
                 id = "eip155:1/slip44:60", displayName = "Ether"
             ),
         )
-    }
-
-    override suspend fun backupAssetWithKey(asset: AvailableAsset) {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun getAssetWithKey(livemode: Boolean): AvailableAsset? {
-        TODO("Not yet implemented")
     }
 
     override suspend fun getAssets(pageSize: Int, nextPageToken: String?): AssetsResponse {
@@ -94,7 +85,7 @@ internal class FakeInteractor : ISpendInteractor {
         TODO("Not yet implemented")
     }
 
-    override suspend fun putAccounts(accounts: List<com.flexa.core.shared.AppAccount>): PutAppAccountsResponse {
+    override suspend fun putAccounts(accounts: List<com.flexa.core.shared.AssetAccount>): PutAppAccountsResponse {
         TODO("Not yet implemented")
     }
 
@@ -115,6 +106,14 @@ internal class FakeInteractor : ISpendInteractor {
                 )
             )
         )
+    }
+
+    override suspend fun getAccountCached(): Account? {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getUnitOfAccount(): String {
+        TODO("Not yet implemented")
     }
 
     override suspend fun deleteNotification(id: String) {
@@ -181,13 +180,13 @@ internal class FakeInteractor : ISpendInteractor {
     }
 
     override suspend fun getBrands(legacyOnly: Boolean): List<Brand> {
-        return listOf(MockFactory.getMockBrand())
+        return listOf(MockFactory.getBrand())
     }
 
     override suspend fun getDbBrands(): List<Brand> {
         return arrayListOf<Brand>().apply {
             repeat(5) {
-                MockFactory.getMockBrand()
+                MockFactory.getBrand()
             }
         }
     }
@@ -263,7 +262,7 @@ internal class FakeInteractor : ISpendInteractor {
         TODO("Not yet implemented")
     }
 
-    override suspend fun getDbOneTimeKey(assetId: String): OneTimeKey? {
+    override suspend fun getDbOneTimeKey(assetId: String, livemode: Boolean?): OneTimeKey? {
         TODO("Not yet implemented")
     }
 
@@ -291,10 +290,7 @@ internal class FakeInteractor : ISpendInteractor {
         TODO("Not yet implemented")
     }
 
-    override suspend fun getTransactionFees(
-        assetIds: List<String>,
-        unitOfAccount: String
-    ): List<TransactionFee> {
+    override suspend fun getTransactionFees(assetIds: List<String>): List<TransactionFee> {
         TODO("Not yet implemented")
     }
 
@@ -306,7 +302,11 @@ internal class FakeInteractor : ISpendInteractor {
         TODO("Not yet implemented")
     }
 
-    override suspend fun getDbTransactionFee(assetId: String): TransactionFee? {
+    override suspend fun getDbFeeByTransactionAssetID(assetId: String): TransactionFee? {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getDbFeeByAssetID(assetId: String): TransactionFee? {
         TODO("Not yet implemented")
     }
 }

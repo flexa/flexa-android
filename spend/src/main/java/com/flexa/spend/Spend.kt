@@ -55,7 +55,7 @@ data class Transaction(
     val brandLogo: String,
     val brandName: String,
     val brandColor: String,
-    val appAccountId: String,
+    val assetAccountHash: String,
     val assetId: String,
     val destinationAddress: String,
     val feeAmount: String,

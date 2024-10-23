@@ -42,7 +42,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.flexa.core.Flexa
-import com.flexa.core.shared.AppAccount
+import com.flexa.core.shared.AssetAccount
 import com.flexa.core.shared.AvailableAsset
 import com.flexa.core.shared.CustodyModel
 import com.flexa.core.shared.FlexaClientConfiguration
@@ -62,51 +62,28 @@ class MainActivity : ComponentActivity() {
                 context = applicationContext,
                 publishableKey = BuildConfig.PUBLISHABLE_KEY,
                 theme = FlexaTheme(),
-                appAccounts = arrayListOf(
-                    AppAccount(
-                        accountId = "1".toSha256(),
+                assetAccounts = arrayListOf(
+                    AssetAccount(
+                        assetAccountHash = "1".toSha256(),
                         custodyModel = CustodyModel.LOCAL,
                         displayName = "Example Wallet",
                         icon = "https://flexa.network/static/4bbb1733b3ef41240ca0f0675502c4f7/d8419/flexa-logo%403x.png",
                         availableAssets = listOf(
-//                            AvailableAsset(
-//                                assetId = "eip155:11155111/slip44:60",
-//                                balance = 5.5,
-//                            ),
-//                            AvailableAsset(
-//                                assetId = "bip122:000000000019d6689c085ae165831e93/slip44:0",
-//                                balance = 7.501,
-//                            ),
-
-
-//                            AvailableAsset(
-//                                assetId = "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/slip44:501",
-//                                balance = 0.5,
-//                            ),
                             AvailableAsset(
-                                assetId = "eip155:1/slip44:60",
+                                assetId = "eip155:1/erc20:0xe7ae9b78373d0D54BAC81a85525826Fd50a1E2d3",
+                                symbol = "CR",
+                                balance = 100.0
+                            ),
+                            AvailableAsset(
+                                assetId = "eip155:11155111/slip44:60",
+                                symbol = "ETH",
                                 balance = 0.501,
                             ),
                             AvailableAsset(
-                                assetId = "no-name-coin",
-                                balance = 0.025,
-                            ),
-                            AvailableAsset(
-                                assetId = "cip34:1-764824073/slip44:1815",
-                                balance = 25.0,
-                            ),
-                            AvailableAsset(
-                                assetId = "eip155:1/erc20:0xe7ae9b78373d0D54BAC81a85525826Fd50a1E2d3",
-                                balance = 25.0,
-                            ),
-                            AvailableAsset(
-                                assetId = "eip155:1/erc20:0xbb0e17ef65f82ab018d8edd776e8dd940327b28b",
-                                balance = 25.0,
-                            ),
-                            AvailableAsset(
-                                assetId = "eip155:1/erc20:0xdBdb4d16EdA451D0503b854CF79D55697F90c8DF",
-                                balance = 25.0,
-                            ),
+                                assetId = "bip122:00040fe8ec8471911baa1db1266ea15d/slip44:133",
+                                symbol = "ZEC",
+                                balance = 10.0,
+                            )
                         )
                     )
                 ),
@@ -238,7 +215,6 @@ fun Greeting() {
             }
         }
         item {
-//            val scope = rememberCoroutineScope()
             OutlinedButton(
                 modifier = Modifier.defaultMinSize(minWidth = minWidth),
                 onClick = {
@@ -251,51 +227,6 @@ fun Greeting() {
                             }
                             .open(it)
                     }
-//                    scope.launch(Dispatchers.IO) {
-//                        delay(5_000)
-//                        Flexa.updateAppAccounts(
-//                            arrayListOf(
-//                                AppAccount(
-//                                    accountId = "1".toSha256(),
-//                                    custodyModel = CustodyModel.LOCAL,
-//                                    displayName = "Example Wallet",
-//                                    icon = "https://flexa.network/static/4bbb1733b3ef41240ca0f0675502c4f7/d8419/flexa-logo%403x.png",
-//                                    availableAssets = listOf(
-//                                        AvailableAsset(
-//                                            assetId = "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/slip44:501",
-//                                            balance = 0.5,
-//                                        ),
-//                                        AvailableAsset(
-//                                            assetId = "eip155:1/slip44:60",
-//                                            balance = 0.101003423423,
-//                                            balanceAvailable = 0.01
-//                                        ),
-//                                        AvailableAsset(
-//                                            assetId = "cip34:1-764824073/slip44:1815",
-//                                            balance = 25.0,
-//                                        ),
-//                                        AvailableAsset(
-//                                            assetId = "eip155:1/erc20:0xe7ae9b78373d0D54BAC81a85525826Fd50a1E2d3",
-//                                            balance = 25.0,
-//                                        ),
-//                                        AvailableAsset(
-//                                            assetId = "eip155:1/erc20:0xbb0e17ef65f82ab018d8edd776e8dd940327b28b",
-//                                            balance = 25.0,
-//                                        ),
-//                                        AvailableAsset(
-//                                            assetId = "eip155:1/erc20:0xdBdb4d16EdA451D0503b854CF79D55697F90c8DF",
-//                                            balance = 25.0,
-//                                        ),
-//                                        AvailableAsset(
-//                                            assetId = "eip155:1/erc20:0xC011a73ee8576Fb46F5E1c5751cA3B9Fe0af2a6F",
-//                                            balance = 25.0,
-//                                        ),
-//                                    )
-//                                )
-//                            )
-//                        )
-//                    }
-
                 }) {
                 Icon(imageVector = Icons.Rounded.ShoppingCart, contentDescription = null)
                 Spacer(modifier = Modifier.width(4.dp))

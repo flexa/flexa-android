@@ -13,14 +13,12 @@
 -keep class com.flexa.core.shared.FlexaClientConfiguration { public *; }
 -keep class com.flexa.core.domain.rest.RestInteractor { public *; }
 -keep class com.flexa.core.view.LogoKt { public *; }
--keep class com.flexa.core.shared.AppAccount { public *; }
+-keep class com.flexa.core.shared.AssetAccount { public *; }
 -keep class com.flexa.core.shared.AvailableAsset { public *; }
 -keep class com.flexa.core.shared.ErrorDialogsKt { public *; }
 -keep class com.flexa.core.shared.Asset { public *; }
 -keep class com.flexa.core.shared.AssetsResponse { public *; }
 -keep class com.flexa.core.view.AutoSizeTextKt { public *; }
--keep class com.flexa.core.shared.ApiErrorHandler { public *; }
--keep class com.flexa.core.view.FlexaProgressKt { public *; }
 -keep class com.flexa.core.shared.ConnectionHandlerKt { public *; }
 -keep class com.flexa.core.shared.ApiError { public *; }
 -keep class com.flexa.core.shared.ApiError$InfoEntity { public *; }

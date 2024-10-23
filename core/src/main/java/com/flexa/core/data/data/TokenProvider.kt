@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicReference
 private const val TOKEN_ERROR_COUNTER = 3
 
 internal class TokenProvider(
-    private val preferences: SecuredPreferences,
+    internal val preferences: SecuredPreferences,
     private val tokenKey: String
 ) : ITokenProvider {
 
@@ -98,7 +98,7 @@ internal class TokenProvider(
         val request: Request = Request.Builder().url(url)
             .header("Accept", "application/vnd.flexa+json")
             .header("Flexa-App", headersBundle.appName)
-            .header("Flexa-Version", headersBundle.appVersion)
+            .header("Flexa-Version", headersBundle.version)
             .header("User-Agent", headersBundle.userAgent)
             .header("Authorization", "Basic $tokenBase64")
             .header("client-trace-id", UUID.randomUUID().toString())

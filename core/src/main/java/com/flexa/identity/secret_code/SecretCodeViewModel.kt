@@ -80,7 +80,7 @@ internal class SecretCodeViewModel(
         }
     }
 
-    private suspend fun getAppAccounts(): List<AppAccount> = runBlocking {
+    private fun getAppAccounts(): List<AppAccount> = runBlocking {
         val acc = interactor.putAppAccounts(Flexa.appAccounts.value)
         interactor.saveAppAccounts(acc.accounts)
 

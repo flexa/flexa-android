@@ -3,6 +3,7 @@ package com.flexa.spend.domain
 import com.flexa.core.data.db.BrandSession
 import com.flexa.core.domain.db.DbInteractor
 import com.flexa.core.domain.rest.RestInteractor
+import com.flexa.core.entity.Account
 import com.flexa.core.entity.AppAccount
 import com.flexa.core.entity.AvailableAsset
 import com.flexa.core.entity.CommerceSession
@@ -25,6 +26,8 @@ import com.flexa.spend.Spend.json
 import com.flexa.spend.SpendConstants
 import com.flexa.spend.data.SecuredPreferences
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
@@ -45,24 +48,33 @@ internal class SpendInteractor(
     }
 
     override suspend fun putAccounts(
-        accounts: List<com.flexa.core.shared.AppAccount>
+        accounts: List<com.flexa.core.shared.AssetAccount>
     ): PutAppAccountsResponse = withContext(Dispatchers.IO) {
         val appAccounts = ArrayList<AppAccount>(accounts.size)
-        val account = getAccount()
-        val assets = getAllAssets(100)
+
+        val assets = getAllAssets()
         deleteAssets()
         saveAssets(assets)
 
-        val unitOfAccount = account.limits
-            ?.firstOrNull { !it.asset.isNullOrBlank() }?.asset ?: ""
+        val unitOfAccount = getUnitOfAccount()
         val assetIds = accounts.filterAssets(assets)
             .flatMap { it.availableAssets }.map { it.assetId }.distinct()
-        val exchangeRates = runCatching {
-            getExchangeRatesSmart(assetIds, unitOfAccount).data
-        }.getOrElse { emptyList() }
-        val oneTimeKeys = runCatching { getOneTimeKeys(assetIds).data }
-            .getOrElse { emptyList() }
+        val exchangeRates = async {
+            runCatching {
+                getExchangeRatesSmart(assetIds, unitOfAccount).data
+            }.getOrElse { emptyList() }
+        }.await()
+        val oneTimeKeys = async {
+            runCatching {
+                if (assetIds.isNotEmpty())
+                    getOneTimeKeys(assetIds).data.apply {
+                        saveOneTimeKeys(this)
+                    }
+                else emptyList()
+            }.getOrElse { emptyList() }
+        }.await()
 
+        ensureActive()
         for (localAccount in accounts) {
             val filteredAssets = localAccount.filterAssets(assets)
             val accountAssets = filteredAssets.map { localAsset ->
@@ -74,6 +86,7 @@ internal class SpendInteractor(
                     assetId = localAsset.assetId,
                     balance = localAsset.balance.toString(),
                     balanceAvailable = localAsset.balanceAvailable,
+                    icon = localAsset.icon,
                     livemode = assetData?.livemode,
                     exchangeRate = exchangeRate,
                     balanceBundle = exchangeRate.toBalanceBundle(localAsset),
@@ -84,9 +97,9 @@ internal class SpendInteractor(
             }
 
             val appAccount = AppAccount(
-                accountId = localAccount.accountId,
+                accountId = localAccount.assetAccountHash,
                 displayName = localAccount.displayName,
-                unitOfAccount = account.limits?.firstOrNull()?.asset,
+                unitOfAccount = unitOfAccount,
                 icon = localAccount.icon,
                 availableAssets = ArrayList(accountAssets)
             )
@@ -95,18 +108,9 @@ internal class SpendInteractor(
 
         val response = PutAppAccountsResponse(date = "", accounts = appAccounts)
 
-        val allAssets = response.accounts.flatMap { it.availableAssets }
-        val livemodeAsset = allAssets.firstOrNull {
-            it.livemode == true && it.key != null
+        json.encodeToString(response.accounts).let { accountsString ->
+            preferences.saveString(FlexaConstants.APP_ACCOUNTS, accountsString)
         }
-        val testmodeAsset = allAssets.firstOrNull {
-            it.livemode == false && it.key != null
-        }
-        livemodeAsset?.let { asset -> backupAssetWithKey(asset) }
-        testmodeAsset?.let { asset -> backupAssetWithKey(asset) }
-
-        val accountsString = json.encodeToString(response.accounts)
-        preferences.saveString(FlexaConstants.APP_ACCOUNTS, accountsString)
         response
     }
 
@@ -120,24 +124,6 @@ internal class SpendInteractor(
                 assets.addAll(response.data)
             } while (startingAfter != null)
             assets
-        }
-
-    override suspend fun backupAssetWithKey(asset: AvailableAsset) =
-        withContext(Dispatchers.IO) {
-            val data = json.encodeToString(asset)
-            val key = if (asset.livemode == true) SpendConstants.ASSET_KEY else
-                SpendConstants.ASSET_TESTMODE_KEY
-            preferences.saveString(key, data)
-        }
-
-    override suspend fun getAssetWithKey(livemode: Boolean): AvailableAsset? =
-        withContext(Dispatchers.IO) {
-            val key = if (livemode) SpendConstants.ASSET_KEY else
-                SpendConstants.ASSET_TESTMODE_KEY
-            val data = preferences.getString(key)
-            if (data?.isNotEmpty() == true) {
-                json.decodeFromString<AvailableAsset>(data)
-            } else null
         }
 
     override suspend fun getAssets(pageSize: Int, nextPageToken: String?): AssetsResponse =
@@ -188,7 +174,20 @@ internal class SpendInteractor(
     }
 
     override suspend fun getAccount() = withContext(Dispatchers.IO) {
-        interactor.getAccount()
+        interactor.getAccount().apply {
+            val jsonData = json.encodeToString(this)
+            preferences.saveString(SpendConstants.ACCOUNT, jsonData)
+        }
+    }
+
+    override suspend fun getAccountCached(): Account? = withContext(Dispatchers.IO) {
+        val accountJson = preferences.getString(SpendConstants.ACCOUNT)
+        accountJson?.let { json.decodeFromString<Account>(it) }
+    }
+
+    override suspend fun getUnitOfAccount(): String = withContext(Dispatchers.IO) {
+        val account = getAccountCached() ?: getAccount()
+        account.limits?.firstOrNull { !it.asset.isNullOrBlank() }?.asset ?: "iso4217/USD"
     }
 
     override suspend fun deleteNotification(id: String) = withContext(Dispatchers.IO) {
@@ -326,9 +325,11 @@ internal class SpendInteractor(
         unitOfAccount: String
     ): ExchangeRatesResponse = withContext(Dispatchers.IO) {
         when {
-            dbInteractor.hasOutdatedExchangeRates() -> {
-                getExchangeRates(assetIds, unitOfAccount)
-            }
+            dbInteractor.hasOutdatedExchangeRates() ||
+                    !dbInteractor.containsAllExchangeRates(assetIds) ->
+                getExchangeRates(assetIds, unitOfAccount).apply {
+                    saveExchangeRates(data)
+                }
 
             else -> {
                 ExchangeRatesResponse(data = dbInteractor.getExchangeRates())
@@ -336,9 +337,12 @@ internal class SpendInteractor(
         }
     }
 
-    override suspend fun getDbOneTimeKey(assetId: String): OneTimeKey? =
+    override suspend fun getDbOneTimeKey(assetId: String, livemode: Boolean?): OneTimeKey? =
         withContext(Dispatchers.IO) {
-            dbInteractor.getOneTimeKeyByAssetId(assetId)
+            var key = dbInteractor.getOneTimeKeyByAssetId(assetId)
+            if (key == null)
+                key = livemode?.run { dbInteractor.getOneTimeKeyByLiveMode(this) }
+            key
         }
 
     override suspend fun getDbOneTimeKeys(): List<OneTimeKey> = withContext(Dispatchers.IO) {
@@ -357,13 +361,20 @@ internal class SpendInteractor(
     override suspend fun getOneTimeKeysSmart(assetIds: List<String>): List<OneTimeKey> =
         withContext(Dispatchers.IO) {
             when {
-                dbInteractor.hasOutdatedOneTimeKeys() -> {
-                    getOneTimeKeys(assetIds).data
+                dbInteractor.hasOutdatedOneTimeKeys() ||
+                        !dbInteractor.containsAllOneTimeKeys(assetIds) -> {
+                    getOneTimeKeys(assetIds).data.apply {
+                        saveOneTimeKeys(this)
+                    }
                 }
 
                 else -> {
                     dbInteractor.getOneTimeKeys()
-                        .ifEmpty { getOneTimeKeys(assetIds).data }
+                        .ifEmpty {
+                            getOneTimeKeys(assetIds).data.apply {
+                                saveOneTimeKeys(this)
+                            }
+                        }
                 }
             }
         }
@@ -384,20 +395,27 @@ internal class SpendInteractor(
 
     override suspend fun getTransactionFees(
         assetIds: List<String>,
-        unitOfAccount: String
     ): List<TransactionFee> = withContext(Dispatchers.IO) {
-        interactor.getTransactionFees(assetIds, unitOfAccount)
+        interactor.getTransactionFees(assetIds)
     }
 
-    override suspend fun getDbTransactionFees(): List<TransactionFee> = withContext(Dispatchers.IO) {
-        dbInteractor.getTransactionFees()
-    }
+    override suspend fun getDbTransactionFees(): List<TransactionFee> =
+        withContext(Dispatchers.IO) {
+            dbInteractor.getTransactionFees()
+        }
 
-    override suspend fun saveTransactionFees(items: List<TransactionFee>) = withContext(Dispatchers.IO) {
-        dbInteractor.saveTransactionFees(items)
-    }
+    override suspend fun saveTransactionFees(items: List<TransactionFee>) =
+        withContext(Dispatchers.IO) {
+            dbInteractor.saveTransactionFees(items)
+        }
 
-    override suspend fun getDbTransactionFee(assetId: String): TransactionFee? = withContext(Dispatchers.IO) {
-        dbInteractor.getTransactionFeesByAssetId(assetId)
-    }
+    override suspend fun getDbFeeByTransactionAssetID(assetId: String): TransactionFee? =
+        withContext(Dispatchers.IO) {
+            dbInteractor.getTransactionFeeByTransactionAssetId(assetId)
+        }
+
+    override suspend fun getDbFeeByAssetID(assetId: String): TransactionFee? =
+        withContext(Dispatchers.IO) {
+            dbInteractor.getTransactionFeeByAssetId(assetId)
+        }
 }

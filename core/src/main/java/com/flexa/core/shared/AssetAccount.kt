@@ -2,11 +2,11 @@ package com.flexa.core.shared
 
 import android.graphics.Color
 
-data class AppAccount(
+data class AssetAccount(
     /**
      * SHA256 hash of Account ID string
      */
-    val accountId: String,
+    val assetAccountHash: String,
     val custodyModel: CustodyModel,
     val displayName: String? = null,
     val icon: String? = null,
@@ -32,9 +32,9 @@ enum class CustodyModel {
     LOCAL, MANAGED
 }
 
-fun List<AppAccount>.filterAssets(assets: List<Asset>): List<AppAccount> {
-    val accounts = this.distinctBy { it.accountId }
-    val appAccounts = ArrayList<AppAccount>(accounts.size)
+fun List<AssetAccount>.filterAssets(assets: List<Asset>): List<AssetAccount> {
+    val accounts = this.distinctBy { it.assetAccountHash }
+    val appAccounts = ArrayList<AssetAccount>(accounts.size)
     accounts.forEach { acc ->
         val filteredAssets = acc.filterAssets(assets)
         appAccounts.add(acc.copy(availableAssets = filteredAssets))
@@ -42,7 +42,7 @@ fun List<AppAccount>.filterAssets(assets: List<Asset>): List<AppAccount> {
     return appAccounts
 }
 
-fun AppAccount.filterAssets(assets: List<Asset>): List<AvailableAsset> {
+fun AssetAccount.filterAssets(assets: List<Asset>): List<AvailableAsset> {
     return this.availableAssets.filter { asset ->
         assets.any { it.id == asset.assetId }
     }

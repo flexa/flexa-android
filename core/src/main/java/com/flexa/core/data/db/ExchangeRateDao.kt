@@ -13,6 +13,9 @@ internal interface ExchangeRateDao {
     @Query("SELECT * FROM exchange_rate")
     fun getAll(): List<ExchangeRate>
 
+    @Query("SELECT COUNT(asset) FROM exchange_rate WHERE asset IN (:ids)")
+    fun countIds(ids: List<String>): Int
+
     @Query("SELECT * FROM exchange_rate WHERE asset = :id LIMIT 1")
     fun getByIdl(id: String): ExchangeRate?
 

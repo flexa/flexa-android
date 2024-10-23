@@ -48,13 +48,14 @@ fun AppNotification(
                     modifier = Modifier
                         .padding(start = 2.dp)
                         .size(34.dp)
+                        .offset(y = 4.dp)
                         .clip(RoundedCornerShape(4.dp)),
                     imageUrl = appNotification.iconUrl,
                     crossfadeDuration = 1000,
                 )
             } else {
                 Icon(
-                    modifier = Modifier.size(40.dp),
+                    modifier = Modifier.size(40.dp).offset(y = 4.dp),
                     imageVector = Icons.AutoMirrored.Default.PlaylistPlay,
                     contentDescription = null
                 )

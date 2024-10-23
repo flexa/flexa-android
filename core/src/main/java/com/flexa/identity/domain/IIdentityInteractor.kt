@@ -5,8 +5,8 @@ import com.flexa.core.entity.ExchangeRate
 import com.flexa.core.entity.PutAppAccountsResponse
 import com.flexa.core.entity.TokenPatch
 import com.flexa.core.entity.TokensResponse
-import com.flexa.core.shared.AppAccount
 import com.flexa.core.shared.Asset
+import com.flexa.core.shared.AssetAccount
 import com.flexa.core.shared.AssetsResponse
 import com.flexa.core.shared.Brand
 
@@ -23,7 +23,7 @@ internal interface IIdentityInteractor {
     suspend fun tokenPatch(code: String? = null, link: String? = null): TokenPatch
     suspend fun getAccount(): Account
     suspend fun getAppAccounts(): List<com.flexa.core.entity.AppAccount>?
-    suspend fun putAppAccounts(accounts: List<AppAccount>): PutAppAccountsResponse
+    suspend fun putAppAccounts(accounts: List<AssetAccount>): PutAppAccountsResponse
     suspend fun saveAppAccounts(account: List<com.flexa.core.entity.AppAccount>)
     suspend fun saveEmail(email: String)
     suspend fun getEmail(): String?

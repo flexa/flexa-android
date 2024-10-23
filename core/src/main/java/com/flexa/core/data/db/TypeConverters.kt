@@ -2,7 +2,9 @@ package com.flexa.core.data.db
 
 import androidx.room.TypeConverter
 import com.flexa.core.data.rest.RestRepository.Companion.json
+import com.flexa.core.entity.TransactionFeePrice
 import com.flexa.core.shared.LegacyFlexcode
+import com.flexa.core.shared.Promotion
 import kotlinx.serialization.encodeToString
 
 class StringListConverter {
@@ -17,15 +19,25 @@ class StringListConverter {
     }
 }
 
-class LegacyFlexcodeConverter {
+class ObjectListsConverter {
     @TypeConverter
-    fun fromString(value: String): List<LegacyFlexcode> {
-        return json.decodeFromString<List<LegacyFlexcode>>(value)
+    fun toLegacyFlexcode(value: String?): List<LegacyFlexcode> {
+        return value?.let { json.decodeFromString<List<LegacyFlexcode>>(it) } ?: emptyList()
     }
 
     @TypeConverter
-    fun fromList(list: List<LegacyFlexcode>): String {
-        return json.encodeToString(list)
+    fun fromLegacyFlexcode(list: List<LegacyFlexcode>?): String? {
+        return list?.let { json.encodeToString(it) }
+    }
+
+    @TypeConverter
+    fun toPromotion(value: String?): List<Promotion> {
+        return value?.let { json.decodeFromString<List<Promotion>>(it) }?: emptyList()
+    }
+
+    @TypeConverter
+    fun fromPromotion(list: List<Promotion>?): String? {
+        return list?.let { json.encodeToString(it) }
     }
 }
 

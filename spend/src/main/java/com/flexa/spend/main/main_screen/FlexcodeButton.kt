@@ -50,49 +50,6 @@ import java.math.BigDecimal
 @Composable
 fun FlexcodeButton(
     modifier: Modifier = Modifier,
-    price: String?,
-    onClick: () -> Unit
-) {
-    FilledTonalButton(
-        modifier = modifier,
-        colors = ButtonDefaults.buttonColors(),
-        onClick = { onClick.invoke() }) {
-        AnimatedContent(
-            targetState = price,
-            transitionSpec = {
-                if ((targetState?.length ?: 0) < (initialState?.length ?: 0)) {
-                    (slideInVertically { width -> width } +
-                            fadeIn()).togetherWith(slideOutVertically()
-                    { width -> -width } + fadeOut())
-                } else {
-                    (slideInVertically { width -> -width } +
-                            fadeIn()).togetherWith(slideOutVertically()
-                    { width -> width } + fadeOut())
-                }.using(SizeTransform(clip = false))
-            }, label = ""
-        ) { state ->
-            Text(
-                modifier = Modifier.animateContentSize(),
-                text = state ?: stringResource(id = R.string.updating),
-                style = TextStyle(
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.W500
-                )
-            )
-        }
-        Spacer(modifier = Modifier.width(6.dp))
-        Icon(
-            modifier = Modifier.size(18.dp),
-            imageVector = Icons.Filled.Info,
-            tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = .5f),
-            contentDescription = null
-        )
-    }
-}
-
-@Composable
-fun FlexcodeButtonV2(
-    modifier: Modifier = Modifier,
     asset: AvailableAsset?,
     onClick: () -> Unit
 ) {
@@ -187,20 +144,7 @@ private fun FlexcodeButtonPreview() {
     FlexaTheme {
         Surface {
             Box(modifier = Modifier.padding(8.dp)) {
-                FlexcodeButton(price = "\$243.90 Available") { }
-            }
-        }
-    }
-}
-
-@Preview
-@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES or Configuration.UI_MODE_TYPE_NORMAL)
-@Composable
-private fun FlexcodeButtonV2Preview() {
-    FlexaTheme {
-        Surface {
-            Box(modifier = Modifier.padding(8.dp)) {
-                FlexcodeButtonV2(
+                FlexcodeButton(
                     asset = MockFactory.getMockSelectedAsset().asset.copy(
                         balanceBundle = MockFactory.getBalanceBundle()
                     )

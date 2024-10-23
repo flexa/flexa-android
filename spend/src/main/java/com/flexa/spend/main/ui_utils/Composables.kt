@@ -96,7 +96,7 @@ fun BalanceRestrictionsDialog(
     viewModel: AssetsViewModel,
     onDismiss: () -> Unit
 ) {
-    val selectedAsset by viewModel.selectedAssetWithBundles.collectAsStateWithLifecycle()
+    val selectedAsset by viewModel.selectedAssetBundle.collectAsStateWithLifecycle()
     AlertDialog(
         modifier = modifier,
         onDismissRequest = { onDismiss() },

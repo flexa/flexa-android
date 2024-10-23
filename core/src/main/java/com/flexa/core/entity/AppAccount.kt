@@ -33,8 +33,6 @@ data class AvailableAsset(
     val balance: String,
     @SerialName("key")
     val key: AssetKey? = null,
-    @SerialName("value")
-    val value: AssetValue? = null,
     @SerialName("livemode")
     val livemode: Boolean? = null,
     @SerialName("icon")
@@ -47,8 +45,8 @@ data class AvailableAsset(
     val exchangeRate: ExchangeRate? = null,
     @SerialName("oneTimeKey")
     val oneTimeKey: OneTimeKey? = null,
-    @SerialName("fee")
-    val fee: TransactionFee? = null,
+    @Transient
+    val feeBundle: FeeBundle? = null,
     @Transient
     val balanceBundle: BalanceBundle? = null,
 )
@@ -60,6 +58,10 @@ data class BalanceBundle (
     val availableLabel: String? = null,
 )
 
+data class FeeBundle (
+    val label: String? = null,
+)
+
 @Serializable
 data class AssetKey(
     @SerialName("prefix")
@@ -68,14 +70,4 @@ data class AssetKey(
     val secret: String,
     @SerialName("length")
     val length: Int,
-)
-
-@Serializable
-data class AssetValue(
-    @SerialName("asset")
-    val asset: String,
-    @SerialName("label")
-    val label: String,
-    @SerialName("label_titlecase")
-    val labelTitlecase: String,
 )

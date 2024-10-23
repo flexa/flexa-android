@@ -1,13 +1,12 @@
 package com.flexa.identity.create_id
 
-import android.app.Activity
 import android.content.Context
-import android.os.Build
 import android.telephony.TelephonyManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flexa.core.entity.TokensResponse
-import com.flexa.core.sendFlexaReport
+import com.flexa.core.entity.error.ApiException
+import com.flexa.core.shared.ApiErrorHandler
 import com.flexa.identity.domain.IIdentityInteractor
 import com.flexa.identity.main.UserData
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,7 +23,7 @@ internal class CreateIdViewModel(
     private val _progress = MutableStateFlow(false)
     val progress: StateFlow<Boolean> = _progress
     private val _error = MutableStateFlow(false)
-    val error: StateFlow<Boolean> = _error
+    val errorHandler = ApiErrorHandler()
 
     fun accounts(context: Context, userData: UserData) {
         viewModelScope.launch {
@@ -32,8 +31,7 @@ internal class CreateIdViewModel(
             runCatching {
                 _progress.value = true
 
-                var country = getCountryByTelephonyManager(context)
-                if (country == null) country = getCountryByLocale(context)
+                val country = getCountryByTelephonyManager(context) ?: getCountryByLocale(context)
 
                 val dateFormat = SimpleDateFormat("yyyy-MM-dd")
                 val birthday = dateFormat.format(userData.birthday ?: Date())
@@ -45,8 +43,12 @@ internal class CreateIdViewModel(
                 )
                 res
             }
-                .onFailure {
+                .onFailure { ex ->
                     _progress.value = false
+                    when (ex) {
+                        is ApiException -> errorHandler.setApiError(ex)
+                        else -> errorHandler.setError(ex)
+                    }
                 }
                 .onSuccess { res ->
                     _progress.value = false
@@ -62,13 +64,6 @@ internal class CreateIdViewModel(
         _error.value = false
     }
 
-    fun sendFlexaReport(context: Context, userData: UserData) {
-        if (context is Activity) {
-            val data = "Registration Error for ${userData.email}"
-            context.sendFlexaReport(data)
-        }
-    }
-
     private fun tokens(email: String) {
         viewModelScope.launch {
             runCatching {
@@ -77,16 +72,16 @@ internal class CreateIdViewModel(
                     interactor.saveEmail(email)
                 res
             }.onSuccess { result ->
-                try {
-                    when (result) {
-                        is TokensResponse.Success -> state.value = State.Success(result)
-                        is TokensResponse.Error -> state.value = State.Error(result)
-                    }
-                } finally {
-                    _progress.value = false
-                }
-            }.onFailure {
                 _progress.value = false
+                if (result is TokensResponse.Success) {
+                    state.value = State.Success(result)
+                }
+            }.onFailure { ex ->
+                _progress.value = false
+                when (ex) {
+                    is ApiException -> errorHandler.setApiError(ex)
+                    else -> errorHandler.setError(ex)
+                }
             }
         }
     }
@@ -102,12 +97,7 @@ internal class CreateIdViewModel(
     }
 
     private fun getCountryByLocale(context: Context): String {
-        val locale: Locale = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            context.resources.configuration.locales[0]
-        } else {
-            @Suppress("DEPRECATION")
-            context.resources.configuration.locale
-        }
+        val locale: Locale = context.resources.configuration.locales[0]
         return locale.country
     }
 
@@ -115,6 +105,5 @@ internal class CreateIdViewModel(
         data object FlexaPrivacy : State()
         data object General : State()
         class Success(val data: TokensResponse.Success) : State()
-        class Error(val data: TokensResponse.Error) : State()
     }
 }

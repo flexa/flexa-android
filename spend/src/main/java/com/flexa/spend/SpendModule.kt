@@ -35,8 +35,7 @@ class SpendConstants {
         const val LAST_EVENT_ID = "last.event.id"
         const val COMMERCE_SESSION_KEY = "commerce.session.key"
         const val PINNED_BRANDS = "pinned.brands"
-        const val ASSET_KEY = "asset.key"
-        const val ASSET_TESTMODE_KEY = "asset.testmode.key"
+        const val ACCOUNT = "account"
     }
 }
 

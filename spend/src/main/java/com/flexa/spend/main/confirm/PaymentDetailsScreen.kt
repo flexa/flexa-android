@@ -1,6 +1,13 @@
 package com.flexa.spend.main.confirm
 
 import android.content.res.Configuration
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -42,8 +49,10 @@ import com.flexa.core.entity.CommerceSession
 import com.flexa.core.theme.FlexaTheme
 import com.flexa.spend.MockFactory
 import com.flexa.spend.R
+import com.flexa.spend.domain.FakeInteractor
 import com.flexa.spend.label
 import com.flexa.spend.main.assets.AssetInfoFooter
+import com.flexa.spend.main.assets.AssetsViewModel
 import com.flexa.spend.transaction
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -53,6 +62,7 @@ import kotlinx.coroutines.flow.StateFlow
 fun PaymentDetailsScreen(
     modifier: Modifier = Modifier,
     sessionFlow: StateFlow<CommerceSession?>,
+    assetsViewModel: AssetsViewModel,
     color: Color = BottomSheetDefaults.ContainerColor,
     toBack: () -> Unit,
     toLearnMore: () -> Unit,
@@ -134,14 +144,29 @@ fun PaymentDetailsScreen(
                 )
             },
             headlineContent = {
-                Text(
-                    text = session?.data?.rate?.label ?: "",
-                    style = TextStyle(
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.W400,
-                        color = palette.onBackground
+                AnimatedContent(
+                    targetState = session?.data?.rate?.label ?: "",
+                    transitionSpec = {
+                        if (targetState < initialState) {
+                            slideInVertically { width -> width } +
+                                    fadeIn() togetherWith slideOutVertically()
+                            { width -> -width } + fadeOut()
+                        } else {
+                            slideInVertically { width -> -width } +
+                                    fadeIn() togetherWith slideOutVertically()
+                            { width -> width } + fadeOut()
+                        }.using(SizeTransform(clip = false))
+                    }, label = ""
+                ) { state ->
+                    Text(
+                        text = state,
+                        style = TextStyle(
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.W400,
+                            color = palette.onBackground
+                        )
                     )
-                )
+                }
             }
         )
         ListItem(
@@ -154,24 +179,54 @@ fun PaymentDetailsScreen(
                 )
             },
             headlineContent = {
-                Text(
-                    text = session?.transaction()?.fee?.equivalent ?: "",
-                    style = TextStyle(
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.W400,
-                        color = palette.onBackground
+                AnimatedContent(
+                    targetState = session?.transaction()?.fee?.equivalent ?: "",
+                    transitionSpec = {
+                        if (targetState < initialState) {
+                            slideInVertically { width -> width } +
+                                    fadeIn() togetherWith slideOutVertically()
+                            { width -> -width } + fadeOut()
+                        } else {
+                            slideInVertically { width -> -width } +
+                                    fadeIn() togetherWith slideOutVertically()
+                            { width -> width } + fadeOut()
+                        }.using(SizeTransform(clip = false))
+                    }, label = ""
+                ) { state ->
+                    Text(
+                        text = state,
+                        style = TextStyle(
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.W400,
+                            color = palette.onBackground
+                        )
                     )
-                )
+                }
             },
             supportingContent = {
-                Text(
-                    text = session?.transaction()?.fee?.label ?: "",
-                    style = TextStyle(
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.W400,
-                        color = palette.outline
+                AnimatedContent(
+                    targetState = session?.transaction()?.fee?.label ?: "",
+                    transitionSpec = {
+                        if (targetState < initialState) {
+                            slideInVertically { width -> width } +
+                                    fadeIn() togetherWith slideOutVertically()
+                            { width -> -width } + fadeOut()
+                        } else {
+                            slideInVertically { width -> -width } +
+                                    fadeIn() togetherWith slideOutVertically()
+                            { width -> width } + fadeOut()
+                        }.using(SizeTransform(clip = false))
+                    }, label = ""
+                ) { state ->
+                    Text(
+                        text = state,
+                        style = TextStyle(
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.W400,
+                            color = palette.outline
+                        )
                     )
-                )
+                }
             }
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -206,6 +261,7 @@ fun ConfirmDetailContentPreview() {
         ) {
             PaymentDetailsScreen(
                 sessionFlow = MutableStateFlow(MockFactory.getCommerceSession()),
+                assetsViewModel = AssetsViewModel(FakeInteractor()),
                 toBack = {},
                 toLearnMore = {}
             )

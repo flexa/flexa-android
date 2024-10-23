@@ -5,7 +5,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
+import androidx.security.crypto.MasterKeys
 import com.flexa.core.domain.data.IDataRepository
 import com.flexa.core.shared.SerializerProvider
 import com.google.gson.JsonSyntaxException
@@ -20,17 +20,18 @@ internal class SecuredPreferences(
 
     private val preferences: SharedPreferences by lazy {
         try {
-            val masterKey = MasterKey.Builder(application, MasterKey.DEFAULT_MASTER_KEY_ALIAS)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build()
-            EncryptedSharedPreferences.create(
-                application, fileName, masterKey,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-            )
+            val masterKey = getMasterKey()
+            getEncryptedSharedPreferences(application.applicationContext, fileName, masterKey)
         } catch (ex: Exception) {
-            Log.e("Auth", ex.message, ex)
-            application.getSharedPreferences(fileName, Context.MODE_PRIVATE)
+            Log.e(null, ex.message, ex)
+            runCatching {
+                application.deleteSharedPreferences(fileName)
+                val masterKey = getMasterKey()
+                getEncryptedSharedPreferences(application.applicationContext, fileName, masterKey)
+            }.getOrElse {
+                Log.e(null, it.message, it)
+                throw Error("EncryptedSharedPreferences error")
+            }
         }
     }
 
@@ -91,5 +92,21 @@ internal class SecuredPreferences(
     }
 
     override fun edit(): SharedPreferences.Editor = preferences.edit()
+
+    private fun getMasterKey(): String {
+        return MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
+    }
+
+    private fun getEncryptedSharedPreferences(
+        context: Context, fileName: String, masterKeyAlias: String
+    ): SharedPreferences {
+        return EncryptedSharedPreferences.create(
+            fileName,
+            masterKeyAlias,
+            context,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
+    }
 }
 

@@ -25,6 +25,7 @@ import com.flexa.identity.coppa.CoppaScreen
 import com.flexa.identity.create_id.CreateId
 import com.flexa.identity.main.InDevelopmentScreen
 import com.flexa.identity.main.LoginScreen
+import com.flexa.identity.main.WebView
 import com.flexa.identity.secret_code.SecretCodeScreen
 import com.flexa.identity.secret_code.SecretCodeViewModel
 import com.flexa.identity.terms_of_use.TermsOfUse
@@ -50,6 +51,18 @@ sealed class Route(val name: String) {
 
         fun createRoute(deepLink: String = ""): String {
             return "$AUTH_ROUTE.secret_code?$KEY_DEEP_LINK=${deepLink.toNavArgument()}"
+        }
+    }
+
+    data object WebView : Route("$AUTH_ROUTE.web_view?url={url}") {
+        const val KEY = "url"
+        val arguments = listOf(navArgument(KEY) {
+            type = NavType.StringType
+            defaultValue = ""
+        })
+
+        fun createRoute(url: String = ""): String {
+            return "$AUTH_ROUTE.web_view?$KEY=${url.toNavArgument()}"
         }
     }
 }
@@ -92,7 +105,8 @@ fun NavGraphBuilder.identityNavGraph(
                 userVM = viewModel(context.getActivity() ?: it),
                 toBack = { close(context, navController) },
                 toContinue = { navController.navigate(Route.VerifyEmail.name) },
-                toSignIn = { navController.navigate(Route.CreateId.name) }
+                toSignIn = { navController.navigate(Route.CreateId.name) },
+                toUrl = { url -> navController.navigate(Route.WebView.createRoute(url)) }
             )
         }
         composable(
@@ -192,6 +206,20 @@ fun NavGraphBuilder.identityNavGraph(
                 onClose = { close(context, navController) }
             )
         }
+    }
+    composable(
+        Route.WebView.name,
+        arguments = Route.WebView.arguments,
+        enterTransition = { enterTransition },
+        exitTransition = { exitTransition },
+        popEnterTransition = { popEnterTransition },
+        popExitTransition = { popExitTransition }
+    ) { entry ->
+        val url = entry.arguments?.getString(Route.WebView.KEY) ?: ""
+        WebView(
+            modifier = modifier,
+            url = url
+        ) { navController.popBackStack() }
     }
 }
 

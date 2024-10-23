@@ -89,7 +89,6 @@ class BrandsViewModel(
     private fun initBrands() {
         viewModelScope.launch {
             populateBrands(interactor.getDbBrands())
-
             runCatching {
                 val brands = interactor.getBrands(true)
                 interactor.deleteBrands()

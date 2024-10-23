@@ -50,6 +50,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.flexa.core.shared.Promotion
 import com.flexa.core.theme.FlexaTheme
 import com.flexa.core.view.FlexaLogo
 import com.flexa.spend.MockFactory
@@ -258,7 +259,25 @@ fun LegacyFlexcodePreview() {
                         .padding(horizontal = 24.dp)
                         .navigationBarsPadding(),
                     viewModel = SpendViewModel(FakeInteractor()).apply {
-                        selectedBrand.value = MockFactory.getMockBrand()
+                        setBrand(
+                            MockFactory.getBrand().run {
+                                copy(
+                                    color = "#8043FF",
+                                    promotions = listOf(
+                                        Promotion(
+                                            id = "",
+                                            amountOff = "10",
+                                            percentOff = "50",
+                                            livemode = true,
+                                            label = "Promotion label",
+                                            restrictions = Promotion.Restrictions(
+                                                maximumDiscount = "15", minimumAmount = "5",
+                                            )
+                                        )
+                                    )
+                                )
+                            }
+                        )
                     },
                     toBack = { _, _ -> },
                 )

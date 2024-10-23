@@ -189,7 +189,7 @@ fun SpendDragHandler(
 private fun MerchantItemPreview() {
     BrandRowItem(
         modifier = Modifier.height(114.dp),
-        item = MockFactory.getMockBrand(),
+        item = MockFactory.getBrand(),
         onClick = { }
     )
 }

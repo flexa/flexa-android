@@ -24,20 +24,37 @@ class DbInteractor(
     suspend fun deleteBrands() = repository.deleteBrands()
 
     suspend fun hasOutdatedExchangeRates(): Boolean = repository.hasOutdatedExchangeRates()
+    suspend fun containsAllExchangeRates(ids: List<String>): Boolean =
+        repository.containsAllExchangeRates(ids)
+
     suspend fun getExchangeRates(): List<ExchangeRate> = repository.getExchangeRates()
     suspend fun getExchangeRateById(id: String): ExchangeRate? = repository.getExchangeRateById(id)
     suspend fun saveExchangeRates(items: List<ExchangeRate>) = repository.saveExchangeRates(items)
     suspend fun deleteExchangeRates() = repository.deleteExchangeRates()
 
     suspend fun hasOutdatedOneTimeKeys(): Boolean = repository.hasOutdatedOneTimeKeys()
+    suspend fun containsAllOneTimeKeys(ids: List<String>): Boolean =
+        repository.containsAllOneTimeKeys(ids)
+
     suspend fun getOneTimeKeys(): List<OneTimeKey> = repository.getOneTimeKeys()
-    suspend fun getOneTimeKeyByAssetId(id: String): OneTimeKey? = repository.getOneTimeKeyByAssetId(id)
+    suspend fun getOneTimeKeyByAssetId(id: String): OneTimeKey? =
+        repository.getOneTimeKeyByAssetId(id)
+    suspend fun getOneTimeKeyByLiveMode(livemode: Boolean): OneTimeKey? =
+        repository.getOneTimeKeyByLiveMode(livemode)
+
     suspend fun saveOneTimeKeys(items: List<OneTimeKey>) = repository.saveOneTimeKeys(items)
     suspend fun deleteOneTimeKeys() = repository.deleteOneTimeKeys()
 
     suspend fun getTransactionFees(): List<TransactionFee> = repository.getTransactionFees()
-    suspend fun getTransactionFeesByAssetId(id: String): TransactionFee? = repository.getTransactionFeeByAssetId(id)
-    suspend fun saveTransactionFees(items: List<TransactionFee>) = repository.saveTransactionFees(items)
+    suspend fun getTransactionFeeByTransactionAssetId(id: String): TransactionFee? =
+        repository.getTransactionFeeByTransactionAssetId(id)
+
+    suspend fun getTransactionFeeByAssetId(id: String): TransactionFee? =
+        repository.getTransactionFeeByAssetId(id)
+
+    suspend fun saveTransactionFees(items: List<TransactionFee>) =
+        repository.saveTransactionFees(items)
+
     suspend fun deleteTransactionFees() = repository.deleteTransactionFees()
 
     suspend fun getBrandSession(sessionId: String) =

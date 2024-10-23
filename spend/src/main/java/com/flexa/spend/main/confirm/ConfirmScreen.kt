@@ -3,6 +3,7 @@ package com.flexa.spend.main.confirm
 import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColor
 import androidx.compose.animation.animateContentSize
@@ -11,6 +12,7 @@ import androidx.compose.animation.core.animateDp
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -68,6 +70,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -94,7 +97,6 @@ import com.flexa.core.view.FlexaLogo
 import com.flexa.spend.MockFactory
 import com.flexa.spend.R
 import com.flexa.spend.Spend
-import com.flexa.spend.Transaction
 import com.flexa.spend.domain.FakeInteractor
 import com.flexa.spend.getAmount
 import com.flexa.spend.getAmountLabel
@@ -104,13 +106,16 @@ import com.flexa.spend.logo
 import com.flexa.spend.main.assets.AssetsViewModel
 import com.flexa.spend.main.ui_utils.BalanceRestrictionsDialog
 import com.flexa.spend.main.ui_utils.SpendAsyncImage
+import com.flexa.spend.shiftHue
+import com.flexa.spend.toColor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
 
 @Composable
-fun ConfirmCard(
+internal fun ConfirmCard(
     modifier: Modifier = Modifier,
     shape: Shape = RoundedCornerShape(24.dp),
     elevation: Dp = 0.dp,
@@ -118,7 +123,6 @@ fun ConfirmCard(
     viewModel: ConfirmViewModel,
     assetsViewModel: AssetsViewModel,
     onClose: () -> Unit,
-    onTransaction: (Transaction) -> Unit = {},
     toDetails: (StateFlow<CommerceSession?>) -> Unit,
     toAssets: () -> Unit = {},
 ) {
@@ -126,21 +130,25 @@ fun ConfirmCard(
     val session by viewModel.session.collectAsStateWithLifecycle()
     val previewMode = LocalInspectionMode.current
 
+    val completed by viewModel.completed.collectAsStateWithLifecycle()
+
+    val payProgress by viewModel.payProgress.collectAsStateWithLifecycle()
+    val patchProgress by viewModel.patchProgress.collectAsStateWithLifecycle()
+    val buttonsBlocked by remember {
+        derivedStateOf { payProgress || patchProgress }
+    }
+
     BackHandler { onClose() }
 
     LaunchedEffect(viewModel) {
         launch {
-            viewModel.transaction.collect { transaction ->
-                transaction?.let {
-                    try {
-                        onTransaction.invoke(it)
-                    } finally {
-                        Spend.onTransactionRequest?.invoke(
-                            Result.success(it)
-                        )
-                    }
+            viewModel.transaction
+                .filter { it != null }
+                .collect { transaction ->
+                    Spend.onTransactionRequest?.invoke(
+                        Result.success(transaction!!)
+                    )
                 }
-            }
         }
     }
 
@@ -150,7 +158,11 @@ fun ConfirmCard(
         elevation = CardDefaults.cardElevation(elevation),
         colors = CardDefaults.cardColors(containerColor = containerColor)
     ) {
-
+        val color by remember {
+            derivedStateOf {
+                session?.data?.brand?.color?.toColor() ?: Color.Magenta
+            }
+        }
         Row(// Toolbar
             modifier = Modifier
                 .fillMaxWidth()
@@ -162,7 +174,7 @@ fun ConfirmCard(
                 FlexaLogo(
                     modifier = Modifier.size(22.dp),
                     shape = RoundedCornerShape(3.dp),
-                    colors = listOf(Color.White, palette.primary)
+                    colors = listOf(Color.White, color, color.shiftHue(10f))
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
@@ -175,14 +187,20 @@ fun ConfirmCard(
                 )
             }
             Row {
-                IconButton(onClick = {
-                    toDetails(viewModel.session)
-                }) {
-                    Icon(
-                        imageVector = Icons.Filled.MoreVert,
-                        contentDescription = null,
-                        tint = palette.onSurface
-                    )
+                AnimatedVisibility(
+                    !patchProgress,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    IconButton(onClick = {
+                        toDetails(viewModel.session)
+                    }) {
+                        Icon(
+                            imageVector = Icons.Filled.MoreVert,
+                            contentDescription = null,
+                            tint = palette.onSurface
+                        )
+                    }
                 }
                 IconButton(onClick = { onClose() }) {
                     Icon(
@@ -278,7 +296,7 @@ fun ConfirmCard(
             Spacer(modifier = Modifier.height(24.dp))
             androidx.compose.animation.AnimatedVisibility(
                 modifier = Modifier,
-                visible = !viewModel.completed,
+                visible = !completed,
                 exit = shrinkVertically() + fadeOut(),
             ) {
                 val selectedAsset by if (!previewMode) Spend.selectedAsset.collectAsStateWithLifecycle()
@@ -330,7 +348,13 @@ fun ConfirmCard(
                         )
                     },
                     trailingContent = {
-                        IconButton(onClick = { toAssets() }) {
+                        IconButton(
+                            onClick = {
+                                viewModel.setPreviouslySelectedAsset(selectedAsset)
+                                toAssets()
+                            },
+                            enabled = !buttonsBlocked
+                        ) {
                             Icon(
                                 modifier = Modifier.size(22.dp),
                                 imageVector = Icons.Outlined.Edit,
@@ -342,14 +366,16 @@ fun ConfirmCard(
                 )
             }
             Spacer(modifier = Modifier.height(1.dp))
-            androidx.compose.animation.AnimatedVisibility(viewModel.payProgress) {
+            androidx.compose.animation.AnimatedVisibility(payProgress) {
                 LinearProgressIndicator(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 2.dp, end = 2.dp, top = .1.dp),
                 )
             }
             Spacer(modifier = Modifier.height(1.dp))
             val completeButtonHeight by remember { mutableIntStateOf(34) }
-            val transition = updateTransition(viewModel.completed, label = "complete button state")
+            val transition = updateTransition(completed, label = "complete button state")
             val topRadius by transition.animateDp(label = "topRadius",
                 transitionSpec = { tween(500) }
             ) { state ->
@@ -367,21 +393,6 @@ fun ConfirmCard(
                 transitionSpec = { tween(500) }) { state ->
                 if (!state) maxWidth else 100.dp
             }
-            val buttonColor1 by transition.animateColor(label = "buttonColor1") { state ->
-                if (!state) Color(0xFF006CFF) else Color(0xFF8ABCFF)
-            }
-            val buttonColor2 by transition.animateColor(label = "buttonColor1") { state ->
-                if (!state) Color(0xFF2A00FF) else Color(0xFFBEB2FF)
-            }
-            val buttonColor3 by transition.animateColor(label = "buttonColor1") { state ->
-                if (!state) Color(0xFF7800FF) else Color(0xFFF8D0FF)
-            }
-            val textColor1 by transition.animateColor(label = "textColor1") { state ->
-                if (!state) Color.White else Color(0xFF2A00FF)
-            }
-            val textColor2 by transition.animateColor(label = "textColor1") { state ->
-                if (!state) Color.White else Color(0xFF7800FF)
-            }
             val bottomPadding by transition.animateDp(label = "bottomPadding",
                 transitionSpec = { tween(500) }) { state ->
                 if (!state) 0.dp else (42 - 18).dp
@@ -397,7 +408,7 @@ fun ConfirmCard(
                         viewModel = assetsViewModel
                     ) { viewModel.showBalanceRestrictions(false) }
                 }
-                val selectedAsset by assetsViewModel.selectedAssetWithBundles.collectAsStateWithLifecycle()
+                val selectedAsset by assetsViewModel.selectedAssetBundle.collectAsStateWithLifecycle()
                 val hasBalanceRestrictions by remember {
                     derivedStateOf { selectedAsset?.asset?.hasBalanceRestrictions() ?: false }
                 }
@@ -426,11 +437,20 @@ fun ConfirmCard(
                 }
                 val canProceed by remember(session) {
                     derivedStateOf {
-                        !viewModel.buttonsBlocked && enough
+                        !buttonsBlocked && enough
                     }
                 }
                 val wrongAvailableState by remember {
                     derivedStateOf { !availableBalanceEnough && hasBalanceRestrictions && totalBalanceEnough }
+                }
+                val buttonColor1 by transition.animateColor(label = "buttonColor1") { state ->
+                    if (!state) color.shiftHue(10F) else Color(0xFF8ABCFF)
+                }
+                val buttonColor2 by transition.animateColor(label = "buttonColor1") { state ->
+                    if (!state) color else Color(0xFFBEB2FF)
+                }
+                val buttonColor3 by transition.animateColor(label = "buttonColor1") { state ->
+                    if (!state) color.shiftHue(-10F) else Color(0xFFF8D0FF)
                 }
                 TextButton(
                     modifier = Modifier
@@ -468,9 +488,9 @@ fun ConfirmCard(
                     val payButtonText by remember {
                         derivedStateOf {
                             when {
-                                viewModel.completed -> context.resources.getString(R.string.done)
-                                viewModel.payProgress -> context.resources.getString(R.string.processing) + "..."
-                                viewModel.patchProgress -> context.resources.getString(R.string.updating) + "..."
+                                completed -> context.resources.getString(R.string.done)
+                                payProgress -> context.resources.getString(R.string.processing) + "..."
+                                patchProgress -> context.resources.getString(R.string.updating) + "..."
                                 !totalBalanceEnough -> "Not enough ${selectedAsset?.asset?.assetData?.displayName}"
                                 !availableBalanceEnough -> context.getString(R.string.balance_not_yet_available)
                                 else -> context.resources.getString(R.string.pay_now)
@@ -479,7 +499,7 @@ fun ConfirmCard(
                     }
                     androidx.compose.animation.AnimatedVisibility(
                         modifier = Modifier,
-                        visible = viewModel.completed,
+                        visible = completed,
                         enter = scaleIn(initialScale = 1.2F) + fadeIn(),
                     ) {
                         ConfirmDone(modifier = Modifier)
@@ -500,14 +520,35 @@ fun ConfirmCard(
                         }, label = "Text"
                     ) { state ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = state,
-                                style = TextStyle(
-                                    brush = Brush.linearGradient(listOf(textColor1, textColor2)),
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.W500,
+                            val textColor1 by transition.animateColor(label = "textColor1") { state ->
+                                if (!state) Color.White else Color(0xFF2A00FF)
+                            }
+                            val textColor2 by transition.animateColor(label = "textColor1") { state ->
+                                if (!state) Color.White else Color(0xFF7800FF)
+                            }
+                            Box {
+                                Text(
+                                    text = state,
+                                    style = TextStyle(
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.W500,
+                                        shadow = Shadow(blurRadius = .5f, color = Color.Black)
+                                    )
                                 )
-                            )
+                                Text(
+                                    text = state,
+                                    style = TextStyle(
+                                        brush = Brush.linearGradient(
+                                            listOf(
+                                                textColor1,
+                                                textColor2
+                                            )
+                                        ),
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.W500,
+                                    )
+                                )
+                            }
                             androidx.compose.animation.AnimatedVisibility(
                                 modifier = Modifier.padding(4.dp),
                                 visible = wrongAvailableState
@@ -564,7 +605,7 @@ private fun ConfirmDialogPreview() {
             elevation = 8.dp,
             viewModel = viewModel(initializer = {
                 ConfirmViewModel(
-                    session = MutableStateFlow(MockFactory.getCommerceSession()),
+                    session = MutableStateFlow(MockFactory.getCommerceSession("13.05")),
                     interactor = FakeInteractor()
                 )
             }),

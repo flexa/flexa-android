@@ -9,18 +9,25 @@ import android.util.Log
 import com.flexa.BuildConfig
 import com.flexa.R
 import com.flexa.core.data.data.AppInfoProvider
+import com.flexa.core.data.rest.RestRepository.Companion.json
 import com.flexa.core.entity.Account
 import com.flexa.core.entity.AssetKey
 import com.flexa.core.entity.AvailableAsset
 import com.flexa.core.entity.BalanceBundle
 import com.flexa.core.entity.ExchangeRate
 import com.flexa.core.entity.OneTimeKey
-import com.flexa.core.shared.AppAccount
+import com.flexa.core.entity.error.ApiException
+import com.flexa.core.shared.AssetAccount
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
+import okhttp3.Response
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.net.URLEncoder
@@ -58,7 +65,7 @@ fun Instant.minutesBetween(timestamp: Long): Long {
     )
 }
 
-fun List<AppAccount>.toJsonObject(): JsonObject =
+fun List<AssetAccount>.toJsonObject(): JsonObject =
     buildJsonObject {
         putJsonArray("data") {
             forEach { acc ->
@@ -76,9 +83,9 @@ fun List<com.flexa.core.entity.AppAccount>.getAssetIds(): List<String> {
         .map { it.assetId }.toSet().toList()
 }
 
-fun AppAccount.toJsonObject(): JsonObject =
+fun AssetAccount.toJsonObject(): JsonObject =
     buildJsonObject {
-        put("account_id", accountId)
+        put("account_id", assetAccountHash)
         displayName?.let { put("display_name", it) }
         icon?.let { put("icon", it) }
         if (availableAssets.isNotEmpty()) {
@@ -105,20 +112,37 @@ fun String.toDate(dateFormat: String = "EEE, dd MMM yyyy HH:mm:ss z"): Date =
         Date()
     }
 
+@Throws(SerializationException::class, IllegalArgumentException::class, )
+internal fun Response.toApiException(): ApiException {
+    val raw = body?.string().toString()
+    val traceId = header("client-trace-id", null) ?: ""
+    val jsonResponse = json.parseToJsonElement(raw)
+    val errorObject = jsonResponse.jsonObject["error"]
+    val code =
+        errorObject?.jsonObject?.get("code")?.jsonPrimitive?.contentOrNull?.toIntOrNull()
+    val message =
+        errorObject?.jsonObject?.get("message")?.jsonPrimitive?.contentOrNull
+    val type =
+        errorObject?.jsonObject?.get("type")?.jsonPrimitive?.contentOrNull
+    return ApiException(
+        code = code, message = message, type = type, traceId = traceId
+    )
+}
+
 fun AvailableAsset.zeroValue(): Boolean {
     return this.balanceBundle?.total?.let { it == BigDecimal.ZERO } ?: true
 }
 
 fun ExchangeRate?.toBalanceBundle(
-    asset: com.flexa.core.shared.AvailableAsset?
+    asset: com.flexa.core.shared.AvailableAsset?,
 ): BalanceBundle? {
     return this?.run {
         val scale = 2
         val roundingMode = RoundingMode.DOWN
         val balance = BigDecimal.valueOf(asset?.balance ?: 0.0)
         val balanceAvailable = asset?.balanceAvailable?.run { BigDecimal.valueOf(this) }
-        val total = (price?.toBigDecimalOrNull() ?: BigDecimal.ZERO).multiply(balance)
-            .setScale(scale, roundingMode)
+        val ratePrice = price?.toBigDecimalOrNull() ?: BigDecimal.ZERO
+        val total = ratePrice.multiply(balance).setScale(scale, roundingMode)
         val available = balanceAvailable?.run {
             (price?.toBigDecimalOrNull() ?: BigDecimal.ZERO).multiply(this)
                 .setScale(scale, roundingMode)
@@ -126,11 +150,12 @@ fun ExchangeRate?.toBalanceBundle(
         val currencySign = unitOfAccount?.toCurrencySign()
         val totalLabel = currencySign + total
         val availableLabel = available?.run { currencySign + this }
+
         BalanceBundle(
             total = total,
             available = available,
             totalLabel = totalLabel,
-            availableLabel = availableLabel
+            availableLabel = availableLabel,
         )
     }
 }

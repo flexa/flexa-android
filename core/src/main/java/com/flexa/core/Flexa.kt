@@ -11,7 +11,7 @@ import com.flexa.core.data.storage.SecuredPreferences
 import com.flexa.core.domain.db.DbInteractor
 import com.flexa.core.domain.rest.RestInteractor
 import com.flexa.core.entity.error.SDKInitializationError
-import com.flexa.core.shared.AppAccount
+import com.flexa.core.shared.AssetAccount
 import com.flexa.core.shared.FlexaClientConfiguration
 import com.flexa.core.shared.FlexaConstants
 import com.flexa.core.shared.SelectedAsset
@@ -21,6 +21,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.util.UUID
 
@@ -42,11 +43,13 @@ object Flexa {
                 throw SDKInitializationError()
             return context!!
         }
+    internal val _canSpend = MutableStateFlow(false)
+    val canSpend = _canSpend.asStateFlow()
     private val _selectedAsset = MutableStateFlow<SelectedAsset?>(null)
     val selectedAsset: StateFlow<SelectedAsset?> = _selectedAsset
     internal var themeConfig = FlexaTheme()
-    private val _appAccounts = MutableStateFlow<List<AppAccount>>(emptyList())
-    val appAccounts: StateFlow<List<AppAccount>> = _appAccounts
+    private val _appAccounts = MutableStateFlow<List<AssetAccount>>(emptyList())
+    val appAccounts: StateFlow<List<AssetAccount>> = _appAccounts
     private val serializerProvider = SerializerProvider()
     private val preferences by lazy {
         SecuredPreferences(
@@ -73,7 +76,7 @@ object Flexa {
     fun init(config: FlexaClientConfiguration) {
         context = config.context.applicationContext
         themeConfig = config.theme
-        setAppAccounts(config.appAccounts)
+        setAppAccounts(config.assetAccounts)
         setUniqueIdentifier()
         saveApiKeys(
             publishableKey = config.publishableKey,
@@ -81,8 +84,8 @@ object Flexa {
         )
     }
 
-    fun updateAppAccounts(appAccounts: ArrayList<AppAccount>) {
-        setAppAccounts(appAccounts)
+    fun updateAssetAccounts(assetAccounts: ArrayList<AssetAccount>) {
+        setAppAccounts(assetAccounts)
     }
 
     fun selectedAsset(appAccountId: String, assetId: String) {
@@ -92,13 +95,14 @@ object Flexa {
             val acc = accounts?.firstOrNull { it.accountId == appAccountId }
             val asset = acc?.availableAssets?.firstOrNull { it.assetId == assetId }
 
-            val localAccounts = appAccounts.value.firstOrNull { acc?.accountId == it.accountId }
+            val localAccounts = appAccounts.value.firstOrNull { acc?.accountId == it.assetAccountHash }
             val localAsset =
                 localAccounts?.availableAssets?.firstOrNull { it.assetId == asset?.assetId }
 
             val dbAsset = dbInteractor.getAssetsById(assetId).firstOrNull()
             val exchangeRate = dbInteractor.getExchangeRateById(assetId)
-            val oneTimeKey = dbInteractor.getOneTimeKeyByAssetId(assetId)
+            val oneTimeKey = dbInteractor.getOneTimeKeyByAssetId(assetId) ?:
+                dbAsset?.livemode?.run { dbInteractor.getOneTimeKeyByLiveMode(this) }
             val assetKey = oneTimeKey?.toAssetKey()
             val assetWithData = asset?.copy(
                 assetData = dbAsset,
@@ -118,7 +122,7 @@ object Flexa {
         }
     }
 
-    private fun setAppAccounts(appAccounts: List<AppAccount>?) {
+    private fun setAppAccounts(appAccounts: List<AssetAccount>?) {
         scope.launch {
             appAccounts?.let { _appAccounts.emit(it) }
         }

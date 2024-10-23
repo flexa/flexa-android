@@ -13,8 +13,14 @@ internal interface OneTimeKeyDao {
     @Query("SELECT * FROM one_time_key")
     fun getAll(): List<OneTimeKey>
 
+    @Query("SELECT COUNT(asset) FROM one_time_key WHERE asset IN (:ids)")
+    fun countIds(ids: List<String>): Int
+
     @Query("SELECT * FROM one_time_key WHERE asset = :id LIMIT 1")
     fun getByAssetId(id: String): OneTimeKey?
+
+    @Query("SELECT * FROM one_time_key WHERE livemode = :livemode LIMIT 1")
+    fun getByLiveMode(livemode: Boolean): OneTimeKey?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertAll(items: List<OneTimeKey>)

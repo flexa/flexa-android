@@ -90,6 +90,7 @@ import com.flexa.spend.Spend
 import com.flexa.spend.TokenState
 import com.flexa.spend.domain.CommerceSessionWorker
 import com.flexa.spend.domain.FakeInteractor
+import com.flexa.spend.isCompleted
 import com.flexa.spend.main.assets.AssetDetailViewModel
 import com.flexa.spend.main.assets.AssetDetailsScreen
 import com.flexa.spend.main.assets.AssetInfoSheetHeader
@@ -193,7 +194,7 @@ fun SpendScreen(
                                 CommerceSessionWorker.execute(context, id)
                         }
                         viewModel.openLegacyCard.value = false
-                        viewModel.selectedBrand.value = null
+                        viewModel.setBrand(null)
                     },
                 )
                 Spacer(modifier = Modifier.height(26.dp))
@@ -259,18 +260,21 @@ fun SpendScreen(
             }
 
             val interactionSource = remember { MutableInteractionSource() }
+            val close = {
+                viewModel.deleteCommerceSessionData()
+                commerceSession?.data?.let { session ->
+                    if (!session.isCompleted()) {
+                        viewModel.closeCommerceSession(context, session.id)
+                    }
+                }
+            }
             Column(
                 modifier = Modifier
                     .fillMaxHeight()
                     .clickable(
                         interactionSource = interactionSource,
                         indication = null
-                    ) {
-                        viewModel.deleteCommerceSessionData()
-                        commerceSession?.data?.id?.let { id ->
-                            viewModel.closeCommerceSession(context, id)
-                        }
-                    },
+                    ) { close() },
             ) {
                 Spacer(
                     modifier = Modifier
@@ -286,20 +290,10 @@ fun SpendScreen(
                             interactionSource = interactionSource,
                             indication = null,
                             onClick = { }
-                        )
-                        .padding(horizontal = 26.dp),
+                        ).padding(horizontal = 26.dp),
                     viewModel = vm,
                     assetsViewModel = assetsViewModel,
-                    onClose = {
-                        viewModel.deleteCommerceSessionData()
-                        commerceSession?.data?.id?.let { id ->
-                            viewModel.closeCommerceSession(context, id)
-                        }
-                    },
-                    onTransaction = {
-                        viewModel.deleteCommerceSessionData()
-                        toBack()
-                    },
+                    onClose = { close() },
                     toDetails = {
                         openBottomSheet(SheetScreen.PaymentDetails(it))
                     },
@@ -446,14 +440,19 @@ fun SpendScreen(
                 },
                 toEdit = { toEdit.invoke() },
                 toInputAmount = { toInputAmount() },
-                toUrl = { url -> toUrl(url) }
+                toLinkRoute = { linkRoute ->
+                    when(linkRoute) {
+                        LinkRoute.Account -> { toManageAccount() }
+                        is LinkRoute.Url -> toUrl(linkRoute.url)
+                    }
+                }
             )
 
             if (showBottomSheet) {
                 val sheetState = rememberModalBottomSheetState(
-                    skipPartiallyExpanded = when {
-                        viewModel.sheetScreen == SheetScreen.PlacesToPay -> true
-                        viewModel.sheetScreen is SheetScreen.AssetDetails -> true
+                    skipPartiallyExpanded = when (viewModel.sheetScreen) {
+                        SheetScreen.PlacesToPay -> true
+                        is SheetScreen.AssetDetails -> true
                         else -> false
                     }
                 )
@@ -530,6 +529,7 @@ fun SpendScreen(
                             PaymentDetailsScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 sessionFlow = sessionFlow,
+                                assetsViewModel = assetsViewModel,
                                 toBack = { closeBottomSheet() },
                                 toLearnMore = { toUrl(context.getString(R.string.learn_more_link)) }
                             )

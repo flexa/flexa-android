@@ -99,4 +99,5 @@
     <string name="balance_restrictions_copy1">Your recent transaction is still mining. You can spend up to</string>
     <string name="balance_restrictions_copy2">now, or wait for your full balance to become available.</string>
     <string name="balance_not_yet_available">Balance Not Yet Available</string>
+    <string name="saving">Saving</string>
 </resources>

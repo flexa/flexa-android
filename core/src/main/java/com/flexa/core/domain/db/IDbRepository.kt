@@ -22,18 +22,22 @@ interface IDbRepository {
     suspend fun saveBrands(items: List<Brand>)
 
     suspend fun hasOutdatedExchangeRates(): Boolean
+    suspend fun containsAllExchangeRates(ids: List<String>): Boolean
     suspend fun getExchangeRates(): List<ExchangeRate>
     suspend fun getExchangeRateById(id: String): ExchangeRate?
     suspend fun saveExchangeRates(items: List<ExchangeRate>)
     suspend fun deleteExchangeRates()
 
     suspend fun hasOutdatedOneTimeKeys(): Boolean
+    suspend fun containsAllOneTimeKeys(ids: List<String>): Boolean
     suspend fun getOneTimeKeys(): List<OneTimeKey>
     suspend fun getOneTimeKeyByAssetId(id: String): OneTimeKey?
+    suspend fun getOneTimeKeyByLiveMode(livemode: Boolean): OneTimeKey?
     suspend fun saveOneTimeKeys(items: List<OneTimeKey>)
     suspend fun deleteOneTimeKeys()
 
     suspend fun getTransactionFees(): List<TransactionFee>
+    suspend fun getTransactionFeeByTransactionAssetId(id: String): TransactionFee?
     suspend fun getTransactionFeeByAssetId(id: String): TransactionFee?
     suspend fun saveTransactionFees(items: List<TransactionFee>)
     suspend fun deleteTransactionFees()

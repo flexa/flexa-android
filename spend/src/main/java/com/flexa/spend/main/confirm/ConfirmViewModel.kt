@@ -1,42 +1,53 @@
 package com.flexa.spend.main.confirm
 
-import android.util.Log
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flexa.core.entity.CommerceSession
+import com.flexa.core.entity.error.ApiException
 import com.flexa.core.shared.ApiErrorHandler
+import com.flexa.core.shared.FlexaConstants.Companion.RETRY_COUNT
+import com.flexa.core.shared.FlexaConstants.Companion.RETRY_DELAY
 import com.flexa.core.shared.SelectedAsset
 import com.flexa.spend.Spend
 import com.flexa.spend.Transaction
 import com.flexa.spend.domain.ISpendInteractor
+import com.flexa.spend.isCompleted
+import com.flexa.spend.toBrandSession
 import com.flexa.spend.toTransaction
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.launch
 
-class ConfirmViewModel(
+internal class ConfirmViewModel(
     internal val session: StateFlow<CommerceSession?>,
     private val interactor: ISpendInteractor = Spend.interactor
 ) : ViewModel() {
 
-    var payProgress by mutableStateOf(false)
-    val buttonsBlocked by derivedStateOf { payProgress || patchProgress }
-    var completed by mutableStateOf(false)
-    val errorHandler = ApiErrorHandler()
-    val transaction = MutableStateFlow<Transaction?>(null)
-    var patchProgress by mutableStateOf(false)
-    private val _showBalanceRestrictions = MutableStateFlow<Boolean>(false)
+    private val _payProgress = MutableStateFlow(false)
+    var payProgress = _payProgress.asStateFlow()
+
+    private val _patchProgress = MutableStateFlow(false)
+    val patchProgress: StateFlow<Boolean> = _patchProgress
+
+    private var _completed = MutableStateFlow(false)
+    var completed = _completed.asStateFlow()
+
+    private val _transaction = MutableStateFlow<Transaction?>(null)
+    val transaction = _transaction.asStateFlow()
+
+    private val _showBalanceRestrictions = MutableStateFlow(false)
     val showBalanceRestrictions = _showBalanceRestrictions.asStateFlow()
-    private var watchDefaultAssetJob: Job? = null
-    private var intentEventId: String = ""
+
+    val errorHandler = ApiErrorHandler()
 
     init {
         listenCommerceSession()
@@ -49,10 +60,8 @@ class ConfirmViewModel(
     }
 
     fun clear() {
-        watchDefaultAssetJob?.cancel()
-        transaction.value = null
-        intentEventId = ""
-        completed = false
+        _transaction.value = null
+        _completed.value = false
     }
 
     fun showBalanceRestrictions(show: Boolean) {
@@ -62,22 +71,39 @@ class ConfirmViewModel(
     fun payNow() {
         viewModelScope.launch {
             session.value?.let { commerceSession ->
-                payProgress = true
-                delay(1000)
-                val t = commerceSession.toTransaction()
-                payProgress = false
-                completed = true
-                delay(2000)
-                transaction.value = t
+                saveBrandSession(commerceSession.data)
+                _payProgress.value = true
+                val transaction = commerceSession.toTransaction()
+                _transaction.value = transaction
             }
         }
     }
 
+    private var previousSelectedAsset: SelectedAsset? = null
+    fun setPreviouslySelectedAsset(selectedAsset: SelectedAsset? = null) {
+        previousSelectedAsset = selectedAsset
+    }
+
     private fun listenCommerceSession() {
         viewModelScope.launch {
-            session.collect {
-                patchProgress = false
-            }
+            session
+                .filter { it?.data != null }
+                .map { it?.data!! }
+                .filter { session -> !isLegacy(session) }
+                .collect { session ->
+                    when {
+                        session.isCompleted() -> {
+                            _payProgress.value = false
+                            _completed.value = true
+                        }
+
+                        isInitiated(session) -> {
+                            _payProgress.value = true
+                        }
+
+                        else -> { _patchProgress.value = false }
+                    }
+                }
         }
     }
 
@@ -86,28 +112,60 @@ class ConfirmViewModel(
             Spend.selectedAsset
                 .drop(1)
                 .collect {
-                it?.let { asset ->
-                    session.value?.data?.id?.let { sessionId ->
-                        Log.d(
-                            null,
-                            "patchCommerceSession: session:${session.value?.id} asset:${asset.asset.assetId}"
-                        )
-                        patchCommerceSession(sessionId, asset)
+                    it?.let { asset ->
+                        session.value?.data?.id?.let { sessionId ->
+                            patchCommerceSession(sessionId, asset)
+                        }
                     }
                 }
-            }
         }
     }
 
+    private var rollBackPatch = false
     private fun patchCommerceSession(commerceSessionId: String, selectedAsset: SelectedAsset) {
-        patchProgress = true
         viewModelScope.launch {
-            runCatching {
-                interactor.patchCommerceSession(
-                    commerceSessionId, selectedAsset.asset.assetId
+            flow {
+                emit(
+                    interactor.patchCommerceSession(
+                        commerceSessionId, selectedAsset.asset.assetId
+                    )
                 )
-            }.onFailure { patchProgress = false }
-                .onSuccess { patchProgress = false }
+            }.retryWhen { _, attempt ->
+                delay(RETRY_DELAY)
+                attempt < RETRY_COUNT
+            }
+                .onStart { _patchProgress.value = true }
+                .catch { ex ->
+                    rollBackPatch = true
+                    _patchProgress.value = false
+                    previousSelectedAsset?.let { sa -> Spend.selectedAsset(sa) }
+                    when (ex) {
+                        is ApiException -> errorHandler.setApiError(ex)
+                        else -> errorHandler.setError(ex)
+                    }
+                }
+                .collect {
+                    if (rollBackPatch) _patchProgress.value = false
+                    rollBackPatch = false
+                }
         }
+    }
+
+    private suspend fun isLegacy(
+        commerceSession: CommerceSession.Data?
+    ): Boolean {
+        val brandSession = interactor.getBrandSession(commerceSession?.id ?: "")
+        return brandSession?.legacy == true
+    }
+
+    private suspend fun isInitiated(
+        commerceSession: CommerceSession.Data?
+    ): Boolean {
+        val brandSession = interactor.getBrandSession(commerceSession?.id ?: "")
+        return brandSession != null
+    }
+
+    private suspend fun saveBrandSession(session: CommerceSession.Data?) {
+        session?.toBrandSession(legacy = false)?.let { interactor.saveBrandSession(it) }
     }
 }

@@ -2,6 +2,7 @@ package com.flexa.spend.main.keypad
 
 import android.content.res.Configuration
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -31,7 +32,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,21 +43,26 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.flexa.core.shared.Promotion
 import com.flexa.core.shared.SelectedAsset
 import com.flexa.core.theme.FlexaTheme
 import com.flexa.spend.MockFactory
 import com.flexa.spend.R
 import com.flexa.spend.domain.FakeInteractor
 import com.flexa.spend.getAmount
+import com.flexa.spend.getAmountWithDiscount
 import com.flexa.spend.getAssetAmount
 import com.flexa.spend.getByAssetId
 import com.flexa.spend.getCurrencySign
+import com.flexa.spend.getPromotion
 import com.flexa.spend.main.assets.AssetInfoFooter
 import com.flexa.spend.main.assets.AssetsViewModel
+import com.flexa.spend.positive
 import java.math.BigDecimal
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -66,19 +71,14 @@ internal fun AmountDetailsScreen(
     modifier: Modifier = Modifier,
     assetBundle: SelectedAsset,
     amount: String,
+    promotions: List<Promotion>? = null,
     viewModel: AmountDetailViewModel,
     assetsViewModel: AssetsViewModel,
     toLearnMore: () -> Unit,
 ) {
     val color = BottomSheetDefaults.ContainerColor
     Column(modifier = modifier.background(color)) {
-        val asset by remember {
-            derivedStateOf {
-                assetsViewModel.assets.firstOrNull {
-                    it.accountId == assetBundle.accountId && it.asset.assetId == assetBundle.asset.assetId
-                }
-            }
-        }
+        val asset by assetsViewModel.selectedAssetBundle.collectAsStateWithLifecycle()
         val exchangeRates by viewModel.exchangeRates.collectAsStateWithLifecycle()
         val exchangeRate by remember {
             derivedStateOf {
@@ -88,14 +88,6 @@ internal fun AmountDetailsScreen(
         val palette = MaterialTheme.colorScheme
         val exchangeRateProgress by remember {
             derivedStateOf { exchangeRate == null }
-        }
-        val progress by viewModel.progress.collectAsStateWithLifecycle()
-        val error by viewModel.error.collectAsStateWithLifecycle()
-
-        LaunchedEffect(asset) {
-            asset?.let {
-                viewModel.assetAmount = AssetAndAmount(it, amount)
-            }
         }
 
         DisposableEffect(Unit) {
@@ -121,18 +113,45 @@ internal fun AmountDetailsScreen(
                 height = with(density) { it.size.height.toDp() }
             }
         ) {
+            val promotion by remember {
+                derivedStateOf {
+                    asset?.asset?.livemode?.run { promotions.getPromotion(this) }
+                }
+            }
+            val hasDiscount by remember {
+                derivedStateOf { promotion?.positive(amount) ?: false }
+            }
             ListItem(
                 colors = ListItemDefaults.colors(containerColor = color),
                 leadingContent = {
                     Icon(
                         modifier = Modifier.size(24.dp),
                         imageVector = Icons.Outlined.AccountBalanceWallet,
-                        contentDescription = null
+                        contentDescription = null,
                     )
+                },
+                overlineContent = {
+                    AnimatedVisibility(hasDiscount) {
+                        val text by remember {
+                            derivedStateOf { (exchangeRate?.getCurrencySign() ?: "") + amount }
+                        }
+                        Text(
+                            text = text,
+                            style = TextStyle(
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.W500,
+                                color = palette.outline,
+                                textDecoration = TextDecoration.LineThrough
+                            )
+                        )
+                    }
                 },
                 headlineContent = {
                     val text by remember {
-                        derivedStateOf { (exchangeRate?.getCurrencySign() ?: "") + amount }
+                        derivedStateOf {
+                            (exchangeRate?.getCurrencySign() ?: "") +
+                                    (promotion?.getAmountWithDiscount(amount) ?: amount)
+                        }
                     }
                     Text(
                         text = text,
@@ -212,8 +231,11 @@ internal fun AmountDetailsScreen(
                     )
                 },
                 headlineContent = {
+                    val feeLabel by remember {
+                        derivedStateOf { asset?.asset?.feeBundle?.label }
+                    }
                     AnimatedContent(
-                        targetState = asset?.asset?.fee?.equivalent,
+                        targetState = feeLabel,
                         transitionSpec = {
                             if ((targetState?.length ?: 0) < (initialState?.length ?: 0)) {
                                 (slideInVertically { width -> width } +
@@ -227,7 +249,7 @@ internal fun AmountDetailsScreen(
                         }, label = ""
                     ) { state ->
                         Text(
-                            text = state ?: stringResource(R.string.network_fee_cannot_be_loaded),
+                            text = state ?: "${stringResource(R.string.updating)}...",
                             style = TextStyle(
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.W400,
@@ -238,10 +260,7 @@ internal fun AmountDetailsScreen(
                 },
                 supportingContent = {
                     Text(
-                        text = if (progress)
-                            "${stringResource(id = R.string.updating)}..."
-                        else
-                            stringResource(id = R.string.network_fee),
+                        text = stringResource(id = R.string.network_fee),
                         style = TextStyle(
                             fontSize = 13.sp,
                             fontWeight = FontWeight.W400,
@@ -286,7 +305,19 @@ private fun AmountDetailsPreview() {
                 exchangeRates.value = MockFactory.getExchangeRates()
             },
             assetsViewModel = AssetsViewModel(FakeInteractor()),
-            amount = "5.23",
+            amount = "21.18",
+            promotions = listOf(
+                Promotion(
+                    id = "",
+                    amountOff = "20",
+                    percentOff = "90",
+                    livemode = false,
+                    restrictions = Promotion.Restrictions(
+                        minimumAmount = "5",
+                        maximumDiscount = "2"
+                    )
+                )
+            ),
             toLearnMore = {},
         )
     }

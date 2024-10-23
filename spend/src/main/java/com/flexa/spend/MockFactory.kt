@@ -2,7 +2,6 @@ package com.flexa.spend
 
 import com.flexa.core.entity.AppAccount
 import com.flexa.core.entity.AssetKey
-import com.flexa.core.entity.AssetValue
 import com.flexa.core.entity.AvailableAsset
 import com.flexa.core.entity.BalanceBundle
 import com.flexa.core.entity.CommerceSession
@@ -51,6 +50,7 @@ class MockFactory {
                 asset = AvailableAsset(
                     assetId = "eip155:1/slip44:60",
                     balance = "0.5",
+                    livemode = true,
                     assetData = Asset(
                         id = "eip155:1/slip44:60",
                         displayName = "ETH",
@@ -59,15 +59,11 @@ class MockFactory {
                     key = AssetKey(
                         prefix = "123", secret = "321", length = 3
                     ),
-                    value = AssetValue(
-                        "", "", "\$68.43 Available"
-                    ),
                     balanceBundle = getBalanceBundle()
                 )
             )
 
-        fun getCommerceSession(): CommerceSession {
-            val price = "32.15"
+        fun getCommerceSession(price: String = "32.15"): CommerceSession {
             val time = Instant.now().plusSeconds(60 * 30).epochSecond
             return json.decodeFromString<CommerceSession>(
                 """
@@ -222,8 +218,8 @@ class MockFactory {
                 "fee": {
                     "amount": "0.003",
                     "asset": "eip155:1/slip44:60",
-                    "equivalent": "${'$'}10.40",
                     "label": "0.003 ETH",
+                    "transaction_asset": "eip155:1/slip44:60",
                     "price": {
                         "amount": "0.000000015",
                         "label": "<1 gwei",
@@ -249,7 +245,7 @@ class MockFactory {
             )
         }
 
-        fun getMockBrand(): Brand {
+        fun getBrand(): Brand {
             return json.decodeFromString<Brand>(
                 """
                     {
@@ -279,7 +275,7 @@ class MockFactory {
         )
 
         fun getExchangeRate(): ExchangeRate = ExchangeRate(
-            asset = "",
+            asset = getMockSelectedAsset().asset.assetId,
             label = "\$2642.56",
             precision = 6,
             price = "2642.56",

@@ -10,7 +10,6 @@ import okhttp3.Request
 import okhttp3.Response
 import java.util.UUID
 
-
 internal class LoginInterceptor(
     private val tokenProvider: TokenProvider
 ) : Interceptor {
@@ -30,7 +29,7 @@ internal class LoginInterceptor(
                     "$appPackageName/$appVersion"
         HeadersBundle(
             appName = appName,
-            appVersion = appVersion,
+            version = appVersion,
             userAgent = userAgent
         )
     }
@@ -38,7 +37,7 @@ internal class LoginInterceptor(
     override fun intercept(chain: Interceptor.Chain): Response {
         val token = tokenProvider.getToken()
         val request = newRequestWithAccessToken(chain.request(), token)
-        var response = chain.proceed(request)
+        val response = chain.proceed(request)
         return response
     }
 
@@ -53,7 +52,7 @@ internal class LoginInterceptor(
         return request.newBuilder()
             .header("Accept", "application/vnd.flexa+json")
             .header("Flexa-App", headersBundle.appName)
-            .header("Flexa-Version", headersBundle.appVersion)
+            .header("Flexa-Version", headersBundle.version)
             .header("User-Agent", headersBundle.userAgent)
             .header("Content-Type", "application/json")
             .header("Authorization", "Basic $tokenBase64")

@@ -47,6 +47,10 @@ class DbRepository(
         return empty || outdated
     }
 
+    override suspend fun containsAllExchangeRates(ids: List<String>): Boolean {
+        val count = db.exchangeRateDao().countIds(ids)
+        return count == ids.size
+    }
 
     override suspend fun getExchangeRates(): List<ExchangeRate> =
         db.exchangeRateDao().getAll().map { it.toObject() }
@@ -63,11 +67,19 @@ class DbRepository(
         return empty || outdated
     }
 
+    override suspend fun containsAllOneTimeKeys(ids: List<String>): Boolean {
+        val count = db.oneTimeKeyDao().countIds(ids)
+        return count == ids.size
+    }
+
     override suspend fun getOneTimeKeys(): List<OneTimeKey> =
         db.oneTimeKeyDao().getAll().map { it.toObject() }
 
     override suspend fun getOneTimeKeyByAssetId(id: String): OneTimeKey? =
         db.oneTimeKeyDao().getByAssetId(id)?.run { toObject() }
+
+    override suspend fun getOneTimeKeyByLiveMode(livemode: Boolean): OneTimeKey? =
+        db.oneTimeKeyDao().getByLiveMode(livemode)?.run { toObject() }
 
     override suspend fun saveOneTimeKeys(items: List<OneTimeKey>) =
         db.oneTimeKeyDao().insertAll(items.map { it.toDao() })
@@ -78,8 +90,11 @@ class DbRepository(
     override suspend fun getTransactionFees(): List<TransactionFee> =
         db.transactionFeeDao().getAll().map { it.toObject() }
 
+    override suspend fun getTransactionFeeByTransactionAssetId(id: String): TransactionFee? =
+        db.transactionFeeDao().getByTransactionAssetID(id)?.run { toObject() }
+
     override suspend fun getTransactionFeeByAssetId(id: String): TransactionFee? =
-        db.transactionFeeDao().getByAssetId(id)?.run { toObject() }
+        db.transactionFeeDao().getByAssetID(id)?.run { toObject() }
 
     override suspend fun saveTransactionFees(items: List<TransactionFee>) =
         db.transactionFeeDao().insertAll(items.map { it.toDao() })

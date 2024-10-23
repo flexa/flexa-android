@@ -5,8 +5,8 @@ import com.flexa.core.entity.ExchangeRate
 import com.flexa.core.entity.PutAppAccountsResponse
 import com.flexa.core.entity.TokenPatch
 import com.flexa.core.entity.TokensResponse
-import com.flexa.core.shared.AppAccount
 import com.flexa.core.shared.Asset
+import com.flexa.core.shared.AssetAccount
 import com.flexa.core.shared.AssetsResponse
 import com.flexa.core.shared.Brand
 
@@ -80,7 +80,7 @@ internal class FakeInteractor : IIdentityInteractor {
         TODO("Not yet implemented")
     }
 
-    override suspend fun putAppAccounts(accounts: List<AppAccount>): PutAppAccountsResponse {
+    override suspend fun putAppAccounts(accounts: List<AssetAccount>): PutAppAccountsResponse {
         TODO("Not yet implemented")
     }
 
