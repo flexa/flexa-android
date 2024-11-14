@@ -99,7 +99,7 @@ internal class HeadersInterceptor(
 
     @Throws(OutOfMemoryError::class, SerializationException::class, IllegalArgumentException::class)
     private fun isRestricted(response: Response): Boolean {
-        val raw = response.body?.string().toString()
+        val raw = response.peekBody(Long.MAX_VALUE).string()
         val jsonResponse = json.parseToJsonElement(raw)
         val res = if ("error" in jsonResponse.jsonObject) {
             val errorObject = jsonResponse.jsonObject["error"]

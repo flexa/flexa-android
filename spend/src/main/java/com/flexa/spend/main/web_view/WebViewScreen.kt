@@ -3,7 +3,9 @@ package com.flexa.spend.main.web_view
 import android.annotation.SuppressLint
 import android.util.Xml.Encoding
 import android.view.ViewGroup
+import android.webkit.WebChromeClient
 import android.webkit.WebView
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -37,6 +39,7 @@ fun WebView(
 ) {
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
     val title = remember { mutableStateOf("") }
+    BackHandler { toBack() }
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
@@ -65,10 +68,16 @@ fun WebView(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT
                     )
+                    webChromeClient = object : WebChromeClient() {
+                        override fun onReceivedTitle(view: WebView?, t: String?) {
+                            super.onReceivedTitle(view, t)
+                            title.value = t ?: ""
+                        }
+                    }
                     webViewClient = object : WebViewClientCompat() {
                         override fun onPageFinished(view: WebView?, url: String?) {
-                            super.onPageFinished(view, url)
                             title.value = view?.title ?: ""
+                            super.onPageFinished(view, url)
                         }
                     }
                     settings.javaScriptEnabled = true

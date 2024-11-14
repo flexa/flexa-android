@@ -1,11 +1,11 @@
 package com.flexa.core.domain.rest
 
 import com.flexa.core.entity.Account
-import com.flexa.core.entity.CommerceSessionEvent
 import com.flexa.core.entity.ExchangeRate
 import com.flexa.core.entity.ExchangeRatesResponse
 import com.flexa.core.entity.OneTimeKey
 import com.flexa.core.entity.OneTimeKeyResponse
+import com.flexa.core.entity.SseEvent
 import com.flexa.core.entity.TokenPatch
 import com.flexa.core.entity.TokensResponse
 import com.flexa.core.entity.TransactionFee
@@ -58,7 +58,7 @@ class RestInteractor(
 
     suspend fun deleteNotification(id: String): Unit = repository.deleteNotification(id)
 
-    suspend fun listenEvents(lastEventId: String?): Flow<CommerceSessionEvent> =
+    suspend fun listenEvents(lastEventId: String?): Flow<SseEvent> =
         repository.listenEvents(lastEventId)
 
     suspend fun getBrands(legacyOnly: Boolean?, startingAfter: String?) =
@@ -83,6 +83,9 @@ class RestInteractor(
     suspend fun patchCommerceSession(
         commerceSessionId: String, paymentAssetId: String
     ) = repository.patchCommerceSession(commerceSessionId, paymentAssetId)
+
+    suspend fun approveCommerceSession(commerceSessionId: String) =
+        repository.approveCommerceSession(commerceSessionId)
 
     suspend fun getCommerceSession(sessionId: String) =
         repository.getCommerceSession(sessionId)

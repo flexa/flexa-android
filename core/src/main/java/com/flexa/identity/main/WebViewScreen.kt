@@ -3,6 +3,7 @@ package com.flexa.identity.main
 import android.annotation.SuppressLint
 import android.util.Xml.Encoding
 import android.view.ViewGroup
+import android.webkit.WebChromeClient
 import android.webkit.WebView
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -69,10 +70,16 @@ fun WebView(
                             ViewGroup.LayoutParams.MATCH_PARENT,
                             ViewGroup.LayoutParams.MATCH_PARENT
                         )
+                        webChromeClient = object : WebChromeClient() {
+                            override fun onReceivedTitle(view: WebView?, t: String?) {
+                                super.onReceivedTitle(view, t)
+                                title.value = t ?: ""
+                            }
+                        }
                         webViewClient = object : WebViewClientCompat() {
                             override fun onPageFinished(view: WebView?, url: String?) {
-                                super.onPageFinished(view, url)
                                 title.value = view?.title ?: ""
+                                super.onPageFinished(view, url)
                             }
                         }
                         settings.javaScriptEnabled = true

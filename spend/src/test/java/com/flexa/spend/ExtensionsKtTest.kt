@@ -1,6 +1,7 @@
 package com.flexa.spend
 
 import com.flexa.core.entity.BalanceBundle
+import com.flexa.core.entity.CommerceSession
 import com.flexa.core.entity.ExchangeRate
 import com.flexa.core.shared.Promotion
 import com.flexa.core.toBalanceBundle
@@ -14,6 +15,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.math.BigDecimal
 import java.time.Instant
+import java.util.UUID
 
 @Config(sdk = [28])
 @RunWith(RobolectricTestRunner::class)
@@ -129,7 +131,8 @@ class ExtensionsKtTest {
             ExchangeRate(asset = "3", expiresAt = baseTimestamp.plusSeconds(17L).epochSecond),
         ).map { it.expiresAt }
         val additionalTimeMillis = 2000L
-        val res = exchangeRates.getExpireTimeMills(deviceTimestamp, plusMillis = additionalTimeMillis)
+        val res =
+            exchangeRates.getExpireTimeMills(deviceTimestamp, plusMillis = additionalTimeMillis)
         assertEquals(additionalTimeMillis + 17L * 1000, res)
     }
 
@@ -267,5 +270,80 @@ class ExtensionsKtTest {
         val data = "https://www.example.com"
         val needToModify = data.needToModify()
         assertFalse(needToModify)
+    }
+
+    @Test
+    fun `recognize valid session with transaction`() {
+        val session = CommerceSession.Data(
+            id = UUID.randomUUID().toString(),
+            status = "requires_transaction",
+            transactions = listOf(
+                CommerceSession.Data.Transaction(
+                    expiresAt = Instant.now().plusSeconds(10).epochSecond,
+                    status = "requested"
+                )
+            )
+        )
+        assertTrue(session.isValid())
+    }
+
+    @Test
+    fun `recognize valid session with credit`() {
+        val session = CommerceSession.Data(
+            id = UUID.randomUUID().toString(),
+            status = "requires_approval",
+            credits = listOf(
+                CommerceSession.Data.Credit(
+
+                )
+            ),
+        )
+        assertTrue(session.isValid())
+    }
+
+    @Test
+    fun `recognize valid session with credit and transaction`() {
+        val session = CommerceSession.Data(
+            id = UUID.randomUUID().toString(),
+            status = "requires_transaction",
+            transactions = listOf(
+                CommerceSession.Data.Transaction(
+                    expiresAt = Instant.now().plusSeconds(10).epochSecond,
+                    status = "requested"
+                )
+            ),
+            credits = listOf(CommerceSession.Data.Credit()),
+        )
+        assertTrue(session.isValid())
+    }
+
+    @Test
+    fun `recognize not valid session`() {
+        val session = CommerceSession.Data(
+            id = UUID.randomUUID().toString(),
+            status = "completed",
+            transactions = emptyList(),
+            credits = emptyList(),
+        )
+        assertFalse(session.isValid())
+    }
+
+    @Test
+    fun `pick the most recent credit`() {
+        val credit1 = CommerceSession.Data.Credit(
+            created = Instant.now().plusMillis(5000).epochSecond
+        )
+        val credit2 = CommerceSession.Data.Credit(
+            created = Instant.now().plusMillis(5001).epochSecond
+        )
+        val session = CommerceSession.Data(
+            id = UUID.randomUUID().toString(),
+            status = "requires_transaction",
+            credits = listOf(
+                credit1, credit2
+            ),
+        )
+        val credit = session.credit()
+        assertEquals(credit2, credit)
     }
 }

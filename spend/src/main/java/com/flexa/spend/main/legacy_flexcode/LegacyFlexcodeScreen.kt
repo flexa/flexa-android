@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -252,7 +253,10 @@ fun LegacyFlexcode(
 @Composable
 fun LegacyFlexcodePreview() {
     FlexaTheme {
-        Box(contentAlignment = Alignment.BottomCenter) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.BottomCenter
+        ) {
             Column {
                 LegacyFlexcode(
                     modifier = Modifier

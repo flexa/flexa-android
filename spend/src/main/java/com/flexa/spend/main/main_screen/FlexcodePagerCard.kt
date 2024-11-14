@@ -59,6 +59,7 @@ fun FlexcodePagerCard(
     assetsSize: Int,
     asset: SelectedAsset?,
     viewModel: AssetsViewModel,
+    spendViewModel: SpendViewModel,
     toAssetInfo: (SelectedAsset) -> Unit
 ) {
     val radiusStart by remember(page, assetsSize) {
@@ -201,6 +202,7 @@ fun FlexcodePagerCard(
                     )
                 }
                 .animateContentSize(),
+            viewModel = spendViewModel,
             asset = asset?.asset
         ) { asset?.let(toAssetInfo) }
         Spacer(modifier = Modifier.height(10.dp))
@@ -220,6 +222,7 @@ fun FlexcodePagerCardPreview() {
             assetsSize = 1,
             asset = MockFactory.getMockSelectedAsset(),
             viewModel = AssetsViewModel(FakeInteractor()),
+            spendViewModel = SpendViewModel(FakeInteractor()),
             toAssetInfo = {}
         )
     }

@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
-import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -59,7 +58,10 @@ import com.flexa.spend.getAmountWithDiscount
 import com.flexa.spend.getAssetAmount
 import com.flexa.spend.getByAssetId
 import com.flexa.spend.getCurrencySign
+import com.flexa.spend.getFlexaBalance
 import com.flexa.spend.getPromotion
+import com.flexa.spend.main.assets.AccountBalance
+import com.flexa.spend.main.assets.AccountCoverageCard
 import com.flexa.spend.main.assets.AssetInfoFooter
 import com.flexa.spend.main.assets.AssetsViewModel
 import com.flexa.spend.positive
@@ -77,216 +79,200 @@ internal fun AmountDetailsScreen(
     toLearnMore: () -> Unit,
 ) {
     val color = BottomSheetDefaults.ContainerColor
-    Column(modifier = modifier.background(color)) {
-        val asset by assetsViewModel.selectedAssetBundle.collectAsStateWithLifecycle()
-        val exchangeRates by viewModel.exchangeRates.collectAsStateWithLifecycle()
-        val exchangeRate by remember {
-            derivedStateOf {
-                exchangeRates.getByAssetId(asset?.asset?.assetId ?: "")
-            }
-        }
-        val palette = MaterialTheme.colorScheme
-        val exchangeRateProgress by remember {
-            derivedStateOf { exchangeRate == null }
-        }
-
-        DisposableEffect(Unit) {
-            onDispose {
-                viewModel.percentJob?.cancel()
-            }
-        }
-        Text(
-            modifier = Modifier
-                .padding(start = 16.dp),
-            text = assetBundle.asset.assetData?.displayName ?: "",
-            style = TextStyle(
-                color = palette.onBackground,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium
-            )
-        )
-
-        var height by remember { mutableStateOf(200.dp) }
-        val density = LocalDensity.current
-        Column(
-            modifier = Modifier.onGloballyPositioned {
-                height = with(density) { it.size.height.toDp() }
-            }
-        ) {
-            val promotion by remember {
-                derivedStateOf {
-                    asset?.asset?.livemode?.run { promotions.getPromotion(this) }
-                }
-            }
-            val hasDiscount by remember {
-                derivedStateOf { promotion?.positive(amount) ?: false }
-            }
-            ListItem(
-                colors = ListItemDefaults.colors(containerColor = color),
-                leadingContent = {
-                    Icon(
-                        modifier = Modifier.size(24.dp),
-                        imageVector = Icons.Outlined.AccountBalanceWallet,
-                        contentDescription = null,
-                    )
-                },
-                overlineContent = {
-                    AnimatedVisibility(hasDiscount) {
-                        val text by remember {
-                            derivedStateOf { (exchangeRate?.getCurrencySign() ?: "") + amount }
-                        }
-                        Text(
-                            text = text,
-                            style = TextStyle(
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.W500,
-                                color = palette.outline,
-                                textDecoration = TextDecoration.LineThrough
-                            )
-                        )
+    val account by assetsViewModel.account.collectAsStateWithLifecycle()
+    val flexaBalance by remember { derivedStateOf { account.getFlexaBalance() } }
+    val residualAmount by remember {
+        derivedStateOf { amount.getAmount().subtract(flexaBalance).setScale(2) }
+    }
+    val showFlexaBalanceCoverage by remember {
+        derivedStateOf { residualAmount <= BigDecimal.ZERO }
+    }
+    AnimatedContent(
+        targetState = showFlexaBalanceCoverage, label = ""
+    ) { balanceCoverage ->
+        if (balanceCoverage) {
+            AccountCoverageCard(assetsViewModel)
+        } else {
+            Column(modifier = modifier.background(color)) {
+                val asset by assetsViewModel.selectedAssetBundle.collectAsStateWithLifecycle()
+                val exchangeRates by viewModel.exchangeRates.collectAsStateWithLifecycle()
+                val exchangeRate by remember {
+                    derivedStateOf {
+                        exchangeRates.getByAssetId(asset?.asset?.assetId ?: "")
                     }
-                },
-                headlineContent = {
-                    val text by remember {
+                }
+                val palette = MaterialTheme.colorScheme
+                val exchangeRateProgress by remember {
+                    derivedStateOf { exchangeRate == null }
+                }
+
+                DisposableEffect(Unit) {
+                    onDispose {
+                        viewModel.percentJob?.cancel()
+                    }
+                }
+                Text(
+                    modifier = Modifier
+                        .padding(start = 16.dp),
+                    text = assetBundle.asset.assetData?.displayName ?: "",
+                    style = TextStyle(
+                        color = palette.onBackground,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                )
+
+                var height by remember { mutableStateOf(200.dp) }
+                val density = LocalDensity.current
+                Column(
+                    modifier = Modifier.onGloballyPositioned {
+                        height = with(density) { it.size.height.toDp() }
+                    }
+                ) {
+                    val promotion by remember {
                         derivedStateOf {
-                            (exchangeRate?.getCurrencySign() ?: "") +
-                                    (promotion?.getAmountWithDiscount(amount) ?: amount)
+                            asset?.asset?.livemode?.run { promotions.getPromotion(this) }
                         }
                     }
-                    Text(
-                        text = text,
-                        style = TextStyle(
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.W400,
-                            color = palette.onBackground
-                        )
-                    )
-                },
-                supportingContent = {
-                    val text by remember {
-                        derivedStateOf {
-                            "${exchangeRate?.getAssetAmount(amount)} ${asset?.asset?.assetData?.displayName}"
-                        }
+                    val hasDiscount by remember {
+                        derivedStateOf { promotion?.positive(amount) ?: false }
                     }
-                    Text(
-                        text = text,
-                        style = TextStyle(
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.W400,
-                            color = palette.outline
-                        )
-                    )
-                }
-            )
-            ListItem(
-                colors = ListItemDefaults.colors(containerColor = color),
-                leadingContent = {
-                    Icon(
-                        modifier = Modifier.size(24.dp),
-                        imageVector = Icons.Outlined.SwapHoriz,
-                        contentDescription = null
-                    )
-                },
-                headlineContent = {
-                    val text by remember {
-                        derivedStateOf {
-                            "1 ${asset?.asset?.assetData?.symbol ?: ""} = ${exchangeRate?.getCurrencySign() ?: ""}${exchangeRate?.price ?: ""}"
-                        }
+                    AnimatedVisibility(flexaBalance > BigDecimal.ZERO) {
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
-                    AnimatedContent(
-                        targetState = exchangeRate?.price?.getAmount() ?: BigDecimal.ZERO,
-                        transitionSpec = {
-                            if (targetState < initialState) {
-                                (slideInVertically { width -> width } +
-                                        fadeIn()).togetherWith(slideOutVertically()
-                                { width -> -width } + fadeOut())
-                            } else {
-                                (slideInVertically { width -> -width } +
-                                        fadeIn()).togetherWith(slideOutVertically()
-                                { width -> width } + fadeOut())
-                            }.using(SizeTransform(clip = false))
-                        }, label = ""
-                    ) { label ->
-                        label
-                        Text(
-                            text = if (!exchangeRateProgress) text
-                            else "${stringResource(R.string.updating)}...",
-                            style = TextStyle(
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.W400,
-                                color = palette.onBackground
-                            )
-                        )
+                    AccountBalance(assetsViewModel, amount)
 
-                    }
-                }
-            )
-            ListItem(
-                colors = ListItemDefaults.colors(containerColor = color),
-                leadingContent = {
-                    Icon(
-                        modifier = Modifier.size(24.dp),
-                        imageVector = Icons.Outlined.Language,
-                        contentDescription = null
-                    )
-                },
-                headlineContent = {
-                    val feeLabel by remember {
-                        derivedStateOf { asset?.asset?.feeBundle?.label }
-                    }
-                    AnimatedContent(
-                        targetState = feeLabel,
-                        transitionSpec = {
-                            if ((targetState?.length ?: 0) < (initialState?.length ?: 0)) {
-                                (slideInVertically { width -> width } +
-                                        fadeIn()).togetherWith(slideOutVertically()
-                                { width -> -width } + fadeOut())
-                            } else {
-                                (slideInVertically { width -> -width } +
-                                        fadeIn()).togetherWith(slideOutVertically()
-                                { width -> width } + fadeOut())
-                            }.using(SizeTransform(clip = false))
-                        }, label = ""
-                    ) { state ->
-                        Text(
-                            text = state ?: "${stringResource(R.string.updating)}...",
-                            style = TextStyle(
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.W400,
-                                color = palette.onBackground
+                    ListItem(
+                        colors = ListItemDefaults.colors(containerColor = color),
+                        leadingContent = {
+                            Icon(
+                                modifier = Modifier.size(24.dp),
+                                imageVector = Icons.Outlined.AccountBalanceWallet,
+                                contentDescription = null,
                             )
-                        )
-                    }
-                },
-                supportingContent = {
-                    Text(
-                        text = stringResource(id = R.string.network_fee),
-                        style = TextStyle(
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.W400,
-                            color = palette.outline
-                        )
+                        },
+                        overlineContent = {
+                            AnimatedVisibility(hasDiscount) {
+                                val text by remember {
+                                    derivedStateOf {
+                                        (exchangeRate?.getCurrencySign() ?: "") +
+                                                amount.getAmount().subtract(flexaBalance)
+                                    }
+                                }
+                                Text(
+                                    text = text,
+                                    style = TextStyle(
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.W500,
+                                        color = palette.outline,
+                                        textDecoration = TextDecoration.LineThrough
+                                    )
+                                )
+                            }
+                        },
+                        headlineContent = {
+                            val text by remember {
+                                derivedStateOf {
+                                    (exchangeRate?.getCurrencySign() ?: "") +
+                                            (promotion?.getAmountWithDiscount(residualAmount.toPlainString())
+                                                ?: residualAmount.toPlainString())
+                                }
+                            }
+                            Text(
+                                text = text,
+                                style = TextStyle(
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.W400,
+                                    color = palette.onBackground
+                                )
+                            )
+                        },
+                        supportingContent = {
+                            val amountWithDiscount by remember {
+                                derivedStateOf {
+                                    promotion?.getAmountWithDiscount(residualAmount.toPlainString())
+                                        ?.toPlainString()
+                                        ?: residualAmount?.toPlainString() ?: amount
+                                }
+                            }
+                            val text by remember {
+                                derivedStateOf {
+                                    "${exchangeRate?.getAssetAmount(amountWithDiscount)} ${asset?.asset?.assetData?.displayName}"
+                                }
+                            }
+                            Text(
+                                text = text,
+                                style = TextStyle(
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.W400,
+                                    color = palette.outline
+                                )
+                            )
+                        }
+                    )
+                    ListItem(
+                        colors = ListItemDefaults.colors(containerColor = color),
+                        leadingContent = {
+                            Icon(
+                                modifier = Modifier.size(24.dp),
+                                imageVector = Icons.Outlined.SwapHoriz,
+                                contentDescription = null
+                            )
+                        },
+                        headlineContent = {
+                            val text by remember {
+                                derivedStateOf {
+                                    "1 ${asset?.asset?.assetData?.symbol ?: ""} = ${exchangeRate?.getCurrencySign() ?: ""}${exchangeRate?.price ?: ""}"
+                                }
+                            }
+                            AnimatedContent(
+                                targetState = exchangeRate?.price?.getAmount() ?: BigDecimal.ZERO,
+                                transitionSpec = {
+                                    if (targetState < initialState) {
+                                        (slideInVertically { width -> width } +
+                                                fadeIn()).togetherWith(slideOutVertically()
+                                        { width -> -width } + fadeOut())
+                                    } else {
+                                        (slideInVertically { width -> -width } +
+                                                fadeIn()).togetherWith(slideOutVertically()
+                                        { width -> width } + fadeOut())
+                                    }.using(SizeTransform(clip = false))
+                                }, label = ""
+                            ) { label ->
+                                label
+                                Text(
+                                    text = if (!exchangeRateProgress) text
+                                    else "${stringResource(R.string.updating)}...",
+                                    style = TextStyle(
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.W400,
+                                        color = palette.onBackground
+                                    )
+                                )
+
+                            }
+                        }
                     )
                 }
-            )
+
+                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    thickness = 1.dp,
+                    color = palette.outline.copy(alpha = .5F)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                AssetInfoFooter(
+                    modifier = Modifier.padding(
+                        start = 16.dp,
+                        top = 16.dp,
+                        end = 16.dp,
+                        bottom = 32.dp
+                    )
+                ) { toLearnMore() }
+                Spacer(modifier = Modifier.navigationBarsPadding())
+            }
         }
-
-        Spacer(modifier = Modifier.height(8.dp))
-        HorizontalDivider(
-            modifier = Modifier.padding(horizontal = 16.dp),
-            thickness = 1.dp,
-            color = palette.outline.copy(alpha = .5F)
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        AssetInfoFooter(
-            modifier = Modifier.padding(
-                start = 16.dp,
-                top = 16.dp,
-                end = 16.dp,
-                bottom = 32.dp
-            )
-        ) { toLearnMore() }
-        Spacer(modifier = Modifier.navigationBarsPadding())
     }
 }
 
@@ -305,7 +291,7 @@ private fun AmountDetailsPreview() {
                 exchangeRates.value = MockFactory.getExchangeRates()
             },
             assetsViewModel = AssetsViewModel(FakeInteractor()),
-            amount = "21.18",
+            amount = "28.74",
             promotions = listOf(
                 Promotion(
                     id = "",

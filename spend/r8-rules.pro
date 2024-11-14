@@ -10,4 +10,5 @@
 -keep class com.flexa.spend.PaymentErrorCallback { public *; }
 -keep class com.flexa.spend.SpendNavGraphKt { public *; }
 -keep class com.flexa.spend.main.main_screen.SpendScreenKt { public *; }
+-keep class com.flexa.spend.main.confirm.TransactionError { public *; }
 -keep enum com.flexa.core.shared.CustodyModel { public *; }

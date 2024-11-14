@@ -5,8 +5,10 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flexa.core.Flexa
+import com.flexa.core.entity.Account
 import com.flexa.core.entity.AppAccount
 import com.flexa.core.entity.AvailableAsset
+import com.flexa.core.entity.CommerceSession
 import com.flexa.core.getAssetIds
 import com.flexa.core.getUnitOfAccount
 import com.flexa.core.nonZeroAssets
@@ -14,6 +16,7 @@ import com.flexa.core.shared.ApiErrorHandler
 import com.flexa.core.shared.SelectedAsset
 import com.flexa.core.toAssetKey
 import com.flexa.core.toBalanceBundle
+import com.flexa.core.toCurrencySign
 import com.flexa.core.toDate
 import com.flexa.spend.MockFactory
 import com.flexa.spend.Spend
@@ -23,6 +26,7 @@ import com.flexa.spend.getExpireTimeMills
 import com.flexa.spend.main.main_screen.Event
 import com.flexa.spend.main.main_screen.SpendViewModel.Companion.eventFlow
 import com.flexa.spend.toFeeBundle
+import com.flexa.spend.transaction
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -35,6 +39,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.math.BigDecimal
+import java.math.RoundingMode
 import java.time.Duration
 import java.time.Instant
 
@@ -58,6 +64,13 @@ class AssetsViewModel(
     private val _selectedAssetBundle = MutableStateFlow(selectedAsset.value)
     val selectedAssetBundle = _selectedAssetBundle.asStateFlow()
 
+    private val _commerceSession = MutableStateFlow<CommerceSession.Data?>(null)
+    val commerceSession = _commerceSession.asStateFlow()
+    private val _sessionFee = MutableStateFlow<SessionFee?>(null)
+    val sessionFee = _sessionFee.asStateFlow()
+
+    private val _account = MutableStateFlow<Account?>(null)
+    val account = _account.asStateFlow()
     private val _assetsScreen = MutableStateFlow<AssetsScreen>(AssetsScreen.Assets)
     val assetsScreen = _assetsScreen.asStateFlow()
     var filtered = MutableStateFlow(false)
@@ -68,7 +81,7 @@ class AssetsViewModel(
     private val mutex = Mutex()
 
     init {
-        subscribeAppAccounts()
+        subscribeEventsFlow()
         subscribeSelectedAsset()
     }
 
@@ -98,11 +111,8 @@ class AssetsViewModel(
         }
     }
 
-    private var subscribeAppAccountsJob: Job? = null
-    private fun subscribeAppAccounts() {
-        if (subscribeAppAccountsJob?.isActive == true) return
-
-        subscribeAppAccountsJob = viewModelScope.launch {
+    private fun subscribeEventsFlow() {
+        viewModelScope.launch {
             eventFlow.collect { event ->
                 when (event) {
                     is Event.AppAccountsUpdate -> {
@@ -112,13 +122,54 @@ class AssetsViewModel(
 
                     is Event.ExchangeRatesUpdate -> {
                         compileAccountsAssets(interactor.getLocalAppAccounts())
+                        updateFeeBundle()
                     }
 
                     is Event.OneTimeKeysUpdate -> {
                         compileAccountsAssets(interactor.getLocalAppAccounts())
                     }
+
+                    is Event.Account -> _account.value = event.account
+
+                    is Event.CommerceSessionUpdate -> {
+                        _commerceSession.value = event.session
+                        updateFeeBundle()
+                    }
                 }
             }
+        }
+    }
+
+    private suspend fun updateFeeBundle() {
+        val commerceSession = this@AssetsViewModel._commerceSession.value
+        if (commerceSession == null) {
+            _sessionFee.value = null
+        } else {
+            runCatching {
+                val feeAssetId = commerceSession.transaction()?.fee?.asset ?: ""
+                val asset = interactor.getDbAssetsById(feeAssetId).firstOrNull()
+                val rate = interactor.getDbExchangeRate(feeAssetId)
+                val feeAmount = commerceSession.transaction()
+                    ?.fee?.amount?.toBigDecimalOrNull() ?: BigDecimal.ZERO
+                val ratePrice = rate?.price?.toBigDecimalOrNull() ?: BigDecimal.ZERO
+                val price = ratePrice?.multiply(feeAmount) ?: BigDecimal.ZERO
+                val priceString = price.setScale(2, RoundingMode.DOWN)?.toPlainString()
+                val amount = "${
+                    feeAmount.setScale(
+                        rate?.precision ?: 0,
+                        RoundingMode.DOWN
+                    )
+                } ${asset?.symbol ?: ""} "
+                _sessionFee.emit(
+                    SessionFee(
+                        equivalent = price,
+                        equivalentLabel = "${rate?.unitOfAccount?.toCurrencySign() ?: ""}${priceString ?: ""}",
+                        amount = feeAmount,
+                        amountPriceLabel = commerceSession.transaction()?.fee?.price?.label ?: "",
+                        amountLabel = amount
+                    )
+                )
+            }.onFailure { Log.e(null, "updateFeeBundle: ", it) }
         }
     }
 
@@ -141,7 +192,10 @@ class AssetsViewModel(
                             localAccount?.availableAssets?.firstOrNull { it.assetId == availableAsset.assetId }
                         val assetData = assets.firstOrNull { it.id == availableAsset.assetId }
                         val exchangeRate = interactor.getDbExchangeRate(availableAsset.assetId)
-                        val oneTimeKey = interactor.getDbOneTimeKey(availableAsset.assetId, availableAsset.livemode)
+                        val oneTimeKey = interactor.getDbOneTimeKey(
+                            availableAsset.assetId,
+                            availableAsset.livemode
+                        )
                         val assetKey = oneTimeKey?.toAssetKey()
                         val fee = interactor.getDbFeeByTransactionAssetID(availableAsset.assetId)
                         val feeExchangeRate = interactor.getDbExchangeRate(fee?.asset ?: "")
@@ -330,3 +384,11 @@ sealed class AssetsScreen {
     data class Settings(val asset: SelectedAsset? = null) : AssetsScreen()
     data class AssetDetails(val asset: SelectedAsset) : AssetsScreen()
 }
+
+data class SessionFee(
+    val equivalent: BigDecimal,
+    val equivalentLabel: String,
+    val amount: BigDecimal,
+    val amountPriceLabel: String,
+    val amountLabel: String,
+)

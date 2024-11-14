@@ -1,12 +1,15 @@
 package com.flexa.spend.main.assets
 
 import android.content.res.Configuration
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.EaseOut
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -26,11 +29,19 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -50,30 +61,37 @@ import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
+import com.flexa.core.entity.Account
 import com.flexa.core.shared.SelectedAsset
 import com.flexa.core.theme.FlexaTheme
 import com.flexa.core.zeroValue
 import com.flexa.spend.R
-import com.flexa.spend.Spend
 import com.flexa.spend.domain.FakeInteractor
+import com.flexa.spend.getResidue
 import com.flexa.spend.isSelected
+import com.flexa.spend.lightenColor
 import com.flexa.spend.main.ui_utils.rememberSelectedAsset
+import java.math.BigDecimal
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun AssetsBottomSheet(
     viewModel: AssetsViewModel,
+    amount: String? = null,
     toUrl: (@ParameterName("url") String) -> Unit,
     toBack: () -> Unit
 ) {
     val previewMode = LocalInspectionMode.current
-    val assetsScreen by if (!previewMode) viewModel.assetsScreen.collectAsStateWithLifecycle()
-    else remember { mutableStateOf(AssetsScreen.Assets) }
+    val account by viewModel.account.collectAsStateWithLifecycle()
+    val remaining by remember {
+        derivedStateOf { account?.getResidue(amount) ?: BigDecimal.ZERO }
+    }
+    val assetsScreen by viewModel.assetsScreen.collectAsStateWithLifecycle()
     val appAccounts = viewModel.appAccounts
     val listItems by remember {
         derivedStateOf {
@@ -84,6 +102,9 @@ fun AssetsBottomSheet(
                 it.copy(availableAssets = sortedAssets)
             }
         }
+    }
+    BackHandler(assetsScreen !is AssetsScreen.Assets) {
+        viewModel.setScreen(AssetsScreen.Assets)
     }
 
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -101,9 +122,30 @@ fun AssetsBottomSheet(
         ) { screen ->
             when (screen) {
                 is AssetsScreen.Assets -> {
-                    AssetsSheetHeader(
-                        stringResource(id = R.string.pay_using)
-                    ) { viewModel.setScreen(AssetsScreen.Settings()) }
+                    Column {
+                        AssetsSheetHeader(
+                            stringResource(id = R.string.pay_using)
+                        ) { viewModel.setScreen(AssetsScreen.Settings()) }
+                        AccountBalance(viewModel, amount)
+                        AnimatedVisibility(remaining > BigDecimal.ZERO) {
+                            val context = LocalContext.current
+                            val text by remember {
+                                mutableStateOf(
+                                    context.getString(
+                                        R.string.pay_remaining,
+                                        "${account?.balance?.label?.substring(0, 1)}${remaining}"
+                                    )
+                                )
+                            }
+                            Text(
+                                modifier = Modifier
+                                    .padding(start = 32.dp, end = 32.dp, bottom = 4.dp),
+                                text = text.uppercase(),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                        }
+                    }
                 }
 
                 is AssetsScreen.AssetDetails -> {
@@ -161,6 +203,7 @@ fun AssetsBottomSheet(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 state = listState
                             ) {
+
                                 listItems.forEach { appAccount ->
                                     val accountId = appAccount.accountId
                                     if (listItems.size > 1) { // StickyHeader
@@ -174,7 +217,11 @@ fun AssetsBottomSheet(
                                         }
                                     } else {
                                         stickyHeader(key = accountId) {
-                                            Spacer(modifier = Modifier.height(20.dp))
+                                            val height by animateDpAsState(
+                                                if (remaining > BigDecimal.ZERO) 4.dp else 20.dp,
+                                                label = ""
+                                            )
+                                            Spacer(modifier = Modifier.height(height))
                                         }
                                     }
                                     appAccount.availableAssets.forEachIndexed { index, asset ->
@@ -230,7 +277,10 @@ fun AssetsBottomSheet(
                                                         placementSpec = tween(durationMillis = animDuration)
                                                     )
                                                     .clickable(enabled = !asset.zeroValue()) {
-                                                        viewModel.setSelectedAsset(accountId, asset)
+                                                        viewModel.setSelectedAsset(
+                                                            accountId,
+                                                            asset
+                                                        )
                                                         toBack()
                                                     },
                                                 color = color,
@@ -287,16 +337,13 @@ fun AssetsBottomSheet(
                             }
                         }
                     }
+
                 }
 
                 is AssetsScreen.AssetDetails -> {
                     val context = LocalContext.current
                     AssetDetailsScreen(
                         modifier = Modifier.fillMaxSize(),
-                        viewModel = viewModel(
-                            initializer = {
-                                AssetDetailViewModel(Spend.interactor)
-                            }),
                         assetBundle = screen.asset,
                         assetsViewModel = viewModel,
                         toLearnMore = { toUrl(context.getString(R.string.learn_more_link)) },
@@ -319,6 +366,121 @@ fun AssetsBottomSheet(
     }
 }
 
+@Composable
+internal fun AccountBalance(viewModel: AssetsViewModel, amount: String? = null) {
+    val previewMode = LocalInspectionMode.current
+    val account by viewModel.account.collectAsStateWithLifecycle()
+    val remaining by remember {
+        derivedStateOf { account?.getResidue(amount) ?: BigDecimal.ZERO }
+    }
+    val accountBalance by remember {
+        derivedStateOf {
+            if (!previewMode) account?.balance
+            else
+                Account.Balance(
+                    amount = "18.48",
+                    asset = "iso4217/USD",
+                    label = "\$18.48"
+                )
+        }
+    }
+    AnimatedVisibility(accountBalance?.amount != null) {
+        ListItem(
+            modifier = Modifier
+                .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                .clip(MaterialTheme.shapes.extraLarge),
+            leadingContent = {
+                Icon(
+                    modifier = Modifier.size(44.dp),
+                    imageVector = Icons.Rounded.CheckCircle,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.outline.lightenColor(
+                        .5F
+                    )
+                )
+
+            },
+            headlineContent = {
+                val context = LocalContext.current
+                val text by remember {
+                    derivedStateOf {
+                        context.getString(
+                            R.string.in_your_flexa_account,
+                            accountBalance?.label?.substringAfter("")
+                                ?: ""
+                        )
+                    }
+                }
+                Text(
+                    text = text,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.sp
+                )
+            },
+            supportingContent = {
+                val text = if (remaining > BigDecimal.ZERO)
+                    stringResource(R.string.applied_to_this_payment)
+                else
+                    stringResource(R.string.applied_to_your_next_payment)
+                Text(text)
+            }
+        )
+    }
+}
+
+@Composable
+internal fun AccountCoverageCard(viewModel: AssetsViewModel) {
+    val context = LocalContext.current
+    val account by viewModel.account.collectAsStateWithLifecycle()
+    val text by remember {
+        derivedStateOf {
+            context.getString(
+                R.string.in_your_flexa_account,
+                account?.balance?.label?.substringAfter("")
+                    ?: ""
+            )
+        }
+    }
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 64.dp),
+        shape = MaterialTheme.shapes.extraLarge,
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Spacer(modifier = Modifier.height(30.dp))
+        Icon(
+            modifier = Modifier
+                .size(60.dp)
+                .align(Alignment.CenterHorizontally),
+            imageVector = Icons.Rounded.CheckCircle,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.outline.lightenColor(
+                .5F
+            )
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        Text(
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+            text = text,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = MaterialTheme.typography.bodyLarge.fontSize
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        Text(
+            modifier = Modifier
+                .width(250.dp)
+                .align(Alignment.CenterHorizontally),
+            text = stringResource(R.string.flexa_account_full_coverage_copy),
+            fontWeight = FontWeight.Normal,
+            fontSize = MaterialTheme.typography.bodyMedium.fontSize,
+            textAlign = TextAlign.Center,
+            lineHeight = 18.sp
+        )
+        Spacer(modifier = Modifier.height(30.dp))
+    }
+}
+
 @Preview
 @Preview(uiMode = Configuration.UI_MODE_NIGHT_YES or Configuration.UI_MODE_TYPE_NORMAL)
 @Composable
@@ -329,6 +491,19 @@ private fun AssetsBottomSheetContentPreview() {
                 viewModel = AssetsViewModel(interactor = FakeInteractor()),
                 toUrl = {},
                 toBack = {}
+            )
+        }
+    }
+}
+
+@Preview
+@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES or Configuration.UI_MODE_TYPE_NORMAL)
+@Composable
+private fun AccountCoverageCardPreview() {
+    FlexaTheme {
+        Surface {
+            AccountCoverageCard(
+                viewModel = AssetsViewModel(interactor = FakeInteractor()),
             )
         }
     }

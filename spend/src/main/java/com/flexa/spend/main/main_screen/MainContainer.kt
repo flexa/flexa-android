@@ -44,10 +44,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -79,7 +76,6 @@ import com.flexa.spend.main.ui_utils.rememberSelectedAsset
 import com.flexa.spend.merchants.BrandsViewModel
 import com.flexa.spend.needToModify
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.launch
 import java.util.UUID
 import kotlin.math.absoluteValue
 
@@ -200,6 +196,7 @@ fun Spend(
                         assetsSize = assets.size,
                         asset = asset,
                         viewModel = assetsViewModel,
+                        spendViewModel = viewModel,
                         toAssetInfo = {
                             Log.d(null, "Spend: toAssetInfo root: $selectedAsset")
                             asset?.let { toAssetInfo.invoke(it) }
@@ -241,7 +238,6 @@ fun Spend(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    val scope = rememberCoroutineScope()
                     val pagerState =
                         rememberPagerState(pageCount = { notifications.size }, initialPage = 0)
                     Spacer(modifier = Modifier.height(10.dp))
@@ -252,7 +248,6 @@ fun Spend(
                         key = { notifications[it].id ?: UUID.randomUUID().toString() }
                     ) { page ->
                         val item: Notification = notifications[page]
-                        var close by remember { mutableStateOf(false) }
                         val context = LocalContext.current
                         AppNotification(
                             modifier = Modifier
@@ -289,22 +284,7 @@ fun Spend(
                                     }
                                 }
                             },
-                            onClose = { n ->
-                                if (notifications.size == 1) {
-                                    viewModel.removeNotification(notifications[0])
-                                } else {
-                                    scope.launch {
-                                        val nextPage = if (notifications.size == page + 1)
-                                            page - 1 else page + 1
-                                        pagerState.animateScrollToPage(
-                                            page = nextPage,
-                                            animationSpec = tween(500)
-                                        )
-                                        close = true
-                                        viewModel.removeNotification(n)
-                                    }
-                                }
-                            }
+                            onClose = { n -> viewModel.removeNotification(n) }
                         )
                     }
                     AnimatedVisibility(notifications.size == 1) {

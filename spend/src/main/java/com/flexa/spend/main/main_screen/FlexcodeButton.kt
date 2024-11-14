@@ -29,6 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,34 +41,52 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.flexa.core.entity.AvailableAsset
 import com.flexa.core.theme.FlexaTheme
+import com.flexa.core.toCurrencySign
 import com.flexa.spend.MockFactory
 import com.flexa.spend.R
+import com.flexa.spend.domain.FakeInteractor
+import com.flexa.spend.getFlexaBalance
 import com.flexa.spend.hasBalanceRestrictions
 import java.math.BigDecimal
+import java.math.RoundingMode
 
 @Composable
 fun FlexcodeButton(
     modifier: Modifier = Modifier,
+    viewModel: SpendViewModel,
     asset: AvailableAsset?,
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
+    val unitOfAccount by viewModel.unitOfAccount.collectAsStateWithLifecycle()
+    val account by viewModel.account.collectAsStateWithLifecycle()
+    val balanceValue = remember { mutableStateOf(BigDecimal.ZERO) }
     val balance by remember(asset) {
-        mutableStateOf(
-            asset?.balanceBundle?.totalLabel?.run {
-                "$this ${context.getString(R.string.balance)}"
-            } ?: context.getString(R.string.updating)
-        )
+        derivedStateOf {
+            if (asset?.balanceBundle != null) {
+                val accountBalance = account.getFlexaBalance()
+                val assetBalance = asset.balanceBundle?.total ?: BigDecimal.ZERO
+                balanceValue.value =
+                    accountBalance.plus(assetBalance).setScale(2, RoundingMode.DOWN)
+                val balance = balanceValue.value.toPlainString()
+                val sign = unitOfAccount.toCurrencySign()
+                "$sign$balance ${context.getString(R.string.balance)}"
+            } else {
+                context.getString(R.string.updating)
+            }
+        }
     }
+
     FilledTonalButton(
         modifier = modifier,
         colors = ButtonDefaults.buttonColors(),
         onClick = { onClick.invoke() }) {
         Column {
             AnimatedContent(
-                targetState = asset?.balanceBundle?.total ?: BigDecimal.ZERO,
+                targetState = balanceValue.value,
                 transitionSpec = {
                     if (targetState < initialState) {
                         (slideInVertically { width -> width } +
@@ -147,7 +166,8 @@ private fun FlexcodeButtonPreview() {
                 FlexcodeButton(
                     asset = MockFactory.getMockSelectedAsset().asset.copy(
                         balanceBundle = MockFactory.getBalanceBundle()
-                    )
+                    ),
+                    viewModel = SpendViewModel(FakeInteractor()),
                 ) {}
             }
         }

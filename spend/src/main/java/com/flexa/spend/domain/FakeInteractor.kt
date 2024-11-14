@@ -4,13 +4,13 @@ import com.flexa.core.data.db.BrandSession
 import com.flexa.core.entity.Account
 import com.flexa.core.entity.AppAccount
 import com.flexa.core.entity.CommerceSession
-import com.flexa.core.entity.CommerceSessionEvent
 import com.flexa.core.entity.ExchangeRate
 import com.flexa.core.entity.ExchangeRatesResponse
 import com.flexa.core.entity.Limit
 import com.flexa.core.entity.OneTimeKey
 import com.flexa.core.entity.OneTimeKeyResponse
 import com.flexa.core.entity.PutAppAccountsResponse
+import com.flexa.core.entity.SseEvent
 import com.flexa.core.entity.TransactionFee
 import com.flexa.core.shared.Asset
 import com.flexa.core.shared.AssetsResponse
@@ -77,7 +77,7 @@ internal class FakeInteractor : ISpendInteractor {
         TODO("Not yet implemented")
     }
 
-    override suspend fun saveLastEventId(eventId: String) {
+    override suspend fun saveLastEventId(eventId: String?) {
         TODO("Not yet implemented")
     }
 
@@ -167,7 +167,7 @@ internal class FakeInteractor : ISpendInteractor {
         TODO("Not yet implemented")
     }
 
-    override suspend fun listenEvents(lastEventId: String?): Flow<CommerceSessionEvent> {
+    override suspend fun listenEvents(lastEventId: String?): Flow<SseEvent> {
         TODO("Not yet implemented")
     }
 
@@ -206,6 +206,10 @@ internal class FakeInteractor : ISpendInteractor {
         TODO("Not yet implemented")
     }
 
+    override suspend fun approveCommerceSession(commerceSessionId: String): Int {
+        TODO("Not yet implemented")
+    }
+
     override suspend fun closeCommerceSession(commerceSessionId: String): String {
         TODO("Not yet implemented")
     }
@@ -219,7 +223,7 @@ internal class FakeInteractor : ISpendInteractor {
 
     override suspend fun patchCommerceSession(
         commerceSessionId: String,
-        txSignature: String
+        paymentAssetId: String
     ): String {
         TODO("Not yet implemented")
     }

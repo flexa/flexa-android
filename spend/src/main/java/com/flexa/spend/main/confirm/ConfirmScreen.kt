@@ -81,6 +81,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -97,6 +98,7 @@ import com.flexa.core.view.FlexaLogo
 import com.flexa.spend.MockFactory
 import com.flexa.spend.R
 import com.flexa.spend.Spend
+import com.flexa.spend.coveredByFlexaAccount
 import com.flexa.spend.domain.FakeInteractor
 import com.flexa.spend.getAmount
 import com.flexa.spend.getAmountLabel
@@ -104,6 +106,7 @@ import com.flexa.spend.getSpendableBalance
 import com.flexa.spend.hasBalanceRestrictions
 import com.flexa.spend.logo
 import com.flexa.spend.main.assets.AssetsViewModel
+import com.flexa.spend.main.main_screen.SpendViewModel
 import com.flexa.spend.main.ui_utils.BalanceRestrictionsDialog
 import com.flexa.spend.main.ui_utils.SpendAsyncImage
 import com.flexa.spend.shiftHue
@@ -120,6 +123,7 @@ internal fun ConfirmCard(
     shape: Shape = RoundedCornerShape(24.dp),
     elevation: Dp = 0.dp,
     containerColor: Color = MaterialTheme.colorScheme.secondaryContainer,
+    spendViewModel: SpendViewModel? = null,
     viewModel: ConfirmViewModel,
     assetsViewModel: AssetsViewModel,
     onClose: () -> Unit,
@@ -128,11 +132,16 @@ internal fun ConfirmCard(
 ) {
     val palette = MaterialTheme.colorScheme
     val session by viewModel.session.collectAsStateWithLifecycle()
+    val coveredByFlexaAccount by remember {
+        derivedStateOf { session?.coveredByFlexaAccount() == true }
+    }
     val previewMode = LocalInspectionMode.current
 
     val completed by viewModel.completed.collectAsStateWithLifecycle()
 
-    val payProgress by viewModel.payProgress.collectAsStateWithLifecycle()
+    val paying by viewModel.payProgress.collectAsStateWithLifecycle()
+    val applying by spendViewModel?.progress?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(false) }
+    val payProgress by remember { derivedStateOf { paying || applying } }
     val patchProgress by viewModel.patchProgress.collectAsStateWithLifecycle()
     val buttonsBlocked by remember {
         derivedStateOf { payProgress || patchProgress }
@@ -192,9 +201,7 @@ internal fun ConfirmCard(
                     enter = expandVertically() + fadeIn(),
                     exit = shrinkVertically() + fadeOut()
                 ) {
-                    IconButton(onClick = {
-                        toDetails(viewModel.session)
-                    }) {
+                    IconButton(onClick = { toDetails(viewModel.session) }) {
                         Icon(
                             imageVector = Icons.Filled.MoreVert,
                             contentDescription = null,
@@ -334,14 +341,26 @@ internal fun ConfirmCard(
                     },
                     headlineContent = {
                         Text(
-                            text = "Using", style = TextStyle(
+                            text = stringResource(R.string.using),
+                            style = TextStyle(
                                 fontSize = 18.sp, fontWeight = FontWeight.Normal
                             )
                         )
                     },
                     supportingContent = {
+                        val context = LocalContext.current
+                        val text by remember {
+                            derivedStateOf {
+                                if (coveredByFlexaAccount)
+                                    context.getString(R.string.your_flexa_account)
+                                else
+                                    selectedAsset?.asset?.assetData?.displayName ?: ""
+                            }
+                        }
                         Text(
-                            text = selectedAsset?.asset?.assetData?.displayName ?: "",
+                            text = text,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                             style = TextStyle(
                                 fontSize = 13.sp, fontWeight = FontWeight.Normal
                             )
@@ -478,6 +497,11 @@ internal fun ConfirmCard(
                     contentPadding = PaddingValues(0.dp),
                     onClick = {
                         when {
+                            canProceed && coveredByFlexaAccount ->
+                                session?.data?.id?.let { id ->
+                                    spendViewModel?.approveCommerceSession(id)
+                                }
+
                             canProceed -> viewModel.payNow()
                             wrongAvailableState -> viewModel.showBalanceRestrictions(
                                 true
@@ -520,11 +544,16 @@ internal fun ConfirmCard(
                         }, label = "Text"
                     ) { state ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
+                            val brand by remember { derivedStateOf { session?.data?.brand } }
                             val textColor1 by transition.animateColor(label = "textColor1") { state ->
-                                if (!state) Color.White else Color(0xFF2A00FF)
+                                if (!state) Color.White
+                                else
+                                    brand?.color?.toColor()?.shiftHue(10f) ?: Color(0xFF2A00FF)
                             }
                             val textColor2 by transition.animateColor(label = "textColor1") { state ->
-                                if (!state) Color.White else Color(0xFF7800FF)
+                                if (!state) Color.White
+                                else
+                                    brand?.color?.toColor()?.shiftHue(-10f) ?: Color(0xFF7800FF)
                             }
                             Box {
                                 Text(
@@ -539,10 +568,7 @@ internal fun ConfirmCard(
                                     text = state,
                                     style = TextStyle(
                                         brush = Brush.linearGradient(
-                                            listOf(
-                                                textColor1,
-                                                textColor2
-                                            )
+                                            listOf(textColor1, textColor2)
                                         ),
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.W500,

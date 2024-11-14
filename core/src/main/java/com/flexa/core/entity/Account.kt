@@ -5,25 +5,31 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class Account(
-
     @SerialName("pinned_brands")
     val pinnedBrands: List<String?>? = null,
-
     @SerialName("preferred_unit_of_account")
     val preferredUnitOfAccount: String? = null,
-
     @SerialName("name")
     val name: String? = null,
-
     @SerialName("notifications")
     val notifications: List<Notification>? = null,
-
     @SerialName("limits")
     val limits: List<Limit>? = null,
-
     @SerialName("created")
-    val created: Long? = null
-)
+    val created: Long? = null,
+    @SerialName("balance")
+    val balance: Balance? = null
+) {
+    @Serializable
+    data class Balance(
+        @SerialName("amount")
+        val amount: String? = null,
+        @SerialName("asset")
+        val asset: String? = null,
+        @SerialName("label")
+        val label: String? = null
+    )
+}
 
 @Serializable
 data class Notification(

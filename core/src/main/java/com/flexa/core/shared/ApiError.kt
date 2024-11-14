@@ -7,9 +7,9 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.util.Log
+import com.flexa.BuildConfig
 import com.flexa.R
 import com.flexa.core.Flexa
-import java.util.Locale
 
 sealed class ApiError(
     open val traceId: String? = null,
@@ -29,23 +29,17 @@ sealed class ApiError(
     ) : ApiError(traceId = traceId, message = message) {
         val title get() = Flexa.requiredContext.resources.getString(R.string.something_went_wrong)
         val text
-            get() = message
-                ?: Flexa.requiredContext.resources.getString(R.string.we_are_sorry_we_encountered_a_problem)
+            get() = if (!message.isNullOrBlank()) message else
+                Flexa.requiredContext.resources.getString(R.string.we_are_sorry_we_encountered_a_problem)
 
         fun sendEmailReport(activity: Activity) {
             activity.run {
-                val errorType = traceId ?: getString(R.string.client_error)
+                val errorId = traceId ?: getString(R.string.client_error)
 
                 val messageBody = StringBuilder()
                 messageBody.append(getString(R.string.report_email_message_body))
-                messageBody.append("\n• Trace id: $errorType")
-                messageBody.append("\n• ${
-                    FlexaConstants.ANDROID.replaceFirstChar {
-                        it.uppercase(Locale.getDefault())
-                    }
-                } API ${Build.VERSION.SDK_INT}"
-                )
-                messageBody.append("\n• ${Build.MANUFACTURER} ${Build.MODEL}")
+                messageBody.append("\n• Trace id: $errorId")
+
                 try {
                     val packageInfo = when {
                         Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ->
@@ -59,9 +53,20 @@ sealed class ApiError(
                             )
                     }
                     val appName = getString(packageInfo.applicationInfo.labelRes)
-                    val appVersion = packageInfo.versionName
-                    messageBody.append("\n• App name: $appName")
-                    messageBody.append("\n• App version: $appVersion").append("\n\n")
+                    val appCode = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+                        packageInfo.versionCode
+                    } else {
+                        packageInfo.longVersionCode
+                    }
+                    val appVersionName = packageInfo.versionName
+                    val deviceModel = Build.MODEL
+                    val deviceManufacturer = Build.MANUFACTURER
+
+                    messageBody.append("\n• Application: $appName code: $appCode version name: $appVersionName")
+                    messageBody.append("\n• Device: $deviceManufacturer $deviceModel Android: ${Build.VERSION.RELEASE} API: ${Build.VERSION.SDK_INT}")
+                    messageBody.append("\n• Flexa SDK: ${BuildConfig.SPEND_SDK_VERSION} ${BuildConfig.RELEASE_DATE}")
+                    messageBody.append("\n\n")
+
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }

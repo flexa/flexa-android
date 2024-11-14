@@ -1,6 +1,5 @@
 package com.flexa.spend.main.main_screen
 
-import android.app.Activity
 import android.content.res.Configuration
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
@@ -41,6 +40,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.ModalBottomSheetProperties
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -88,10 +88,15 @@ import com.flexa.spend.MockFactory
 import com.flexa.spend.R
 import com.flexa.spend.Spend
 import com.flexa.spend.TokenState
+import com.flexa.spend.coveredByFlexaAccount
+import com.flexa.spend.coveringAmount
+import com.flexa.spend.data.DeepLink
+import com.flexa.spend.data.DeepLinkParser
 import com.flexa.spend.domain.CommerceSessionWorker
 import com.flexa.spend.domain.FakeInteractor
 import com.flexa.spend.isCompleted
-import com.flexa.spend.main.assets.AssetDetailViewModel
+import com.flexa.spend.main.assets.AccountBalance
+import com.flexa.spend.main.assets.AccountCoverageCard
 import com.flexa.spend.main.assets.AssetDetailsScreen
 import com.flexa.spend.main.assets.AssetInfoSheetHeader
 import com.flexa.spend.main.assets.AssetsBottomSheet
@@ -118,6 +123,7 @@ fun SpendScreen(
     assetsViewModel: AssetsViewModel,
     brandsViewModel: BrandsViewModel,
     settingsPopupViewModel: PopupViewModel = viewModel(),
+    deepLink: String? = null,
     toBack: () -> Unit,
     toLogin: () -> Unit,
     toEdit: () -> Unit,
@@ -147,10 +153,33 @@ fun SpendScreen(
             showBottomSheet = true
         }
         val commerceSession by viewModel.commerceSession.collectAsStateWithLifecycle()
-        val showNextGenCard by remember {
-            derivedStateOf { commerceSession?.data?.isLegacy == false }
-        }
         val showLegacyFlexcode by viewModel.openLegacyCard.collectAsStateWithLifecycle()
+        val showNextGenCard by remember {
+            derivedStateOf {
+                commerceSession?.data?.isLegacy == false &&
+                        !showLegacyFlexcode
+            }
+        }
+
+        val link = rememberSaveable { mutableStateOf(deepLink) }
+        LaunchedEffect(link.value) {
+            link.value?.let {
+                when (val lnk = DeepLinkParser.getDeepLink(it)) {
+                    DeepLink.PlacesToPay -> {
+                        openBottomSheet(SheetScreen.PlacesToPay)
+                    }
+
+                    is DeepLink.CommerceSession -> {
+                        // todo under development
+                    }
+
+                    is DeepLink.ReportIssue -> toUrl(lnk.url)
+
+                    else -> {}
+                }
+                link.value = null
+            }
+        }
 
         AnimatedVisibility( // Background Dim
             modifier = Modifier.zIndex(.1F),
@@ -274,7 +303,7 @@ fun SpendScreen(
                     .clickable(
                         interactionSource = interactionSource,
                         indication = null
-                    ) { close() },
+                    ) { },
             ) {
                 Spacer(
                     modifier = Modifier
@@ -290,14 +319,16 @@ fun SpendScreen(
                             interactionSource = interactionSource,
                             indication = null,
                             onClick = { }
-                        ).padding(horizontal = 26.dp),
+                        )
+                        .padding(horizontal = 26.dp),
+                    spendViewModel = if (commerceSession?.coveredByFlexaAccount() == true) viewModel else null,
                     viewModel = vm,
                     assetsViewModel = assetsViewModel,
                     onClose = { close() },
                     toDetails = {
                         openBottomSheet(SheetScreen.PaymentDetails(it))
                     },
-                    toAssets = { openBottomSheet(SheetScreen.Assets) }
+                    toAssets = { openBottomSheet(SheetScreen.Assets(commerceSession?.data?.amount)) }
                 )
                 Spacer(modifier = Modifier.height(26.dp))
                 Spacer(
@@ -315,10 +346,8 @@ fun SpendScreen(
             viewModel = settingsPopupViewModel,
             toPlaces = { openBottomSheet(SheetScreen.PlacesToPay) },
             toFlexaId = { toManageAccount() },
-            toHowTo = { },
-            toReport = {
-                if (context is Activity) settingsPopupViewModel.reportAnIssue(context)
-            }
+            toHowTo = { toUrl("https://flexa.co/guides/how-to-pay") },
+            toReport = { toUrl("https://flexa.co/report-an-issue") }
         )
         Scaffold(
             modifier = modifier
@@ -432,7 +461,7 @@ fun SpendScreen(
                 sheetStateVisible = showBottomSheet,
                 toAssets = {
                     assetsViewModel.setScreen(AssetsScreen.Assets)
-                    openBottomSheet(SheetScreen.Assets)
+                    openBottomSheet(SheetScreen.Assets())
                 },
                 toAddAssets = { toBack() },
                 toAssetInfo = { asset ->
@@ -441,8 +470,11 @@ fun SpendScreen(
                 toEdit = { toEdit.invoke() },
                 toInputAmount = { toInputAmount() },
                 toLinkRoute = { linkRoute ->
-                    when(linkRoute) {
-                        LinkRoute.Account -> { toManageAccount() }
+                    when (linkRoute) {
+                        LinkRoute.Account -> {
+                            toManageAccount()
+                        }
+
                         is LinkRoute.Url -> toUrl(linkRoute.url)
                     }
                 }
@@ -464,14 +496,29 @@ fun SpendScreen(
                     dragHandle = { SpendDragHandler() },
                     onDismissRequest = { closeBottomSheet() },
                     sheetState = sheetState,
+                    properties = ModalBottomSheetProperties(
+                        shouldDismissOnBackPress = viewModel.sheetScreen !is SheetScreen.Assets
+                    )
                 ) {
                     when (val screen = viewModel.sheetScreen) {
-                        is SheetScreen.Assets ->
-                            AssetsBottomSheet(
-                                viewModel = assetsViewModel,
-                                toUrl = { toUrl(it) },
-                                toBack = { closeBottomSheet() },
-                            )
+                        is SheetScreen.Assets -> {
+                            val account by viewModel.account.collectAsStateWithLifecycle()
+                            val amount = screen.amount
+                            when {
+                                account?.coveringAmount(amount) == true -> {
+                                    AccountCoverageCard(assetsViewModel)
+                                }
+
+                                else -> {
+                                    AssetsBottomSheet(
+                                        viewModel = assetsViewModel,
+                                        amount = screen.amount,
+                                        toUrl = { toUrl(it) },
+                                        toBack = { closeBottomSheet() },
+                                    )
+                                }
+                            }
+                        }
 
                         is SheetScreen.AssetDetails -> {
                             Column(
@@ -484,11 +531,8 @@ fun SpendScreen(
                                     toBack = {},
                                     toSettings = {}
                                 )
+                                AccountBalance(assetsViewModel)
                                 AssetDetailsScreen(
-                                    viewModel = viewModel(
-                                        initializer = {
-                                            AssetDetailViewModel(Spend.interactor)
-                                        }),
                                     assetBundle = screen.asset,
                                     assetsViewModel = assetsViewModel,
                                     toLearnMore = { toUrl(context.getString(R.string.learn_more_link)) },

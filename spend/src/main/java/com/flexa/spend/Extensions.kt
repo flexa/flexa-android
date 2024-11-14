@@ -25,6 +25,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.unit.IntOffset
 import com.flexa.core.data.db.BrandSession
+import com.flexa.core.entity.Account
 import com.flexa.core.entity.AvailableAsset
 import com.flexa.core.entity.CommerceSession
 import com.flexa.core.entity.ExchangeRate
@@ -142,6 +143,18 @@ fun CommerceSession.Data?.isCompleted(): Boolean {
     return this?.status == "completed"
 }
 
+fun CommerceSession?.isCurrent(id: String?): Boolean {
+    return this?.data?.id == id
+}
+
+fun CommerceSession?.isClosed(): Boolean {
+    return this?.data?.isClosed() ?: false
+}
+
+fun CommerceSession.Data?.isClosed(): Boolean {
+    return this?.status == "closed"
+}
+
 fun CommerceSession?.isValid(): Boolean {
     return this?.data?.isValid() ?: false
 }
@@ -149,12 +162,25 @@ fun CommerceSession?.isValid(): Boolean {
 fun CommerceSession.Data?.isValid(): Boolean {
     val nonNull = this != null
     val rightStatus = this?.status != null && this.status != "closed"
-    val transaction = this?.transactions?.firstOrNull {
-        it?.status == "requested" ||
-                it?.status == "approved"
-    }
+    val transaction = this?.transaction()
     val notExpired = transaction?.notExpired() ?: false
-    return nonNull && rightStatus && transaction != null && notExpired
+    val containsTransaction = transaction != null && notExpired
+    val containsCredit = this?.credits != null && this.credits?.isNotEmpty() == true
+    val hasTransactionOrCredit = containsTransaction || containsCredit
+    return nonNull && rightStatus && hasTransactionOrCredit
+}
+
+fun CommerceSession?.coveredByFlexaAccount(): Boolean {
+    return this?.data?.coveredByFlexaAccount() == true
+}
+
+fun CommerceSession.Data?.coveredByFlexaAccount(): Boolean {
+    val valid = this.isValid()
+    val requiresApproval = this?.status == "requires_approval"
+    val noTransactions = this?.transaction() == null
+    val containsCredit = this?.credits != null && this.credits?.isNotEmpty() == true
+    val noTransactionsAndHasCredit = noTransactions && containsCredit
+    return valid && requiresApproval && noTransactionsAndHasCredit
 }
 
 fun CommerceSession.Data?.transaction(): CommerceSession.Data.Transaction? {
@@ -162,6 +188,10 @@ fun CommerceSession.Data?.transaction(): CommerceSession.Data.Transaction? {
         it?.status == "requested" ||
                 it?.status == "approved"
     }
+}
+
+fun CommerceSession.Data?.credit(): CommerceSession.Data.Credit? {
+    return this?.credits?.maxByOrNull { it.created ?: 0 }
 }
 
 fun CommerceSession.Data.Transaction?.notExpired(): Boolean {
@@ -309,6 +339,26 @@ fun AvailableAsset.getSpendableBalance(): BigDecimal {
     } else total
 }
 
+fun Account?.coveringAmount(amount: String?): Boolean {
+    if (this?.balance?.amount == null) return false
+    val amountValue = amount.getAmount()
+    if (amountValue == BigDecimal.ZERO) return false
+    val accountBalance = this.balance?.amount?.getAmount() ?: BigDecimal.ZERO
+    return accountBalance >= amountValue
+}
+
+fun Account?.getResidue(amount: String?): BigDecimal? {
+    if (this?.balance?.amount == null) return null
+    val amountValue = amount.getAmount()
+    if (amountValue == BigDecimal.ZERO) return null
+    val accountBalance = this.balance?.amount?.getAmount() ?: BigDecimal.ZERO
+    return (amountValue - accountBalance).setScale(2)
+}
+
+fun Account?.getFlexaBalance(): BigDecimal {
+    return this?.balance?.amount?.toBigDecimalOrNull()?.setScale(2) ?: BigDecimal.ZERO
+}
+
 internal fun Context.getAppName(): String {
     return try {
         val application = this.applicationContext
@@ -382,7 +432,7 @@ internal fun Promotion.getAmountWithDiscount(amount: String): BigDecimal {
 internal fun Promotion.getDiscount(amount: String): BigDecimal {
     val amountValue = amount.getAmount()
     return when {
-        amountOff != null -> {
+        !amountOff.isNullOrBlank() -> {
             if (amountValue < (restrictions?.minimumAmount?.toBigDecimalOrNull()
                     ?: BigDecimal.ZERO)
             ) {
@@ -392,7 +442,7 @@ internal fun Promotion.getDiscount(amount: String): BigDecimal {
             }
         }
 
-        percentOff != null -> {
+        !percentOff.isNullOrBlank() -> {
             this.getPercentAmount(amount).coerceAtMost(
                 restrictions?.maximumDiscount?.toBigDecimalOrNull() ?: amountValue
             ).setScale(2)

@@ -3,12 +3,12 @@ package com.flexa.core
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.util.Log
 import com.flexa.BuildConfig
 import com.flexa.R
-import com.flexa.core.data.data.AppInfoProvider
 import com.flexa.core.data.rest.RestRepository.Companion.json
 import com.flexa.core.entity.Account
 import com.flexa.core.entity.AssetKey
@@ -54,7 +54,6 @@ fun String?.toCurrencySign(): String =
         "iso4217/EUR" -> "€"
         else -> "¤"
     }
-
 
 fun Instant.minutesBetween(timestamp: Long): Long {
     runCatching {
@@ -102,7 +101,6 @@ fun AssetAccount.toJsonObject(): JsonObject =
             }
         }
     }
-
 
 fun String.toDate(dateFormat: String = "EEE, dd MMM yyyy HH:mm:ss z"): Date =
     try {
@@ -174,19 +172,37 @@ fun com.flexa.core.entity.AppAccount.nonZeroAssets(): List<AvailableAsset> =
 fun Activity?.sendFlexaReport(data: String? = null) {
     this?.run {
         val messageBody = StringBuilder()
-        messageBody.append(AppInfoProvider.getAppName(this.application))
-        messageBody.append(" ")
-        messageBody.append(AppInfoProvider.getAppVersion(this.application))
-        messageBody.append(" ${AppInfoProvider.getAppPackageName(this.application)} ")
+        messageBody.append(getString(R.string.report_email_message_body))
+        try {
+            val packageInfo = when {
+                Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ->
+                    application.packageManager
+                        .getPackageInfo(application.packageName, 0)
 
-        val deviceModel = Build.MODEL
-        val deviceManufacturer = Build.MANUFACTURER
-        val userAgent =
-            "$deviceManufacturer $deviceModel/${Build.VERSION.SDK_INT}(${Build.VERSION.RELEASE}) " +
-                    "Flexa/${BuildConfig.SPEND_SDK_VERSION} "
-        messageBody.append("\n• $userAgent")
-        data?.let { messageBody.append("\n$it\n") }
-        messageBody.append("\n\n")
+                else -> application.packageManager
+                    .getPackageInfo(
+                        application.packageName,
+                        PackageManager.PackageInfoFlags.of(0)
+                    )
+            }
+            val appName = getString(packageInfo.applicationInfo.labelRes)
+            val appCode = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+                packageInfo.versionCode
+            } else {
+                packageInfo.longVersionCode
+            }
+            val appVersionName = packageInfo.versionName
+            val deviceModel = Build.MODEL
+            val deviceManufacturer = Build.MANUFACTURER
+
+            messageBody.append("\n• Application: $appName code: $appCode version name: $appVersionName")
+            messageBody.append("\n• Device: $deviceManufacturer $deviceModel Android: ${Build.VERSION.RELEASE} API: ${Build.VERSION.SDK_INT}")
+            messageBody.append("\n• Flexa SDK: ${BuildConfig.SPEND_SDK_VERSION} ${BuildConfig.RELEASE_DATE}")
+            messageBody.append("\n\n")
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        data?.let { messageBody.append(it) }
 
         val uriText = "mailto:${getString(R.string.flexa_report_email)}" +
                 "?subject=" + Uri.encode(getString(R.string.report_an_issue)) +

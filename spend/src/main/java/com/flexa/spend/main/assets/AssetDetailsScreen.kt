@@ -23,7 +23,6 @@ import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material.icons.rounded.HourglassTop
 import androidx.compose.material3.BottomSheetDefaults
@@ -35,8 +34,6 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -75,7 +72,6 @@ import java.math.BigDecimal
 @Composable
 internal fun AssetDetailsScreen(
     modifier: Modifier = Modifier,
-    viewModel: AssetDetailViewModel,
     assetsViewModel: AssetsViewModel,
     assetBundle: SelectedAsset,
     color: Color = BottomSheetDefaults.ContainerColor,
@@ -85,18 +81,6 @@ internal fun AssetDetailsScreen(
     val density = LocalDensity.current
     var height by remember { mutableStateOf(200.dp) }
     val asset by assetsViewModel.selectedAssetBundle.collectAsStateWithLifecycle()
-
-    LaunchedEffect(asset) {
-        asset?.let {
-            viewModel.asset = it
-        }
-    }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            viewModel.clear()
-        }
-    }
 
     Column(
         modifier = modifier.background(color)
@@ -109,7 +93,6 @@ internal fun AssetDetailsScreen(
                 },
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            val progress by viewModel.progress.collectAsStateWithLifecycle()
             val balanceRestricted by remember {
                 derivedStateOf { asset?.asset?.hasBalanceRestrictions() == true }
             }
@@ -252,55 +235,7 @@ internal fun AssetDetailsScreen(
                     }
                 }
             )
-            ListItem(
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                leadingContent = {
-                    Icon(
-                        modifier = Modifier.size(24.dp),
-                        imageVector = Icons.Outlined.Language,
-                        contentDescription = null
-                    )
-                },
-                headlineContent = {
-                    AnimatedContent(
-                        targetState = asset?.asset?.feeBundle?.label,
-                        transitionSpec = {
-                            if ((targetState?.length ?: 0) < (initialState?.length ?: 0)) {
-                                slideInVertically { width -> width } +
-                                        fadeIn() togetherWith slideOutVertically()
-                                { width -> -width } + fadeOut()
-                            } else {
-                                slideInVertically { width -> -width } +
-                                        fadeIn() togetherWith slideOutVertically()
-                                { width -> width } + fadeOut()
-                            }.using(SizeTransform(clip = false))
-                        }, label = ""
-                    ) { state ->
-                        state
-                        Text(
-                            text = (state?:"").ifBlank { "${stringResource(R.string.updating)}..." },
-                            style = TextStyle(
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.W400,
-                                color = palette.onBackground
-                            )
-                        )
-                    }
-                },
-                supportingContent = {
-                    Text(
-                        text = if (progress)
-                            "${stringResource(id = R.string.updating)}..."
-                        else
-                            stringResource(id = R.string.network_fee),
-                        style = TextStyle(
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.W400,
-                            color = palette.outline
-                        )
-                    )
-                }
-            )
+            SessionFeeItem(assetsViewModel)
         }
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -374,11 +309,6 @@ fun AssetInfoFooter(
 fun AssetDetailContentPreview() {
     FlexaTheme {
         AssetDetailsScreen(
-            viewModel = AssetDetailViewModel(
-                FakeInteractor()
-            ).apply {
-                exchangeRates.value = MockFactory.getExchangeRates()
-            },
             assetBundle = MockFactory.getMockSelectedAsset().copy(
                 asset = MockFactory.getMockSelectedAsset().asset.copy(
                     exchangeRate = MockFactory.getExchangeRate(),

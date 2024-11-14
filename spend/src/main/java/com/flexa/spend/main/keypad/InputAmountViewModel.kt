@@ -21,6 +21,7 @@ internal const val INPUT_DELAY = 1000L
 internal class InputAmountViewModel : ViewModel() {
 
     val formatter = Formatter()
+    val done = MutableStateFlow(false)
     private val _inputState = MutableSharedFlow<InputState>()
     val inputState = _inputState.asSharedFlow()
     private val _inputStateDelayed = MutableSharedFlow<InputState>()

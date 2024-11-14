@@ -7,12 +7,12 @@ import com.flexa.core.entity.Account
 import com.flexa.core.entity.AppAccount
 import com.flexa.core.entity.AvailableAsset
 import com.flexa.core.entity.CommerceSession
-import com.flexa.core.entity.CommerceSessionEvent
 import com.flexa.core.entity.ExchangeRate
 import com.flexa.core.entity.ExchangeRatesResponse
 import com.flexa.core.entity.OneTimeKey
 import com.flexa.core.entity.OneTimeKeyResponse
 import com.flexa.core.entity.PutAppAccountsResponse
+import com.flexa.core.entity.SseEvent
 import com.flexa.core.entity.TransactionFee
 import com.flexa.core.shared.Asset
 import com.flexa.core.shared.AssetsResponse
@@ -165,8 +165,11 @@ internal class SpendInteractor(
             interactor.getCommerceSession(sessionId)
         }
 
-    override suspend fun saveLastEventId(eventId: String) = withContext(Dispatchers.IO) {
-        preferences.saveString(SpendConstants.LAST_EVENT_ID, eventId)
+    override suspend fun saveLastEventId(eventId: String?) = withContext(Dispatchers.IO) {
+        if (eventId != null)
+            preferences.saveString(SpendConstants.LAST_EVENT_ID, eventId)
+        else
+            preferences.remove(SpendConstants.LAST_EVENT_ID)
     }
 
     override suspend fun getLastEventId(): String? = withContext(Dispatchers.IO) {
@@ -218,7 +221,7 @@ internal class SpendInteractor(
     override suspend fun saveAssets(items: List<Asset>) =
         withContext(Dispatchers.IO) { dbInteractor.saveAssets(items) }
 
-    override suspend fun listenEvents(lastEventId: String?): Flow<CommerceSessionEvent> =
+    override suspend fun listenEvents(lastEventId: String?): Flow<SseEvent> =
         interactor.listenEvents(lastEventId)
 
     override suspend fun savePinnedBrands(itemsIds: List<String>) =
@@ -267,6 +270,11 @@ internal class SpendInteractor(
                 assetId,
                 paymentAssetId
             )
+        }
+
+    override suspend fun approveCommerceSession(commerceSessionId: String): Int =
+        withContext(Dispatchers.IO) {
+            interactor.approveCommerceSession(commerceSessionId)
         }
 
     override suspend fun closeCommerceSession(commerceSessionId: String): String =

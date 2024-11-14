@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,10 +20,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -136,6 +139,7 @@ fun FlexcodeLayout(
         ) {
             var parentWidth by remember { mutableIntStateOf(0) }
             var parentHeight by remember { mutableIntStateOf(0) }
+            val offset by remember { derivedStateOf { rootSize.width * -0.004F } }
             Box(
                 modifier = Modifier
                     .align(Alignment.Center)
@@ -163,7 +167,7 @@ fun FlexcodeLayout(
                         .fillMaxHeight()
                         .rotate(180F)
                         .offset {
-                            IntOffset(x = (rootSize.width * -0.004F).toInt(), y = 0)
+                            IntOffset(x = offset.toInt(), y = 0)
                         },
                     code = code,
                     rows = 23,
@@ -175,14 +179,11 @@ fun FlexcodeLayout(
                     with(density) { (rootSize.width * (0.42F)).toDp() }
                 }
             }
-            val multiplier by remember {
-                derivedStateOf { parentWidth.toFloat() / parentHeight }
-            }
             val imgOffset by remember {
-                derivedStateOf { (rootSize.width / (5.16F * multiplier)).toInt() }
+                derivedStateOf { ((rootSize.width * 0.141f) - offset).toInt() }
             }
             val imgHeight by remember {
-                derivedStateOf { with(density) { (rootSize.height * 0.055f).toDp() } }
+                derivedStateOf { with(density) { (rootSize.height * 0.056f).toDp() } }
             }
             Image(
                 modifier = Modifier
@@ -192,7 +193,7 @@ fun FlexcodeLayout(
                     .offset {
                         IntOffset(
                             x = imgOffset,
-                            y = (rootSize.height * 0.0275f).toInt()
+                            y = (rootSize.height * 0.028f).toInt()
                         )
                     }
                     .animateContentSize(),
@@ -208,7 +209,7 @@ fun FlexcodeLayout(
                     .offset {
                         IntOffset(
                             x = imgOffset,
-                            y = (rootSize.height * (-0.0275f)).toInt()
+                            y = (rootSize.height * (-0.028f)).toInt()
                         )
                     }
                     .animateContentSize(),
@@ -260,7 +261,8 @@ fun FlexcodeLayout(
     }
 }
 
-@Preview(showBackground = true, showSystemUi = false, backgroundColor = 0xFFCCCCCC,
+@Preview(
+    showBackground = true, showSystemUi = false, backgroundColor = 0xFFCCCCCC,
     device = "spec:parent=pixel_5,orientation=portrait"
 )
 @Preview(
@@ -276,18 +278,36 @@ fun FlexcodeLayout(
 @Composable
 private fun FlexcodeLayoutPreview() {
     FlexaTheme {
-        Column(modifier = Modifier
-            .padding(20.dp)
-            .padding(top = 100.dp)
-            .fillMaxSize().verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
-            FlexcodeLayout(
+        Column(
+            modifier = Modifier
+                .padding(20.dp)
+                .padding(top = 100.dp)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            var sliderPosition by remember { mutableFloatStateOf(1.0f) }
+            val d = LocalDensity.current
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1.14f)
-                ,
-                code = "123456789012",
-                color = Color.Magenta
+                    .aspectRatio(1.14f),
+                contentAlignment = Alignment.Center,
+            ) {
+                FlexcodeLayout(
+                    modifier = Modifier
+                        .width(with(d) { (sliderPosition * 1000F).toDp() })
+                        .aspectRatio(1.14f),
+                    code = "123456789012",
+                    color = Color.Magenta
+                )
+            }
+            Spacer(modifier = Modifier.height(60.dp))
+            Slider(
+                value = sliderPosition,
+                onValueChange = { sliderPosition = it }
             )
+
         }
     }
 }

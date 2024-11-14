@@ -6,14 +6,15 @@ import com.flexa.core.data.storage.SecuredPreferences
 import com.flexa.core.domain.rest.IRestRepository
 import com.flexa.core.entity.Account
 import com.flexa.core.entity.CommerceSession
-import com.flexa.core.entity.CommerceSessionEvent
 import com.flexa.core.entity.ExchangeRate
 import com.flexa.core.entity.ExchangeRatesResponse
 import com.flexa.core.entity.OneTimeKey
 import com.flexa.core.entity.OneTimeKeyResponse
+import com.flexa.core.entity.SseEvent
 import com.flexa.core.entity.TokenPatch
 import com.flexa.core.entity.TokensResponse
 import com.flexa.core.entity.TransactionFee
+import com.flexa.core.entity.error.ApiException
 import com.flexa.core.shared.Asset
 import com.flexa.core.shared.AssetsResponse
 import com.flexa.core.shared.Brand
@@ -48,6 +49,7 @@ import okhttp3.sse.EventSource
 import okhttp3.sse.EventSourceListener
 import okhttp3.sse.EventSources
 import java.net.HttpURLConnection
+import java.util.concurrent.CancellationException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -400,25 +402,28 @@ internal class RestRepository(
             )
     }
 
-    override suspend fun listenEvents(lastEventId: String?): Flow<CommerceSessionEvent> =
+    override suspend fun listenEvents(lastEventId: String?): Flow<SseEvent> =
         callbackFlow {
+            val sessionCreated = "commerce_session.created"
+            val sessionRequiresTransaction = "commerce_session.requires_transaction"
+            val sessionRequiresApproval = "commerce_session.requires_approval"
+            val sessionClosed = "commerce_session.closed"
+            val sessionCompleted = "commerce_session.completed"
             val url = HttpUrl.Builder()
                 .scheme(SCHEME).host(host)
                 .addPathSegment("events")
                 .addEncodedQueryParameter(
                     "type",
-                    "commerce_session.created," +
-                            "commerce_session.completed," +
-                            "commerce_session.updated"
+                    "$sessionCreated," +
+                            "$sessionRequiresTransaction," +
+                            "$sessionRequiresApproval," +
+                            "$sessionClosed," +
+                            sessionCompleted
                 )
                 .build()
             val sseClient = okHttpProvider.sseClient
             val sseRequest = Request.Builder()
-                .apply {
-                    lastEventId?.let {
-                        addHeader("Last-Event-ID", it)
-                    }
-                }
+                .apply { lastEventId?.let { addHeader("Last-Event-ID", it) } }
                 .url(url)
                 .build()
 
@@ -434,24 +439,27 @@ internal class RestRepository(
                     type: String?,
                     data: String
                 ) {
-                    Log.d("TAG", "onEvent: $data eventSource: $eventSource id: $id, type: $type")
+                    Log.d(null, "onEvent: $data eventSource: $eventSource id: $id, type: $type")
                     when (type) {
-                        "commerce_session.created" -> {
+                        sessionCreated,
+                        sessionRequiresTransaction,
+                        sessionRequiresApproval,
+                        sessionClosed,
+                        sessionCompleted -> {
                             val dto = json.decodeFromString<CommerceSession>(data)
-                            trySend(CommerceSessionEvent.Created(id, dto))
-                        }
-
-                        "commerce_session.updated" -> {
-                            val dto = json.decodeFromString<CommerceSession>(data)
-                            trySend(CommerceSessionEvent.Updated(id, dto))
-                        }
-
-                        "commerce_session.completed" -> {
-                            val dto = json.decodeFromString<CommerceSession>(data)
-                            trySend(CommerceSessionEvent.Completed(id, dto))
+                            trySend(SseEvent.Session(id, dto))
                         }
 
                         else -> {}
+                    }
+                    runCatching {
+                        val jsonResponse = json.parseToJsonElement(data)
+                        val error = jsonResponse.jsonObject["error"]
+                        error?.jsonObject?.get("message")?.jsonPrimitive?.contentOrNull
+                    }.onSuccess { message ->
+                        if (message != null) {
+                            cancel(cause = CancellationException(message))
+                        }
                     }
                 }
 
@@ -460,12 +468,14 @@ internal class RestRepository(
                     t: Throwable?,
                     response: Response?
                 ) {
-                    Log.e("TAG", "onFailure: ", t)
+                    Log.e(null, "onFailure: ", t)
                     cancel(message = response?.message ?: "", cause = t)
                 }
 
                 override fun onOpen(eventSource: EventSource, response: Response) {
-                    Log.d("TAG", "onOpen: ${response.code} ${response.message}")
+                    Log.d(null, "onOpen: ${response.code} ${response.message}")
+                    if (!response.isSuccessful)
+                        cancel(cause = CancellationException())
                 }
             }
             val eventSource = EventSources.createFactory(sseClient)
@@ -555,23 +565,29 @@ internal class RestRepository(
             .post(body).build()
 
         runCatching { okHttpProvider.client.newCall(request).execute() }
-            .fold(
-                onSuccess = { response ->
+            .onSuccess { response ->
+                if (response.isSuccessful) {
                     runCatching {
-                        if (response.code != 201) {
-                            throw NullPointerException()
-                        } else {
-                            val raw = response.body?.string().toString()
-                            val dto = json.decodeFromString<CommerceSession.Data>(raw)
-                            dto
+                        val raw = response.body?.string().toString()
+                        json.decodeFromString<CommerceSession.Data>(raw)
+                    }.onSuccess { dto -> it.resume(dto) }
+                        .onFailure { e ->
+                            Log.e(null, "createCommerceSession: ", e)
+                            it.resumeWithException(
+                                ApiException(
+                                    message = "Can't parse the commerce session data",
+                                    traceId = response.header("client-trace-id")
+                                )
+                            )
                         }
-                    }.fold(
-                        onSuccess = { dto -> it.resume(dto) },
-                        onFailure = { ex -> it.resumeWithException(ex) }
-                    )
-                },
-                onFailure = { ex -> it.resumeWithException(ex) }
-            )
+                } else {
+                    val e = response.toApiException()
+                    it.resumeWithException(e)
+                }
+            }
+            .onFailure { ex ->
+                it.resumeWithException(ex)
+            }
     }
 
     override suspend fun closeCommerceSession(commerceSessionId: String): String =
@@ -669,6 +685,29 @@ internal class RestRepository(
                         }
                     }
                 }
+        }
+
+    override suspend fun approveCommerceSession(commerceSessionId: String): Int =
+        suspendCancellableCoroutine {
+            val url = HttpUrl.Builder()
+                .scheme(SCHEME).host(host)
+                .addPathSegment("commerce_sessions")
+                .addEncodedPathSegment(commerceSessionId)
+                .addPathSegment("approve")
+                .build()
+
+            val request: Request = Request.Builder().url(url).post(EMPTY_REQUEST).build()
+
+            runCatching { okHttpProvider.client.newCall(request).execute() }
+                .onSuccess { response ->
+                    if (response.isSuccessful) {
+                        it.resume(response.code)
+                    } else {
+                        val e = response.toApiException()
+                        it.resumeWithException(e)
+                    }
+                }
+                .onFailure { ex -> it.resumeWithException(ex) }
         }
 
     override suspend fun getCommerceSession(sessionId: String): CommerceSession.Data =

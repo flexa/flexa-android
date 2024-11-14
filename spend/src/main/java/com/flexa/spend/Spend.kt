@@ -22,6 +22,9 @@ internal object Spend {
         @ParameterName("commerceSessionId") String,
         @ParameterName("txSignature") String
     ) -> Unit)? = null
+    internal var transactionFailed: ((
+        @ParameterName("commerceSessionId") String
+    ) -> Unit)? = null
     internal val json = Json { ignoreUnknownKeys = true }
 
     private val securedPreferences by lazy {

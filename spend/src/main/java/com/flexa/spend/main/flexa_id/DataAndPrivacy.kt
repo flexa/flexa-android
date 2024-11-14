@@ -12,7 +12,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.PersonRemove
 import androidx.compose.material.icons.outlined.WarningAmber
@@ -39,7 +38,6 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -182,38 +180,6 @@ fun DataAndPrivacy(
                         )
                     }
                 }
-            )
-            HorizontalDivider()
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                text = stringResource(R.string.advanced),
-                color = palette.primary,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            androidx.compose.material3.ListItem(
-                modifier = Modifier
-                    .clickable {
-
-                    },
-                colors = ListItemDefaults.colors(
-                    containerColor = Color.Transparent
-                ),
-                leadingContent = {
-                    Icon(
-                        modifier = Modifier.size(iconsSize),
-                        imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
-                        contentDescription = null,
-                    )
-                },
-                headlineContent = {
-                    Text(
-                        text = stringResource(R.string.export_debug_data),
-                        fontSize = 18.sp,
-                    )
-                },
             )
             HorizontalDivider()
             Text(

@@ -48,6 +48,7 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.CreditCard
+import androidx.compose.material.icons.rounded.Done
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.WatchLater
@@ -98,6 +99,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.flexa.core.shared.ErrorDialog
 import com.flexa.core.shared.Promotion
 import com.flexa.core.theme.FlexaTheme
 import com.flexa.core.toCurrencySign
@@ -106,6 +108,7 @@ import com.flexa.spend.MockFactory
 import com.flexa.spend.R
 import com.flexa.spend.Spend
 import com.flexa.spend.containsAuthorization
+import com.flexa.spend.coveringAmount
 import com.flexa.spend.domain.FakeInteractor
 import com.flexa.spend.getAmount
 import com.flexa.spend.getDiscount
@@ -114,6 +117,7 @@ import com.flexa.spend.getSpendableBalance
 import com.flexa.spend.hasBalanceRestrictions
 import com.flexa.spend.isDark
 import com.flexa.spend.lightenColor
+import com.flexa.spend.main.assets.AccountCoverageCard
 import com.flexa.spend.main.assets.AssetsBottomSheet
 import com.flexa.spend.main.assets.AssetsViewModel
 import com.flexa.spend.main.main_screen.SpendDragHandler
@@ -126,6 +130,7 @@ import com.flexa.spend.main.ui_utils.rememberSelectedAsset
 import com.flexa.spend.positive
 import com.flexa.spend.shiftHue
 import com.flexa.spend.toColor
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.math.BigDecimal
 import kotlin.math.roundToInt
@@ -144,7 +149,6 @@ internal fun InputAmountScreen(
     val context = LocalContext.current
     val palette = MaterialTheme.colorScheme
 
-    val sheetState = rememberModalBottomSheetState()
     var showBottomSheet by remember { mutableStateOf(false) }
     var sheetType by remember { mutableStateOf(SheetType.ASSETS) }
 
@@ -173,6 +177,10 @@ internal fun InputAmountScreen(
             brand?.color?.toColor() ?: palette.primary
         )
     }
+    val account by assetsViewModel.account.collectAsStateWithLifecycle()
+    val coveredByFlexaBalance by remember {
+        derivedStateOf { account?.coveringAmount(amount) == true }
+    }
 
     val returnBack = {
         spendViewModel.setBrand(null)
@@ -196,6 +204,8 @@ internal fun InputAmountScreen(
         val legacy = commerceSession?.data?.isLegacy == true
         val containsAuthorization = commerceSession?.containsAuthorization() ?: false
         if (legacy && containsAuthorization) {
+            viewModel.done.value = true
+            delay(300)
             returnBack()
         }
     }
@@ -335,13 +345,13 @@ internal fun InputAmountScreen(
                 Column {
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(
-                        modifier = Modifier.height(30.dp),
+                        modifier = Modifier.padding(horizontal = 32.dp),
                         enabled = promotion?.url != null,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = background,
                             disabledContainerColor = background
                         ),
-                        contentPadding = PaddingValues(horizontal = 8.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                         onClick = { promotion?.url?.let(toUrl) }
                     ) {
                         AnimatedVisibility(discountPositive) {
@@ -352,7 +362,6 @@ internal fun InputAmountScreen(
                                     contentDescription = null,
                                     tint = contentColor
                                 )
-                                Spacer(modifier = Modifier.width(6.dp))
                             }
                         }
                         val promotionText by remember {
@@ -369,7 +378,9 @@ internal fun InputAmountScreen(
                             }
                         }
                         Text(
-                            modifier = Modifier.animateContentSize(),
+                            modifier = Modifier
+                                .animateContentSize()
+                                .padding(horizontal = 8.dp),
                             text = promotionText,
                             color = contentColor,
                         )
@@ -423,12 +434,18 @@ internal fun InputAmountScreen(
             ) {
                 val text by remember {
                     derivedStateOf {
-                        when (inputStateDelayed) {
-                            is InputState.Min ->
+                        when {
+                            inputStateDelayed is InputState.Min ->
                                 "${context.getString(R.string.minimum_amount)}: \$${brand?.legacyFlexcodes?.firstOrNull()?.amount?.minimum ?: ""}"
 
-                            is InputState.Max ->
+                            inputStateDelayed is InputState.Max ->
                                 "${context.getString(R.string.maximum_amount)}: \$${brand?.legacyFlexcodes?.firstOrNull()?.amount?.maximum ?: ""}"
+
+                            coveredByFlexaBalance ->
+                                "${context.getString(R.string.using)} ${
+                                    context.getString(R.string.your_flexa_account)
+                                        .replaceFirstChar { it.lowercaseChar() }
+                                }"
 
                             else -> "${context.getString(R.string.using)} ${selectedAsset?.asset?.assetData?.displayName}"
                         }
@@ -585,22 +602,23 @@ internal fun InputAmountScreen(
                 )
             },
             dismissButton = {
-                TextButton(onClick = { spendViewModel.initCloseSessionTimeout() }) {
-                    Text(text = "Wait")
-                }
-            },
-            confirmButton = {
                 TextButton(onClick = {
                     returnBack.invoke()
                     spendViewModel.cancelTimeout()
-                }) {
-                    Text(text = "Cancel Payment")
+                }) { Text(text = "Cancel Payment") }
+            },
+            confirmButton = {
+                Button(onClick = { spendViewModel.initCloseSessionTimeout() }) {
+                    Text(text = "Wait")
                 }
             }
         )
     }
 
     if (showBottomSheet) {
+        val sheetState = rememberModalBottomSheetState(
+            skipPartiallyExpanded = sheetType != SheetType.ASSETS
+        )
         ModalBottomSheet(
             modifier = Modifier
                 .fillMaxWidth()
@@ -611,11 +629,16 @@ internal fun InputAmountScreen(
         ) {
             when (sheetType) {
                 SheetType.ASSETS -> {
-                    AssetsBottomSheet(
-                        viewModel = assetsViewModel,
-                        toUrl = { toUrl(it) },
-                        toBack = { showBottomSheet = false }
-                    )
+                    if (!coveredByFlexaBalance) {
+                        AssetsBottomSheet(
+                            viewModel = assetsViewModel,
+                            amount = amount,
+                            toUrl = { toUrl(it) },
+                            toBack = { showBottomSheet = false }
+                        )
+                    } else {
+                        AccountCoverageCard(assetsViewModel)
+                    }
                 }
 
                 SheetType.AMOUNT -> {
@@ -637,6 +660,7 @@ internal fun InputAmountScreen(
             }
         }
     }
+    ErrorDialog(spendViewModel.errorHandler)
 }
 
 private enum class SheetType {
@@ -655,6 +679,7 @@ internal fun PayButton(
 ) {
     val context = LocalContext.current
     val progress by spendViewModel.progress.collectAsStateWithLifecycle()
+    val progressState by spendViewModel.progressState.collectAsStateWithLifecycle()
     val selectedAsset by assetsViewModel.selectedAssetBundle.collectAsStateWithLifecycle()
     val amount by viewModel.formatter.dataAsFlow.collectAsStateWithLifecycle()
     val totalBalanceEnough by remember {
@@ -691,10 +716,12 @@ internal fun PayButton(
     val wrongAvailableState by remember {
         derivedStateOf { !availableBalanceEnough && hasBalanceRestrictions && totalBalanceEnough }
     }
+    val done by viewModel.done.collectAsStateWithLifecycle()
     val text by remember {
         derivedStateOf {
             when {
-                progress -> "${context.getString(R.string.processing)}..."
+                done -> context.getString(R.string.done)
+                progress -> progressState ?: ""
                 !totalBalanceEnough -> "Not enough ${selectedAsset?.asset?.assetData?.displayName}"
                 !availableBalanceEnough -> "${context.getString(R.string.balance_not_yet_available)}..."
                 else -> context.getString(R.string.confirm)
@@ -730,6 +757,19 @@ internal fun PayButton(
             }, label = "Pay Now"
         ) { state ->
             Row(verticalAlignment = Alignment.CenterVertically) {
+                val done by viewModel.done.collectAsStateWithLifecycle()
+                androidx.compose.animation.AnimatedVisibility(
+                    modifier = Modifier.padding(4.dp),
+                    visible = done,
+                    enter = scaleIn(initialScale = 1.3F) + fadeIn(),
+                    exit = scaleOut(targetScale = 1.3F) + fadeOut()
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Done,
+                        contentDescription = null,
+                        tint = Color.White
+                    )
+                }
                 androidx.compose.animation.AnimatedVisibility(
                     modifier = Modifier.padding(4.dp),
                     visible = progress
@@ -840,7 +880,7 @@ private fun KeypadScreenPreview() {
         InputAmountScreen(
             modifier = Modifier.fillMaxSize(),
             viewModel = InputAmountViewModel().apply {
-                formatter.append(Symbol("23.10"))
+                formatter.append(Symbol("13.10"))
             },
             spendViewModel = SpendViewModel(FakeInteractor()).apply {
                 setBrand(

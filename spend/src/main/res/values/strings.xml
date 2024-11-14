@@ -43,6 +43,10 @@
     <string name="default_asset">Default Asset</string>
     <string name="coming_soon">Coming soon</string>
     <string name="not_enough_for_this_payment">%1$s not enough for this payment</string>
+    <string name="in_your_flexa_account">%1$s in your Flexa Account</string>
+    <string name="pay_remaining">Pay remaining %1$s using</string>
+    <string name="applied_to_your_next_payment">Applied to your next payment</string>
+    <string name="applied_to_this_payment">Applied to this payment</string>
     <string name="available_to_spend">Available to Spend</string>
     <string name="us_dollars">US dollars</string>
     <string name="payment_privacy_enabled">Payment Privacy Enabled</string>
@@ -78,6 +82,7 @@
     <string name="delete_account_copy">Deleting your Flexa Account will permanently erase your account and associated data from all Flexa systems and apps where you are signed in.\n\nDepending on where you live, we may not be able to delete all of your account data right away. We will, however, delete all of your account data as quickly as we are permitted by law.\n\nAfter your account is deleted, you will no longer be able to receive refunds back to your wallet, and any active subscriptions will be canceled.</string>
     <string name="advanced">Advanced</string>
     <string name="your_flexa_account">Your Flexa Account</string>
+    <string name="flexa_account_full_coverage_copy">The balance of your Flexa Account will cover this payment. You don\'t need to send anything else.</string>
     <string name="export_debug_data">Export debug data</string>
     <string name="sdk_version">SDK version %1$s</string>
     <string name="confirm_deletion">Confirm deletion</string>
@@ -100,4 +105,6 @@
     <string name="balance_restrictions_copy2">now, or wait for your full balance to become available.</string>
     <string name="balance_not_yet_available">Balance Not Yet Available</string>
     <string name="saving">Saving</string>
+    <string name="signing">Signing</string>
+    <string name="sending">Sending</string>
 </resources>

@@ -7,6 +7,7 @@ import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -90,6 +91,7 @@ private fun InfoDialog(
                 modifier = Modifier.fillMaxWidth(),
                 text = title ?: context.getString(R.string.something_went_wrong),
                 fontWeight = FontWeight.Medium,
+                style = MaterialTheme.typography.titleLarge
             )
         },
         text = {
@@ -129,6 +131,7 @@ private fun ReportDialog(
                     modifier = Modifier.fillMaxWidth(),
                     text = it,
                     fontWeight = FontWeight.Medium,
+                    style = MaterialTheme.typography.titleLarge
                 )
             }
         },

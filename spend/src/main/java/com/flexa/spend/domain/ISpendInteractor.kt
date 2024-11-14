@@ -4,12 +4,12 @@ import com.flexa.core.data.db.BrandSession
 import com.flexa.core.entity.Account
 import com.flexa.core.entity.AppAccount
 import com.flexa.core.entity.CommerceSession
-import com.flexa.core.entity.CommerceSessionEvent
 import com.flexa.core.entity.ExchangeRate
 import com.flexa.core.entity.ExchangeRatesResponse
 import com.flexa.core.entity.OneTimeKey
 import com.flexa.core.entity.OneTimeKeyResponse
 import com.flexa.core.entity.PutAppAccountsResponse
+import com.flexa.core.entity.SseEvent
 import com.flexa.core.entity.TransactionFee
 import com.flexa.core.shared.Asset
 import com.flexa.core.shared.AssetsResponse
@@ -31,7 +31,7 @@ interface ISpendInteractor {
     suspend fun saveLastSessionId(eventId: String?)
     suspend fun getLastSessionId(): String?
     suspend fun getCommerceSession(sessionId: String): CommerceSession.Data
-    suspend fun saveLastEventId(eventId: String)
+    suspend fun saveLastEventId(eventId: String?)
     suspend fun getLastEventId(): String?
     suspend fun putAccounts(accounts: List<com.flexa.core.shared.AssetAccount>): PutAppAccountsResponse
     suspend fun getAccount(): Account
@@ -45,7 +45,7 @@ interface ISpendInteractor {
     suspend fun getDbAssetsById(vararg ids: String): List<Asset>
     suspend fun deleteAssets()
     suspend fun saveAssets(items: List<Asset>)
-    suspend fun listenEvents(lastEventId: String?): Flow<CommerceSessionEvent>
+    suspend fun listenEvents(lastEventId: String?): Flow<SseEvent>
     suspend fun savePinnedBrands(itemsIds: List<String>)
     suspend fun getPinnedBrands(): List<String>
     suspend fun getBrands(legacyOnly: Boolean): List<Brand>
@@ -55,7 +55,7 @@ interface ISpendInteractor {
     suspend fun createCommerceSession(
         brandId: String, amount: String, assetId: String, paymentAssetId: String
     ): CommerceSession.Data
-
+    suspend fun approveCommerceSession(commerceSessionId: String): Int
     suspend fun closeCommerceSession(commerceSessionId: String): String
     suspend fun confirmTransaction(
         commerceSessionId: String, txSignature: String

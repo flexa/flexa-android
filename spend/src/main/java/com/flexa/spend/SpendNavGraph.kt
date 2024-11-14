@@ -23,6 +23,8 @@ import com.flexa.core.toNavArgument
 import com.flexa.identity.buildIdentity
 import com.flexa.identity.getActivity
 import com.flexa.identity.shared.ConnectResult
+import com.flexa.spend.data.DeepLink
+import com.flexa.spend.data.DeepLinkParser
 import com.flexa.spend.main.assets.AssetsViewModel
 import com.flexa.spend.main.flexa_id.ConfirmDeleteAccount
 import com.flexa.spend.main.flexa_id.DataAndPrivacy
@@ -76,22 +78,8 @@ fun NavGraphBuilder.spendNavGraph(
             val context = LocalContext.current
             Entrance(
                 deepLink = deepLink,
-                toDeepLink = {
-                    if (context is Activity) {
-                        Flexa.buildIdentity().onResult { res ->
-                            when (res) {
-                                is ConnectResult.Connected -> {
-                                    navController.navigate(Route.Pay.name) {
-                                        popUpTo(PAY_ROUTE) { inclusive = true }
-                                    }
-                                }
-
-                                else -> {
-                                    close(context, navController)
-                                }
-                            }
-                        }.build().open(context, deepLink)
-                    }
+                toDeepLink = { link ->
+                    toLink(link, navController, context)
                 },
                 toLogin = {
                     if (context is Activity)
@@ -145,12 +133,11 @@ fun NavGraphBuilder.spendNavGraph(
                     initializer = { BrandsViewModel(Spend.interactor) },
                     viewModelStoreOwner = context.getActivity() ?: it
                 ),
+                deepLink = deepLink,
                 toBack = { close(context, navController) },
                 toEdit = { navController.navigate(Route.Brands.name) },
                 toManageAccount = { navController.navigate(Route.Account.name) },
-                toUrl = { url ->
-                    navController.navigate(Route.WebView.createRoute(url))
-                },
+                toUrl = { url -> toLink(url, navController, context, false) },
                 toInputAmount = {
                     navController.navigate(Route.InputAmount.name)
                 },
@@ -293,11 +280,11 @@ private fun Entrance(
     deepLink: String?,
     toLogin: () -> Unit,
     toPay: () -> Unit,
-    toDeepLink: () -> Unit,
+    toDeepLink: (@ParameterName("link") String) -> Unit,
 ) {
     LaunchedEffect(deepLink) {
         if (deepLink != null) {
-            toDeepLink.invoke()
+            toDeepLink.invoke(deepLink)
         } else {
             Flexa.buildIdentity().build().collect {
                 when (it) {
@@ -313,4 +300,106 @@ private fun close(context: Context, navController: NavHostController) {
     if (context is SpendActivity) context.finish()
     else
         navController.popBackStack(route = PAY_ROUTE, true)
+}
+
+private fun toLink(
+    deepLink: String,
+    navController: NavHostController,
+    context: Context,
+    external: Boolean = true
+) {
+    when (val link = DeepLinkParser.getDeepLink(deepLink)) {
+        DeepLink.Account -> {
+            if (external)
+                navController.navigate(Route.Pay.name) { popUpTo(PAY_ROUTE) { inclusive = true } }
+            navController.navigate(Route.Account.name)
+        }
+
+        DeepLink.DataAndPrivacy -> {
+            if (external)
+                navController.navigate(Route.Pay.name) { popUpTo(PAY_ROUTE) { inclusive = true } }
+            navController.navigate(Route.Account.name)
+            navController.navigate(Route.DataAndPrivacy.name)
+        }
+
+        DeepLink.DeleteAccount -> {
+            if (external)
+                navController.navigate(Route.Pay.name) { popUpTo(PAY_ROUTE) { inclusive = true } }
+            navController.navigate(Route.Account.name)
+            navController.navigate(Route.DataAndPrivacy.name)
+            navController.navigate(Route.DeleteAccount.name)
+        }
+
+        DeepLink.PlacesToPay -> {
+            navController.navigate(Route.Pay.name) { popUpTo(PAY_ROUTE) { inclusive = true } }
+        }
+
+        is DeepLink.Brands -> {
+            if (external)
+                navController.navigate(Route.Pay.name) { popUpTo(PAY_ROUTE) { inclusive = true } }
+            navController.navigate(
+                Route.WebView.createRoute("https://flexa.network/directory/${link.url}")
+            )
+        }
+
+        DeepLink.HowToPay -> {
+            if (external)
+                navController.navigate(Route.Pay.name) { popUpTo(PAY_ROUTE) { inclusive = true } }
+            navController.navigate(
+                Route.WebView.createRoute("https://flexa.co/guides/how-to-pay")
+            )
+        }
+
+        DeepLink.Pay, is DeepLink.CommerceSession -> {
+            navController.navigate(Route.Pay.name) {
+                popUpTo(PAY_ROUTE) { inclusive = true }
+            }
+        }
+
+        DeepLink.PinnedBrands -> {
+            if (external)
+                navController.navigate(Route.Pay.name) { popUpTo(PAY_ROUTE) { inclusive = true } }
+            navController.navigate(Route.Brands.name)
+        }
+
+        is DeepLink.ReportIssue -> {
+            navController.navigate(Route.Pay.name) { popUpTo(PAY_ROUTE) { inclusive = true } }
+        }
+
+        is DeepLink.Login -> {
+            if (context is Activity) {
+                Flexa.buildIdentity().onResult { res ->
+                    when (res) {
+                        is ConnectResult.Connected -> {
+                            navController.navigate(Route.Pay.name) {
+                                popUpTo(PAY_ROUTE) { inclusive = true }
+                            }
+                        }
+
+                        else -> {
+                            close(context, navController)
+                        }
+                    }
+                }.build().open(context, deepLink)
+            }
+        }
+
+        is DeepLink.ReportIssueBrand -> {
+            //todo development
+        }
+
+        is DeepLink.SupportArticle -> {
+            if (external)
+                navController.navigate(Route.Pay.name) { popUpTo(PAY_ROUTE) { inclusive = true } }
+            navController.navigate(
+                Route.WebView.createRoute("https://flexa.network/directory/${link.url}")
+            )
+        }
+
+        DeepLink.Unknown -> {
+            if (external)
+                navController.navigate(Route.Pay.name) { popUpTo(PAY_ROUTE) { inclusive = true } }
+            navController.navigate(Route.WebView.createRoute(deepLink))
+        }
+    }
 }

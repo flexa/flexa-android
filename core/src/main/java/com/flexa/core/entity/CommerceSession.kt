@@ -55,9 +55,31 @@ data class CommerceSession(
         val updated: Long? = null,
         @SerialName("authorization")
         val authorization: Authorization? = null,
+        @SerialName("credits")
+        val credits: List<Credit>? = null,
         @Transient
         val isLegacy: Boolean = false
     ) {
+
+        @Serializable
+        data class Credit(
+            @SerialName("id")
+            val id: String? = null,
+            @SerialName("amount")
+            val amount: String? = null,
+            @SerialName("asset")
+            val asset: String? = null,
+            @SerialName("kind")
+            val kind: String? = null,
+            @SerialName("label")
+            val label: String? = null,
+            @SerialName("status")
+            val status: String? = null,
+            @SerialName("created")
+            val created: Long? = null,
+            @SerialName("updated")
+            val updated: Long? = null,
+        )
 
         @Serializable
         data class Authorization(
@@ -157,9 +179,9 @@ data class CommerceSession(
                 @SerialName("asset")
                 val asset: String? = null,
                 @SerialName("equivalent")
-                val equivalent: String? = null,
+                var equivalent: String? = null,
                 @SerialName("label")
-                val label: String? = null,
+                var label: String? = null,
                 @SerialName("price")
                 val price: Price? = null,
                 @SerialName("zone")
@@ -179,8 +201,6 @@ data class CommerceSession(
     }
 }
 
-sealed class CommerceSessionEvent(val eventId: String?) {
-    class Created(id: String?, val session: CommerceSession) : CommerceSessionEvent(id)
-    class Updated(id: String?, val session: CommerceSession) : CommerceSessionEvent(id)
-    class Completed(id: String?, val session: CommerceSession) : CommerceSessionEvent(id)
+sealed class SseEvent(val eventId: String?) {
+    class Session(id: String?, val session: CommerceSession) : SseEvent(id)
 }

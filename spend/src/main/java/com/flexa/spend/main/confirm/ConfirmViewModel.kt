@@ -10,10 +10,12 @@ import com.flexa.core.shared.FlexaConstants.Companion.RETRY_DELAY
 import com.flexa.core.shared.SelectedAsset
 import com.flexa.spend.Spend
 import com.flexa.spend.Transaction
+import com.flexa.spend.coveredByFlexaAccount
 import com.flexa.spend.domain.ISpendInteractor
 import com.flexa.spend.isCompleted
 import com.flexa.spend.toBrandSession
 import com.flexa.spend.toTransaction
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,7 +27,9 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.retryWhen
+import kotlinx.coroutines.flow.timeout
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 internal class ConfirmViewModel(
     internal val session: StateFlow<CommerceSession?>,
@@ -71,7 +75,7 @@ internal class ConfirmViewModel(
     fun payNow() {
         viewModelScope.launch {
             session.value?.let { commerceSession ->
-                saveBrandSession(commerceSession.data)
+                saveSession(commerceSession.data)
                 _payProgress.value = true
                 val transaction = commerceSession.toTransaction()
                 _transaction.value = transaction
@@ -97,11 +101,8 @@ internal class ConfirmViewModel(
                             _completed.value = true
                         }
 
-                        isInitiated(session) -> {
-                            _payProgress.value = true
-                        }
-
-                        else -> { _patchProgress.value = false }
+                        isInitiated(session) -> _payProgress.value = true
+                        else -> _patchProgress.value = false
                     }
                 }
         }
@@ -114,7 +115,12 @@ internal class ConfirmViewModel(
                 .collect {
                     it?.let { asset ->
                         session.value?.data?.id?.let { sessionId ->
-                            patchCommerceSession(sessionId, asset)
+                            val covered =
+                                session.value?.data?.coveredByFlexaAccount() == true
+                            val completed = session.value?.isCompleted() == true
+                            if (!covered && !completed) {
+                                patchCommerceSession(sessionId, asset)
+                            }
                         }
                     }
                 }
@@ -122,6 +128,8 @@ internal class ConfirmViewModel(
     }
 
     private var rollBackPatch = false
+
+    @OptIn(FlowPreview::class)
     private fun patchCommerceSession(commerceSessionId: String, selectedAsset: SelectedAsset) {
         viewModelScope.launch {
             flow {
@@ -134,6 +142,7 @@ internal class ConfirmViewModel(
                 delay(RETRY_DELAY)
                 attempt < RETRY_COUNT
             }
+                .timeout(3000.milliseconds)
                 .onStart { _patchProgress.value = true }
                 .catch { ex ->
                     rollBackPatch = true
@@ -165,7 +174,7 @@ internal class ConfirmViewModel(
         return brandSession != null
     }
 
-    private suspend fun saveBrandSession(session: CommerceSession.Data?) {
+    private suspend fun saveSession(session: CommerceSession.Data?) {
         session?.toBrandSession(legacy = false)?.let { interactor.saveBrandSession(it) }
     }
 }

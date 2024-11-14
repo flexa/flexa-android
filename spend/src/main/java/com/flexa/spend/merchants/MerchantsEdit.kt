@@ -39,7 +39,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -59,6 +58,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.flexa.core.shared.Brand
 import com.flexa.core.theme.FlexaTheme
@@ -85,6 +85,7 @@ fun MerchantsEdit(
     viewModel: BrandsViewModel,
     toBack: () -> Unit
 ) {
+    viewModel.addMerchantId.collectAsStateWithLifecycle()
     Column(
         modifier = modifier
             .background(MaterialTheme.colorScheme.background),
@@ -252,7 +253,7 @@ fun MerchantOrderListItem(
     onAdd: ((BrandListItem) -> Unit)? = null,
     onRemove: ((BrandListItem) -> Unit)? = null,
 ) {
-    val addMerchantId by viewModel.addMerchantId.collectAsState()
+    val addMerchantId by viewModel.addMerchantId.collectAsStateWithLifecycle()
     val remove by remember { derivedStateOf { merchant.id == addMerchantId } }
     val height by animateDpAsState(
         targetValue = if (remove) 0.dp else ITEM_HEIGHT.dp,

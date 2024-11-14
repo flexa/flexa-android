@@ -3,6 +3,7 @@ package com.flexa.spend
 import android.app.Activity
 import android.content.Intent
 import com.flexa.core.Flexa
+import com.flexa.spend.domain.CommerceSessionWorker
 
 class SpendConfig private constructor() {
 
@@ -20,6 +21,11 @@ class SpendConfig private constructor() {
 
         fun transactionSent(commerceSessionId: String, txSignature: String) {
             Spend.transactionSent?.invoke(commerceSessionId, txSignature)
+        }
+
+        fun transactionFailed(commerceSessionId: String) {
+            Flexa.context?.let { ctx -> CommerceSessionWorker.execute(ctx, commerceSessionId) }
+            Spend.transactionFailed?.invoke(commerceSessionId)
         }
 
         fun build() = SpendConfig()

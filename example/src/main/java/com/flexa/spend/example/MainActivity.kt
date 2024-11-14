@@ -221,8 +221,13 @@ fun Greeting() {
                     activity?.let {
                         Flexa.buildSpend()
                             .onTransactionRequest { result ->
-                                if (result.isSuccess) {
-                                    Log.d("TAG", "onTransactionRequest: ${result.getOrThrow()}")
+                                when {
+                                    result.isSuccess -> {
+                                        Log.d(null, "onTransactionRequest: ${result.getOrNull()}")
+                                    }
+                                    result.isFailure -> {
+                                        Log.e(null, "onTransactionRequest:", result.exceptionOrNull())
+                                    }
                                 }
                             }
                             .open(it)

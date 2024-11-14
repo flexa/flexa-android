@@ -18,7 +18,7 @@ class ErrorParser {
                     code = code, message = message, status = status
                 )
             } catch (e: JSONException) {
-                ErrorBundle(code = -1, null, null)
+                ErrorBundle( -1, null, null)
             }
         }
     }
