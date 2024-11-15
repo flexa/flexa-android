@@ -363,8 +363,10 @@ class SpendViewModel(
                         legacy && sendTransactionRequest -> {
                             cs.toTransaction()?.let { transaction ->
                                 brandSessionId.value = null
-                                Log.d(null, "CS>>>: onTransactionRequest ${cs.data?.id}")
-                                Spend.onTransactionRequest?.invoke(Result.success(transaction))
+                                if (!coveredByFlexaAccount) {
+                                    Log.d(null, "CS>>>: onTransactionRequest ${cs.data?.id}")
+                                    Spend.onTransactionRequest?.invoke(Result.success(transaction))
+                                }
                             }
                         }
                     }

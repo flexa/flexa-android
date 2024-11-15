@@ -177,10 +177,7 @@ fun CommerceSession?.coveredByFlexaAccount(): Boolean {
 fun CommerceSession.Data?.coveredByFlexaAccount(): Boolean {
     val valid = this.isValid()
     val requiresApproval = this?.status == "requires_approval"
-    val noTransactions = this?.transaction() == null
-    val containsCredit = this?.credits != null && this.credits?.isNotEmpty() == true
-    val noTransactionsAndHasCredit = noTransactions && containsCredit
-    return valid && requiresApproval && noTransactionsAndHasCredit
+    return valid && requiresApproval
 }
 
 fun CommerceSession.Data?.transaction(): CommerceSession.Data.Transaction? {

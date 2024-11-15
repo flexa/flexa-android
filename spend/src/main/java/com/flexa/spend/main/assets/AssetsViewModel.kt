@@ -9,16 +9,19 @@ import com.flexa.core.entity.Account
 import com.flexa.core.entity.AppAccount
 import com.flexa.core.entity.AvailableAsset
 import com.flexa.core.entity.CommerceSession
+import com.flexa.core.entity.ExchangeRate
 import com.flexa.core.getAssetIds
 import com.flexa.core.getUnitOfAccount
 import com.flexa.core.nonZeroAssets
 import com.flexa.core.shared.ApiErrorHandler
+import com.flexa.core.shared.Asset
 import com.flexa.core.shared.SelectedAsset
 import com.flexa.core.toAssetKey
 import com.flexa.core.toBalanceBundle
 import com.flexa.core.toCurrencySign
 import com.flexa.core.toDate
 import com.flexa.spend.MockFactory
+import com.flexa.spend.R
 import com.flexa.spend.Spend
 import com.flexa.spend.domain.FakeInteractor
 import com.flexa.spend.domain.ISpendInteractor
@@ -154,12 +157,14 @@ class AssetsViewModel(
                 val ratePrice = rate?.price?.toBigDecimalOrNull() ?: BigDecimal.ZERO
                 val price = ratePrice?.multiply(feeAmount) ?: BigDecimal.ZERO
                 val priceString = price.setScale(2, RoundingMode.DOWN)?.toPlainString()
-                val amount = "${
-                    feeAmount.setScale(
-                        rate?.precision ?: 0,
-                        RoundingMode.DOWN
-                    )
-                } ${asset?.symbol ?: ""} "
+                val amount = if (feeAmount < BigDecimal(0.01)) {
+                    Flexa.context?.getString(
+                        R.string.fee_less_than,
+                        asset?.symbol ?: ""
+                    ) ?: getFeeAmountLabel(feeAmount, rate, asset)
+                } else {
+                    getFeeAmountLabel(feeAmount, rate, asset)
+                }
                 _sessionFee.emit(
                     SessionFee(
                         equivalent = price,
@@ -172,6 +177,14 @@ class AssetsViewModel(
             }.onFailure { Log.e(null, "updateFeeBundle: ", it) }
         }
     }
+
+    private fun getFeeAmountLabel(
+        feeAmount: BigDecimal,
+        rate: ExchangeRate?,
+        asset: Asset?
+    ) = "${
+        feeAmount.setScale(rate?.precision ?: 0, RoundingMode.DOWN)
+    } ${asset?.symbol ?: ""} "
 
     private var updateAccountJob: Job? = null
     private fun compileAccountsAssets(accounts: List<AppAccount>) {
@@ -372,9 +385,6 @@ class AssetsViewModel(
         val serverTime = date.toDate().toInstant()
         val clientTime = Instant.now()
         val duration = Duration.between(serverTime, clientTime)
-        Log.d(null, "getDuration: server: $serverTime")
-        Log.d(null, "getDuration: local : $clientTime")
-        Log.d(null, "getDuration: >${duration.toMillis()}<")
         return duration
     }
 }

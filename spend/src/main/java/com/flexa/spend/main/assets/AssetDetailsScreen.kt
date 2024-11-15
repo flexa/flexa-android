@@ -55,7 +55,6 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.flexa.core.entity.FeeBundle
 import com.flexa.core.shared.SelectedAsset
 import com.flexa.core.theme.FlexaTheme
@@ -80,7 +79,13 @@ internal fun AssetDetailsScreen(
 
     val density = LocalDensity.current
     var height by remember { mutableStateOf(200.dp) }
-    val asset by assetsViewModel.selectedAssetBundle.collectAsStateWithLifecycle()
+    val asset by remember {
+        derivedStateOf {
+            assetsViewModel.assets.firstOrNull {
+                it.accountId == assetBundle.accountId && it.asset.assetId == assetBundle.asset.assetId
+            }
+        }
+    }
 
     Column(
         modifier = modifier.background(color)
