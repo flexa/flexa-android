@@ -139,6 +139,10 @@ fun CommerceSession.isCompleted(): Boolean {
     return this.data?.isCompleted() == true
 }
 
+fun CommerceSession.Data?.nextGenNeedsClose(): Boolean {
+    return this != null && this.status != "completed" && this.status != "requires_approval"
+}
+
 fun CommerceSession.Data?.isCompleted(): Boolean {
     return this?.status == "completed"
 }
@@ -170,14 +174,23 @@ fun CommerceSession.Data?.isValid(): Boolean {
     return nonNull && rightStatus && hasTransactionOrCredit
 }
 
+fun CommerceSession?.requiresApproval(): Boolean {
+    return this?.data?.requiresApproval() == true
+}
+
+fun CommerceSession.Data?.requiresApproval(): Boolean {
+    val requiresApproval = this?.status == "requires_approval"
+    return requiresApproval
+}
+
 fun CommerceSession?.coveredByFlexaAccount(): Boolean {
     return this?.data?.coveredByFlexaAccount() == true
 }
 
 fun CommerceSession.Data?.coveredByFlexaAccount(): Boolean {
-    val valid = this.isValid()
-    val requiresApproval = this?.status == "requires_approval"
-    return valid && requiresApproval
+    val noTransactions = this?.transaction() == null
+    val hasCredit = this?.credit() != null
+    return noTransactions && hasCredit
 }
 
 fun CommerceSession.Data?.transaction(): CommerceSession.Data.Transaction? {
@@ -205,6 +218,10 @@ fun CommerceSession.Data?.hasAnotherAsset(assetId: String): Boolean {
     return this?.transaction()?.asset != assetId
 }
 
+fun CommerceSession?.legacyNeedsClose(): Boolean {
+    return this != null && !this.containsAuthorization() && this.data?.status != "requires_approval"
+}
+
 fun CommerceSession?.containsAuthorization() =
     if (this == null) {
         false
@@ -222,27 +239,26 @@ fun CommerceSession?.getAmountLabel(): String {
 }
 
 fun CommerceSession?.toTransaction(): Transaction? {
-    return if (this == null) {
+    val currentTransaction = this?.data?.transactions?.firstOrNull {
+        it?.status == "requested" || it?.status == "approved"
+    }
+    return if (currentTransaction == null) {
         null
     } else {
-        val currentTransaction = this.data?.transactions?.firstOrNull {
-            it?.status == "requested" ||
-                    it?.status == "approved"
-        }
         Transaction(
-            commerceSessionId = this.data?.id ?: "",
-            amount = currentTransaction?.amount ?: "",
+            commerceSessionId = this?.data?.id ?: "",
+            amount = currentTransaction.amount ?: "",
             assetAccountHash = Spend.selectedAsset.value?.accountId ?: "",
-            assetId = currentTransaction?.asset ?: "",
-            destinationAddress = currentTransaction?.destination?.address ?: "",
-            feeAmount = currentTransaction?.fee?.amount ?: "",
-            feeAssetId = currentTransaction?.fee?.asset ?: "",
-            feePrice = currentTransaction?.fee?.price?.amount ?: "",
-            feePriorityPrice = currentTransaction?.fee?.price?.priority ?: "",
-            size = currentTransaction?.size ?: "",
-            brandLogo = this.data?.brand?.logoUrl ?: "",
-            brandName = this.data?.brand?.name ?: "",
-            brandColor = this.data?.brand?.color ?: "",
+            assetId = currentTransaction.asset ?: "",
+            destinationAddress = currentTransaction.destination?.address ?: "",
+            feeAmount = currentTransaction.fee?.amount ?: "",
+            feeAssetId = currentTransaction.fee?.asset ?: "",
+            feePrice = currentTransaction.fee?.price?.amount ?: "",
+            feePriorityPrice = currentTransaction.fee?.price?.priority ?: "",
+            size = currentTransaction.size ?: "",
+            brandLogo = this?.data?.brand?.logoUrl ?: "",
+            brandName = this?.data?.brand?.name ?: "",
+            brandColor = this?.data?.brand?.color ?: "",
         )
     }
 }
@@ -453,7 +469,7 @@ internal fun Promotion.getPercentAmount(amount: String): BigDecimal {
     val amountValue = amount.getAmount()
     val percent = percentOff?.toBigDecimalOrNull()?.coerceAtLeast(BigDecimal.ZERO)
         ?.coerceAtMost(BigDecimal(100)) ?: BigDecimal.ZERO
-    return amountValue.multiply(percent).divide(BigDecimal(100), 2, RoundingMode.DOWN)
+    return amountValue.multiply(percent).setScale(2)
 }
 
 @Suppress(names = ["ModifierFactoryUnreferencedReceiver"])

@@ -34,6 +34,7 @@ import com.flexa.spend.isClosed
 import com.flexa.spend.isCompleted
 import com.flexa.spend.isCurrent
 import com.flexa.spend.isValid
+import com.flexa.spend.requiresApproval
 import com.flexa.spend.toBrandSession
 import com.flexa.spend.toTransaction
 import kotlinx.coroutines.Dispatchers
@@ -127,6 +128,9 @@ class SpendViewModel(
     internal fun deleteCommerceSessionData() {
         deleteLastSessionId()
         _commerceSession.value = null
+        viewModelScope.launch {
+            eventFlow.emit(Event.CommerceSessionUpdate(null))
+        }
     }
 
     private var brandSessionId = MutableStateFlow<String?>(null)
@@ -195,7 +199,10 @@ class SpendViewModel(
         CommerceSessionWorker.execute(context, sessionId)
     }
 
+    private var approvedSessionId: String? = null
     internal fun approveCommerceSession(sessionId: String) {
+        if (approvedSessionId == sessionId) return
+        approvedSessionId = sessionId
         viewModelScope.launch {
             flow { emit(interactor.approveCommerceSession(sessionId)) }
                 .catch { ex ->
@@ -293,10 +300,11 @@ class SpendViewModel(
                     }
                 }
                 .onEach { event ->
-                    when(event) {
+                    when (event) {
                         is SseEvent.Session -> {
                             if (event.session.isCompleted()) interactor.saveLastEventId(null)
                         }
+
                         else -> event.eventId?.let { interactor.saveLastEventId(it) }
                     }
                 }
@@ -353,20 +361,17 @@ class SpendViewModel(
                                 || (legacy && containsAuthorization)
 
                     val sendTransactionRequest = brandSessionId.value == cs.data?.id
-                    val coveredByFlexaAccount = cs.coveredByFlexaAccount()
-                    val completed = cs.isCompleted()
+                    val requiresApproval = cs.requiresApproval()
                     when {
-                        legacy && coveredByFlexaAccount && !completed -> cs.data?.id?.let {
+                        legacy && requiresApproval -> cs.data?.id?.let {
                             approveCommerceSession(it)
                         }
 
                         legacy && sendTransactionRequest -> {
+                            brandSessionId.value = null
                             cs.toTransaction()?.let { transaction ->
-                                brandSessionId.value = null
-                                if (!coveredByFlexaAccount) {
-                                    Log.d(null, "CS>>>: onTransactionRequest ${cs.data?.id}")
-                                    Spend.onTransactionRequest?.invoke(Result.success(transaction))
-                                }
+                                Log.d(null, "CS>>>: onTransactionRequest ${cs.data?.id}")
+                                Spend.onTransactionRequest?.invoke(Result.success(transaction))
                             }
                         }
                     }

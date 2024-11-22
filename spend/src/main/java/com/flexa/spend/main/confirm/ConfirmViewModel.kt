@@ -72,6 +72,10 @@ internal class ConfirmViewModel(
         _showBalanceRestrictions.value = show
     }
 
+    fun startProgress() {
+        _payProgress.value = true
+    }
+
     fun payNow() {
         viewModelScope.launch {
             session.value?.let { commerceSession ->

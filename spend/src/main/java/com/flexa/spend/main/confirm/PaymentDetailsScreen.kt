@@ -59,6 +59,7 @@ import com.flexa.spend.main.assets.AccountCoverageCard
 import com.flexa.spend.main.assets.AssetInfoFooter
 import com.flexa.spend.main.assets.AssetsViewModel
 import com.flexa.spend.main.assets.SessionFeeItem
+import com.flexa.spend.requiresApproval
 import com.flexa.spend.transaction
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -75,12 +76,12 @@ fun PaymentDetailsScreen(
 ) {
 
     val session by sessionFlow.collectAsStateWithLifecycle()
-    val coveredByAccountBalance by remember {
-        derivedStateOf { session.coveredByFlexaAccount() }
+    val requiresApproval by remember {
+        derivedStateOf { session.requiresApproval() }
     }
 
     AnimatedContent(
-        targetState = coveredByAccountBalance, label = ""
+        targetState = requiresApproval, label = ""
     ) { covered ->
         if (covered) {
             AccountCoverageCard(assetsViewModel)
@@ -155,7 +156,7 @@ fun PaymentDetailsScreen(
                 )
                 val previewMode = LocalInspectionMode.current
                 val showRate by remember {
-                    derivedStateOf { if (!previewMode) session.coveredByFlexaAccount() else true }
+                    derivedStateOf { if (!previewMode) !session.coveredByFlexaAccount() else true }
                 }
                 AnimatedVisibility(showRate) {
                     ListItem(

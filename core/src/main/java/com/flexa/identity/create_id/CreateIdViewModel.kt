@@ -33,7 +33,7 @@ internal class CreateIdViewModel(
 
                 val country = getCountryByTelephonyManager(context) ?: getCountryByLocale(context)
 
-                val dateFormat = SimpleDateFormat("yyyy-MM-dd")
+                val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
                 val birthday = dateFormat.format(userData.birthday ?: Date())
 
                 val res = interactor.accounts(
@@ -102,7 +102,6 @@ internal class CreateIdViewModel(
     }
 
     sealed class State {
-        data object FlexaPrivacy : State()
         data object General : State()
         class Success(val data: TokensResponse.Success) : State()
     }

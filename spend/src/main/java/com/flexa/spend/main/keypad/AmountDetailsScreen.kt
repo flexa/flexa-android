@@ -54,10 +54,10 @@ import com.flexa.spend.MockFactory
 import com.flexa.spend.R
 import com.flexa.spend.domain.FakeInteractor
 import com.flexa.spend.getAmount
-import com.flexa.spend.getAmountWithDiscount
 import com.flexa.spend.getAssetAmount
 import com.flexa.spend.getByAssetId
 import com.flexa.spend.getCurrencySign
+import com.flexa.spend.getDiscount
 import com.flexa.spend.getFlexaBalance
 import com.flexa.spend.getPromotion
 import com.flexa.spend.main.assets.AccountBalance
@@ -141,7 +141,6 @@ internal fun AmountDetailsScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                     }
                     AccountBalance(assetsViewModel, amount)
-
                     ListItem(
                         colors = ListItemDefaults.colors(containerColor = color),
                         leadingContent = {
@@ -157,6 +156,7 @@ internal fun AmountDetailsScreen(
                                     derivedStateOf {
                                         (exchangeRate?.getCurrencySign() ?: "") +
                                                 amount.getAmount().subtract(flexaBalance)
+                                                    .setScale(2).toPlainString()
                                     }
                                 }
                                 Text(
@@ -174,8 +174,9 @@ internal fun AmountDetailsScreen(
                             val text by remember {
                                 derivedStateOf {
                                     (exchangeRate?.getCurrencySign() ?: "") +
-                                            (promotion?.getAmountWithDiscount(residualAmount.toPlainString())
-                                                ?: residualAmount.toPlainString())
+                                            residualAmount.subtract(
+                                                promotion?.getDiscount(amount) ?: BigDecimal.ZERO
+                                            ).setScale(2).toPlainString()
                                 }
                             }
                             Text(
@@ -190,9 +191,9 @@ internal fun AmountDetailsScreen(
                         supportingContent = {
                             val amountWithDiscount by remember {
                                 derivedStateOf {
-                                    promotion?.getAmountWithDiscount(residualAmount.toPlainString())
-                                        ?.toPlainString()
-                                        ?: residualAmount?.toPlainString() ?: amount
+                                    residualAmount.subtract(
+                                        promotion?.getDiscount(amount) ?: BigDecimal.ZERO
+                                    ).setScale(2).toPlainString()
                                 }
                             }
                             val text by remember {

@@ -157,18 +157,20 @@ class AssetsViewModel(
                 val ratePrice = rate?.price?.toBigDecimalOrNull() ?: BigDecimal.ZERO
                 val price = ratePrice?.multiply(feeAmount) ?: BigDecimal.ZERO
                 val priceString = price.setScale(2, RoundingMode.DOWN)?.toPlainString()
-                val amount = if (feeAmount < BigDecimal(0.01)) {
+                val amount = getFeeAmountLabel(feeAmount, rate, asset)
+                val equivalentLabel = if (price < BigDecimal(0.01)) {
                     Flexa.context?.getString(
                         R.string.fee_less_than,
-                        asset?.symbol ?: ""
-                    ) ?: getFeeAmountLabel(feeAmount, rate, asset)
+                        rate?.unitOfAccount?.toCurrencySign() ?: ""
+                    )
                 } else {
-                    getFeeAmountLabel(feeAmount, rate, asset)
+                    "${rate?.unitOfAccount?.toCurrencySign() ?: ""}${priceString ?: ""}"
                 }
                 _sessionFee.emit(
                     SessionFee(
                         equivalent = price,
-                        equivalentLabel = "${rate?.unitOfAccount?.toCurrencySign() ?: ""}${priceString ?: ""}",
+                        equivalentLabel = equivalentLabel
+                            ?: "${rate?.unitOfAccount?.toCurrencySign() ?: ""}${priceString ?: ""}",
                         amount = feeAmount,
                         amountPriceLabel = commerceSession.transaction()?.fee?.price?.label ?: "",
                         amountLabel = amount

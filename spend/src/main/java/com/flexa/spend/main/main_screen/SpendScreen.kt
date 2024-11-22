@@ -88,13 +88,11 @@ import com.flexa.spend.MockFactory
 import com.flexa.spend.R
 import com.flexa.spend.Spend
 import com.flexa.spend.TokenState
-import com.flexa.spend.coveredByFlexaAccount
 import com.flexa.spend.coveringAmount
 import com.flexa.spend.data.DeepLink
 import com.flexa.spend.data.DeepLinkParser
 import com.flexa.spend.domain.CommerceSessionWorker
 import com.flexa.spend.domain.FakeInteractor
-import com.flexa.spend.isCompleted
 import com.flexa.spend.main.assets.AccountBalance
 import com.flexa.spend.main.assets.AccountCoverageCard
 import com.flexa.spend.main.assets.AssetDetailsScreen
@@ -113,6 +111,7 @@ import com.flexa.spend.main.places_to_pay.PlacesToPayViewModel
 import com.flexa.spend.main.settings_popup.PopupViewModel
 import com.flexa.spend.main.settings_popup.SettingsPopup
 import com.flexa.spend.merchants.BrandsViewModel
+import com.flexa.spend.nextGenNeedsClose
 import kotlinx.coroutines.flow.MutableStateFlow
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -290,11 +289,11 @@ fun SpendScreen(
 
             val interactionSource = remember { MutableInteractionSource() }
             val close = {
-                viewModel.deleteCommerceSessionData()
                 commerceSession?.data?.let { session ->
-                    if (!session.isCompleted()) {
+                    if (session.nextGenNeedsClose()) {
                         viewModel.closeCommerceSession(context, session.id)
                     }
+                    viewModel.deleteCommerceSessionData()
                 }
             }
             Column(
@@ -321,7 +320,7 @@ fun SpendScreen(
                             onClick = { }
                         )
                         .padding(horizontal = 26.dp),
-                    spendViewModel = if (commerceSession?.coveredByFlexaAccount() == true) viewModel else null,
+                    spendViewModel = viewModel,
                     viewModel = vm,
                     assetsViewModel = assetsViewModel,
                     onClose = { close() },

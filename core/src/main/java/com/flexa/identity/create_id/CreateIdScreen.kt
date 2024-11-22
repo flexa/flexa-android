@@ -2,7 +2,6 @@ package com.flexa.identity.create_id
 
 import android.content.res.Configuration
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -12,7 +11,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.with
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
@@ -109,7 +108,7 @@ import java.util.Date
 
 
 @OptIn(
-    ExperimentalComposeUiApi::class, ExperimentalAnimationApi::class,
+    ExperimentalComposeUiApi::class,
     ExperimentalMaterial3Api::class
 )
 @Composable
@@ -118,6 +117,7 @@ internal fun CreateId(
     viewModel: CreateIdViewModel,
     userVM: UserViewModel,
     toBack: () -> Unit = {},
+    toPrivacy: () -> Unit = {},
     toTermsOfUse: () -> Unit = {},
     toCoppa: () -> Unit = {},
     toContinue: () -> Unit = {},
@@ -159,6 +159,7 @@ internal fun CreateId(
                 toContinue()
                 viewModel.state.value = CreateIdViewModel.State.General
             }
+
             else -> {}
         }
     }
@@ -201,7 +202,8 @@ internal fun CreateId(
             ) {
                 TextButton(
                     modifier = Modifier.padding(start = 0.dp),
-                    onClick = { viewModel.state.value = CreateIdViewModel.State.FlexaPrivacy }) {
+                    onClick = toPrivacy
+                ) {
                     Text(text = stringResource(id = R.string.about_flexa_and_privacy))
                 }
                 val progress by viewModel.progress.collectAsStateWithLifecycle()
@@ -231,11 +233,11 @@ internal fun CreateId(
                         transitionSpec = {
                             if (targetState) {
                                 slideInHorizontally { width -> width } +
-                                        fadeIn() with slideOutHorizontally()
+                                        fadeIn() togetherWith slideOutHorizontally()
                                 { width -> -width } + fadeOut()
                             } else {
                                 slideInHorizontally { width -> -width } +
-                                        fadeIn() with slideOutHorizontally()
+                                        fadeIn() togetherWith slideOutHorizontally()
                                 { width -> width } + fadeOut()
                             }.using(SizeTransform(clip = false))
                         }, label = stringResource(R.string.get_started)
@@ -280,7 +282,14 @@ internal fun CreateId(
             }
             val keyboardController = LocalSoftwareKeyboardController.current
             KeyboardHandler()
-            val firstNameTextValue = remember { mutableStateOf(TextFieldValue(firstName)) }
+            val firstNameTextValue = remember {
+                mutableStateOf(
+                    TextFieldValue(
+                        text = firstName,
+                        selection = TextRange(firstName.length)
+                    )
+                )
+            }
             TextField(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -314,18 +323,15 @@ internal fun CreateId(
                         transitionSpec = {
                             if (targetState.length > initialState.length) {
                                 slideInVertically { width -> width } +
-                                        fadeIn() with slideOutVertically()
+                                        fadeIn() togetherWith slideOutVertically()
                                 { width -> -width } + fadeOut()
                             } else {
                                 slideInVertically { width -> -width } +
-                                        fadeIn() with slideOutVertically()
+                                        fadeIn() togetherWith slideOutVertically()
                                 { width -> width } + fadeOut()
                             }.using(SizeTransform(clip = false))
                         }, label = "Text"
-                    ) { state ->
-                        state
-                        Text(text = text)
-                    }
+                    ) { state -> Text(text = state) }
                 },
                 value = if (nameExpanded) firstNameTextValue.value
                 else {
@@ -337,12 +343,20 @@ internal fun CreateId(
                     )
                 },
                 onValueChange = {
-                    if (firstNameBlocked) {
-                        firstNameBlocked = false
-                    } else {
-                        firstNameTextValue.value = it
-                        firstNameError = it.text.isEmpty()
-                        userVM.userData.value = userVM.userData.value.copy(firstName = it.text)
+                    when {
+                        firstNameTextValue.value.text.isEmpty() -> {
+                            firstNameBlocked = false
+                            firstNameTextValue.value = it
+                            firstNameError = it.text.isEmpty()
+                            userVM.userData.value = userVM.userData.value.copy(firstName = it.text)
+                        }
+
+                        firstNameBlocked -> firstNameBlocked = false
+                        else -> {
+                            firstNameTextValue.value = it
+                            firstNameError = it.text.isEmpty()
+                            userVM.userData.value = userVM.userData.value.copy(firstName = it.text)
+                        }
                     }
                 },
                 leadingIcon = {
@@ -366,7 +380,14 @@ internal fun CreateId(
                 enter = expandVertically(),
                 exit = shrinkVertically()
             ) {
-                val lastNameTextValue = remember { mutableStateOf(TextFieldValue(lastName)) }
+                val lastNameTextValue = remember {
+                    mutableStateOf(
+                        TextFieldValue(
+                            text = lastName,
+                            selection = TextRange(lastName.length)
+                        )
+                    )
+                }
                 TextField(
                     modifier = Modifier
                         .focusRequester(lastNameFocus)
@@ -390,10 +411,7 @@ internal fun CreateId(
                             style = TextStyle(color = MaterialTheme.colorScheme.error)
                         )
                     },
-                    value = TextFieldValue(
-                        text = lastName,
-                        selection = TextRange(lastName.length)
-                    ),
+                    value = lastNameTextValue.value,
                     maxLines = 1,
                     label = { Text(text = stringResource(id = R.string.last_name)) },
                     onValueChange = {

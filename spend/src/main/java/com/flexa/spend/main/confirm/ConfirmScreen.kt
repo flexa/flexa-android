@@ -109,6 +109,7 @@ import com.flexa.spend.main.assets.AssetsViewModel
 import com.flexa.spend.main.main_screen.SpendViewModel
 import com.flexa.spend.main.ui_utils.BalanceRestrictionsDialog
 import com.flexa.spend.main.ui_utils.SpendAsyncImage
+import com.flexa.spend.requiresApproval
 import com.flexa.spend.shiftHue
 import com.flexa.spend.toColor
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -123,7 +124,7 @@ internal fun ConfirmCard(
     shape: Shape = RoundedCornerShape(24.dp),
     elevation: Dp = 0.dp,
     containerColor: Color = MaterialTheme.colorScheme.secondaryContainer,
-    spendViewModel: SpendViewModel? = null,
+    spendViewModel: SpendViewModel,
     viewModel: ConfirmViewModel,
     assetsViewModel: AssetsViewModel,
     onClose: () -> Unit,
@@ -132,6 +133,9 @@ internal fun ConfirmCard(
 ) {
     val palette = MaterialTheme.colorScheme
     val session by viewModel.session.collectAsStateWithLifecycle()
+    val requiresApproval by remember {
+        derivedStateOf { session?.requiresApproval() == true }
+    }
     val coveredByFlexaAccount by remember {
         derivedStateOf { session?.coveredByFlexaAccount() == true }
     }
@@ -140,8 +144,7 @@ internal fun ConfirmCard(
     val completed by viewModel.completed.collectAsStateWithLifecycle()
 
     val paying by viewModel.payProgress.collectAsStateWithLifecycle()
-    val applying by spendViewModel?.progress?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(false) }
-    val payProgress by remember { derivedStateOf { paying || applying } }
+    val payProgress by remember { derivedStateOf { paying } }
     val patchProgress by viewModel.patchProgress.collectAsStateWithLifecycle()
     val buttonsBlocked by remember {
         derivedStateOf { payProgress || patchProgress }
@@ -497,10 +500,11 @@ internal fun ConfirmCard(
                     contentPadding = PaddingValues(0.dp),
                     onClick = {
                         when {
-                            canProceed && coveredByFlexaAccount ->
-                                session?.data?.id?.let { id ->
-                                    spendViewModel?.approveCommerceSession(id)
-                                }
+                            completed -> { onClose() }
+                            requiresApproval -> session?.data?.id?.let { id ->
+                                viewModel.startProgress()
+                                spendViewModel.approveCommerceSession(id)
+                            }
 
                             canProceed -> viewModel.payNow()
                             wrongAvailableState -> viewModel.showBalanceRestrictions(
@@ -635,6 +639,7 @@ private fun ConfirmDialogPreview() {
                     interactor = FakeInteractor()
                 )
             }),
+            spendViewModel = SpendViewModel(FakeInteractor()),
             assetsViewModel = AssetsViewModel(
                 FakeInteractor(), MutableStateFlow(MockFactory.getMockSelectedAsset())
             ),

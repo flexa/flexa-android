@@ -181,7 +181,7 @@ class ExtensionsKtTest {
     @Test
     fun `percent off calculation`() {
         val promotion = Promotion(
-            id = "", percentOff = "20"
+            id = "", percentOff = "0.20"
         )
         val amount = "23.15"
         val res = promotion.getPercentAmount(amount)
@@ -211,7 +211,7 @@ class ExtensionsKtTest {
     @Test
     fun `percent boundaries`() {
         val promotion = Promotion(
-            id = "", percentOff = "50", restrictions = Promotion.Restrictions(
+            id = "", percentOff = ".50", restrictions = Promotion.Restrictions(
                 maximumDiscount = "20"
             )
         )

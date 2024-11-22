@@ -122,6 +122,7 @@ fun NavGraphBuilder.identityNavGraph(
                 viewModel = viewModel(),
                 userVM = viewModel(context.getActivity() ?: entry),
                 toBack = { navController.navigateUp() },
+                toPrivacy = { navController.navigate(Route.WebView.createRoute("https://flexa.co/legal/privacy")) },
                 toCoppa = { navController.navigate(Route.Coppa.name) },
                 toTermsOfUse = { navController.navigate(Route.TermsOfUse.name) },
                 toContinue = { navController.navigate(Route.VerifyEmail.name) },

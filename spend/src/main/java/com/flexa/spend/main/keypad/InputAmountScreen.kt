@@ -63,6 +63,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.ModalBottomSheetProperties
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -116,6 +117,7 @@ import com.flexa.spend.getPromotion
 import com.flexa.spend.getSpendableBalance
 import com.flexa.spend.hasBalanceRestrictions
 import com.flexa.spend.isDark
+import com.flexa.spend.legacyNeedsClose
 import com.flexa.spend.lightenColor
 import com.flexa.spend.main.assets.AccountCoverageCard
 import com.flexa.spend.main.assets.AssetsBottomSheet
@@ -186,10 +188,11 @@ internal fun InputAmountScreen(
         spendViewModel.setBrand(null)
         spendViewModel.stopProgress()
         spendViewModel.cancelTimeout()
-        if (commerceSession?.containsAuthorization() == false) {
+        if (commerceSession.legacyNeedsClose()) {
             commerceSession?.data?.id?.let { id ->
                 spendViewModel.closeCommerceSession(context, id)
             }
+            spendViewModel.deleteCommerceSessionData()
         }
         toBack()
     }
@@ -300,9 +303,10 @@ internal fun InputAmountScreen(
         ) {
             SpendAsyncImage(
                 modifier = Modifier
+                    .padding(4.dp)
                     .shadow(elevation = 2.dp, shape = RoundedCornerShape(14.dp))
                     .clip(RoundedCornerShape(14.dp))
-                    .size(60.dp),
+                    .size(68.dp),
                 imageUrl = brand?.logoUrl,
                 placeholder = BrushPainter(
                     SolidColor(Color.White.copy(.3F))
@@ -626,13 +630,27 @@ internal fun InputAmountScreen(
             dragHandle = { SpendDragHandler() },
             onDismissRequest = { showBottomSheet = false },
             sheetState = sheetState,
+            properties = ModalBottomSheetProperties(
+                shouldDismissOnBackPress = sheetType != SheetType.ASSETS
+            )
         ) {
             when (sheetType) {
                 SheetType.ASSETS -> {
                     if (!coveredByFlexaBalance) {
+                        val promotion by remember {
+                            derivedStateOf {
+                                brand?.promotions?.getPromotion(selectedAsset?.asset?.livemode)
+                            }
+                        }
+                        val amountMinusPromo by remember {
+                            derivedStateOf {
+                                val promo = promotion?.getDiscount(amount ?: "0") ?: BigDecimal.ZERO
+                                amount?.getAmount()?.subtract(promo)?.setScale(2)?.toPlainString()
+                            }
+                        }
                         AssetsBottomSheet(
                             viewModel = assetsViewModel,
-                            amount = amount,
+                            amount = amountMinusPromo,
                             toUrl = { toUrl(it) },
                             toBack = { showBottomSheet = false }
                         )
@@ -757,7 +775,6 @@ internal fun PayButton(
             }, label = "Pay Now"
         ) { state ->
             Row(verticalAlignment = Alignment.CenterVertically) {
-                val done by viewModel.done.collectAsStateWithLifecycle()
                 androidx.compose.animation.AnimatedVisibility(
                     modifier = Modifier.padding(4.dp),
                     visible = done,
@@ -880,7 +897,7 @@ private fun KeypadScreenPreview() {
         InputAmountScreen(
             modifier = Modifier.fillMaxSize(),
             viewModel = InputAmountViewModel().apply {
-                formatter.append(Symbol("13.10"))
+                formatter.append(Symbol("22.00"))
             },
             spendViewModel = SpendViewModel(FakeInteractor()).apply {
                 setBrand(
@@ -890,8 +907,8 @@ private fun KeypadScreenPreview() {
                             promotions = listOf(
                                 Promotion(
                                     id = "",
-                                    amountOff = "10",
-                                    percentOff = "50",
+                                    amountOff = null,
+                                    percentOff = "0.40",
                                     livemode = true,
                                     label = "Promotion label",
                                     restrictions = Promotion.Restrictions(

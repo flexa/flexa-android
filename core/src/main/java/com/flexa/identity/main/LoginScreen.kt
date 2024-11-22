@@ -397,7 +397,8 @@ internal fun LoginScreen(
             keyboardActions = KeyboardActions(
                 onDone = { keyboardController?.hide() }
             ),
-            maxLines = 1,
+
+            maxLines = 3,
             leadingIcon = {
                 Icon(
                     modifier = Modifier.size(24.dp),
@@ -416,7 +417,7 @@ internal fun LoginScreen(
             },
             label = {
                 Text(
-                    stringResource(id = R.string.whats_your_email_address),
+                    text = stringResource(id = R.string.whats_your_email_address),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodyMedium
