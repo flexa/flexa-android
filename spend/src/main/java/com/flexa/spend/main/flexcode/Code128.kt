@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Color.BLACK
 import android.graphics.Color.TRANSPARENT
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
@@ -76,7 +77,8 @@ private fun LocalFlexcodePreview() {
         Code128(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(60.dp),
+                .height(60.dp)
+                .background(androidx.compose.ui.graphics.Color.White),
             code = "134435"
         )
     }

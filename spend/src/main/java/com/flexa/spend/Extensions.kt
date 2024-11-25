@@ -87,6 +87,10 @@ internal fun SelectedAsset.isSelected(accountId: String, assetId: String): Boole
     return this.accountId == accountId && this.asset.assetId == assetId
 }
 
+internal fun String?.containsLetters(): Boolean {
+    return this?.any { it.isLetter() } == true
+}
+
 internal fun String?.getAmount(): BigDecimal {
     val regex = """\d+(\.\d+)?""".toRegex()
     return regex.find(this ?: "0")?.value?.toBigDecimalOrNull() ?: BigDecimal.ZERO

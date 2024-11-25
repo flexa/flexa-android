@@ -59,9 +59,10 @@ internal class RestRepository(
 
     companion object {
         const val SCHEME = "https"
-        val host = when (BuildConfig.USE_DEBUG_API_HOST.toBoolean()) {
-            true -> BuildConfig.DEBUG_API_HOST
-            else -> "api.flexa.co"
+        val host = if (!BuildConfig.DEBUG_API_HOST.isNullOrEmpty()) {
+            BuildConfig.DEBUG_API_HOST
+        } else {
+            "api.flexa.co"
         }
         val mediaType = "application/json; charset=utf-8".toMediaType()
         val json = Json { ignoreUnknownKeys = true }
