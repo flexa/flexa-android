@@ -105,6 +105,7 @@ import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.util.Date
+import java.util.TimeZone
 
 
 @OptIn(
@@ -277,7 +278,11 @@ internal fun CreateId(
             Spacer(modifier = Modifier.height(32.dp))
             val dateString by remember {
                 derivedStateOf {
-                    birthday?.run { DateFormat.getDateInstance(DateFormat.LONG).format(this) } ?: ""
+                    birthday?.run {
+                        val df = DateFormat.getDateInstance(DateFormat.LONG)
+                        df.timeZone = TimeZone.getTimeZone("UTC")
+                        df.format(this)
+                    } ?: ""
                 }
             }
             val keyboardController = LocalSoftwareKeyboardController.current

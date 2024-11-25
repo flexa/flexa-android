@@ -232,9 +232,9 @@ class SpendViewModel(
         }
     }
 
-    internal suspend fun getAccount() {
+    internal suspend fun getAccount(useCached: Boolean = true) {
         flow {
-            emit(interactor.getAccountCached())
+            if (useCached) emit(interactor.getAccountCached())
             emit(interactor.getAccount().apply {
                 _unitOfAccount.value = interactor.getUnitOfAccount()
             })
@@ -335,7 +335,12 @@ class SpendViewModel(
                 .map { it!! }
                 .onEach { cs -> eventFlow.emit(Event.CommerceSessionUpdate(cs.data)) }
                 .onEach { cs -> cs.data?.id?.let { saveLastSessionId(it) } }
-                .onEach { cs -> if (cs.isCompleted()) stopProgress() }
+                .onEach { cs ->
+                    if (cs.isCompleted()) {
+                        stopProgress()
+                        getAccount(useCached = false)
+                    }
+                }
                 .onEach { cs ->
                     val coveredByFlexaAccount = cs.data?.coveredByFlexaAccount() == true
                     val selectedAssetId = selectedAsset.value?.asset?.assetId ?: ""

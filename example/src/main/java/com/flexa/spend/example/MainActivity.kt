@@ -72,7 +72,7 @@ class MainActivity : ComponentActivity() {
                             AvailableAsset(
                                 assetId = "eip155:1/erc20:0xe7ae9b78373d0D54BAC81a85525826Fd50a1E2d3",
                                 symbol = "CR",
-                                balance = 100.0
+                                balance = 3.0
                             ),
                             AvailableAsset(
                                 assetId = "eip155:11155111/slip44:60",

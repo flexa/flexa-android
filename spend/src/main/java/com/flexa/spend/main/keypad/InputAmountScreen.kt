@@ -113,6 +113,7 @@ import com.flexa.spend.coveringAmount
 import com.flexa.spend.domain.FakeInteractor
 import com.flexa.spend.getAmount
 import com.flexa.spend.getDiscount
+import com.flexa.spend.getFlexaBalance
 import com.flexa.spend.getPromotion
 import com.flexa.spend.getSpendableBalance
 import com.flexa.spend.hasBalanceRestrictions
@@ -700,20 +701,23 @@ internal fun PayButton(
     val progressState by spendViewModel.progressState.collectAsStateWithLifecycle()
     val selectedAsset by assetsViewModel.selectedAssetBundle.collectAsStateWithLifecycle()
     val amount by viewModel.formatter.dataAsFlow.collectAsStateWithLifecycle()
+    val account by spendViewModel.account.collectAsStateWithLifecycle()
     val totalBalanceEnough by remember {
         derivedStateOf {
+            val flexaBalance = account.getFlexaBalance()
             val assetAmount =
                 selectedAsset?.asset?.balanceBundle?.total ?: BigDecimal.ZERO
             val paymentAmount = amount.getAmount()
-            assetAmount >= paymentAmount
+            assetAmount.plus(flexaBalance) >= paymentAmount
         }
     }
     val availableBalanceEnough by remember {
         derivedStateOf {
+            val flexaBalance = account.getFlexaBalance()
             val assetAmount =
                 selectedAsset?.asset?.getSpendableBalance() ?: BigDecimal.ZERO
             val paymentAmount = amount.getAmount()
-            assetAmount >= paymentAmount
+            assetAmount.plus(flexaBalance) >= paymentAmount
         }
     }
     val enough by remember {

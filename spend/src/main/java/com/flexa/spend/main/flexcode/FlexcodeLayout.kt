@@ -166,32 +166,36 @@ fun FlexcodeLayout(
             ) {
                 val pdfOffset by remember {
                     derivedStateOf {
-                        if (complexCode) rootSize.width * -0.035F else 0F
+                        if (complexCode) rootSize.width * -0.039F else 0F
                     }
                 }
                 PDF417(
                     modifier = Modifier
-                        .aspectRatio(if (complexCode) 1.111F else 1.14F)
+                        .aspectRatio(if (complexCode) 1.12F else 1.14F)
                         .fillMaxHeight()
                         .rotate(180F)
                         .offset {
                             IntOffset(x = (offset - pdfOffset).toInt(), y = 0)
                         },
                     code = code,
-                    rows = if(complexCode) 18 else 23,
-                    columns = if (complexCode) 2 else 1
+                    rows = if(complexCode) 23 else 23,
+                    columns = if (complexCode) 3 else 1
                 )
-                Box(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .width(with(density) { (pdfBoxPadding).toDp() })
-                        .background(Color.Black)
-                        .align(Alignment.CenterEnd)
-                ) { }
+                if (complexCode) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .width(with(density) {
+                                (pdfBoxPadding + pdfBoxPadding * .5f).toDp()
+                            })
+                            .background(Color.Black)
+                            .align(Alignment.CenterEnd)
+                    ) { }
+                }
             }
             val imgWidth by remember {
                 derivedStateOf {
-                    with(density) { (rootSize.width * (0.42F)).toDp() }
+                    with(density) { (rootSize.width * (if (complexCode) 0.438F else 0.42F)).toDp() }
                 }
             }
             val imgOffset by remember {
