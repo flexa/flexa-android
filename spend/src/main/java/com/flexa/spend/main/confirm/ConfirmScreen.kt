@@ -102,6 +102,7 @@ import com.flexa.spend.coveredByFlexaAccount
 import com.flexa.spend.domain.FakeInteractor
 import com.flexa.spend.getAmount
 import com.flexa.spend.getAmountLabel
+import com.flexa.spend.getFlexaBalance
 import com.flexa.spend.getSpendableBalance
 import com.flexa.spend.hasBalanceRestrictions
 import com.flexa.spend.logo
@@ -434,20 +435,23 @@ internal fun ConfirmCard(
                 val hasBalanceRestrictions by remember {
                     derivedStateOf { selectedAsset?.asset?.hasBalanceRestrictions() ?: false }
                 }
+                val account by spendViewModel.account.collectAsStateWithLifecycle()
                 val totalBalanceEnough by remember {
                     derivedStateOf {
+                        val flexaBalance = account.getFlexaBalance()
                         val assetAmount =
                             selectedAsset?.asset?.balanceBundle?.total ?: BigDecimal.ZERO
                         val amount = session?.getAmount() ?: BigDecimal.ZERO
-                        assetAmount >= amount
+                        assetAmount.plus(flexaBalance) >= amount
                     }
                 }
                 val availableBalanceEnough by remember {
                     derivedStateOf {
+                        val flexaBalance = account.getFlexaBalance()
                         val assetAmount =
                             selectedAsset?.asset?.getSpendableBalance() ?: BigDecimal.ZERO
                         val amount = session?.getAmount() ?: BigDecimal.ZERO
-                        assetAmount >= amount
+                        assetAmount.plus(flexaBalance) >= amount
                     }
                 }
                 val enough by remember(session) {

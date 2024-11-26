@@ -2,7 +2,7 @@ buildscript {
     ext {
         kotlinVersion = '1.9.21'
 
-        sdk_version = '1.0.8'
+        sdk_version = '1.0.9'
         groupId = 'com.flexa'
         core_version = sdk_version
         scan_version = sdk_version
