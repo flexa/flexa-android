@@ -9,8 +9,10 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
@@ -22,6 +24,7 @@ import com.flexa.core.Flexa
 import com.flexa.core.toNavArgument
 import com.flexa.identity.buildIdentity
 import com.flexa.identity.getActivity
+import com.flexa.identity.restricted_region.RestrictedRegion
 import com.flexa.identity.shared.ConnectResult
 import com.flexa.spend.data.DeepLink
 import com.flexa.spend.data.DeepLinkParser
@@ -41,6 +44,7 @@ import com.flexa.spend.merchants.MerchantsEdit
 const val PAY_ROUTE = "com.flexa.spend"
 
 sealed class Route(val name: String) {
+    data object RestrictedRegion : Route("$PAY_ROUTE.restricted_region")
     data object Entrance : Route("$PAY_ROUTE.entrance")
     data object Pay : Route("$PAY_ROUTE.pay")
     data object Brands : Route("$PAY_ROUTE.brands")
@@ -74,6 +78,12 @@ fun NavGraphBuilder.spendNavGraph(
     deepLink: String? = null
 ) {
     navigation(startDestination = Route.Entrance.name, route = PAY_ROUTE) {
+        composable(Route.RestrictedRegion.name) {
+            val context = LocalContext.current
+            RestrictedRegion(modifier = modifier) {
+                close(context, navController)
+            }
+        }
         composable(Route.Entrance.name) {
             val context = LocalContext.current
             Entrance(
@@ -88,7 +98,7 @@ fun NavGraphBuilder.spendNavGraph(
                             when (res) {
                                 is ConnectResult.Connected -> {
                                     navController.navigate(Route.Pay.name) {
-                                        popUpTo(PAY_ROUTE) { inclusive = true }
+                                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
                                     }
                                 }
 
@@ -113,6 +123,17 @@ fun NavGraphBuilder.spendNavGraph(
             popExitTransition = { popExitTransition }
         ) {
             val context = LocalContext.current
+            val canSpend by Flexa.canSpend.collectAsStateWithLifecycle()
+
+            LaunchedEffect(canSpend) {
+                if (!canSpend) {
+                    navController.navigate(Route.RestrictedRegion.name) {
+                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
+            }
+
             SpendScreen(
                 modifier = modifier,
                 viewModel = viewModel(

@@ -162,7 +162,7 @@ internal class IdentityInteractor(
     override suspend fun putAppAccounts(accounts: List<AssetAccount>): PutAppAccountsResponse =
         withContext(Dispatchers.IO) {
             val appAccounts = ArrayList<com.flexa.core.entity.AppAccount>(accounts.size)
-            val account = getAccount()
+            val account = runCatching { getAccount() }.getOrNull()
             val assets = getAllAssets(100)
             deleteAssets()
             saveAssets(assets)
@@ -182,7 +182,7 @@ internal class IdentityInteractor(
                 val appAccount = com.flexa.core.entity.AppAccount(
                     accountId = localAccount.assetAccountHash,
                     displayName = localAccount.displayName,
-                    unitOfAccount = account.limits?.firstOrNull()?.asset,
+                    unitOfAccount = account?.limits?.firstOrNull()?.asset,
                     icon = localAccount.icon,
                     availableAssets = ArrayList(accountAssets)
                 )

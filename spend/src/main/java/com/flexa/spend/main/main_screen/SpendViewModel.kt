@@ -232,6 +232,12 @@ class SpendViewModel(
         }
     }
 
+    internal fun updateAccountData() {
+        viewModelScope.launch {
+            getAccount(useCached = false)
+        }
+    }
+
     internal suspend fun getAccount(useCached: Boolean = true) {
         flow {
             if (useCached) emit(interactor.getAccountCached())
@@ -302,7 +308,12 @@ class SpendViewModel(
                 .onEach { event ->
                     when (event) {
                         is SseEvent.Session -> {
-                            if (event.session.isCompleted()) interactor.saveLastEventId(null)
+                            if (event.session.isClosed()) {
+                                getAccount(useCached = false)
+                            }
+                            if (event.session.isCompleted()) {
+                                interactor.saveLastEventId(null)
+                            }
                         }
 
                         else -> event.eventId?.let { interactor.saveLastEventId(it) }
@@ -335,12 +346,7 @@ class SpendViewModel(
                 .map { it!! }
                 .onEach { cs -> eventFlow.emit(Event.CommerceSessionUpdate(cs.data)) }
                 .onEach { cs -> cs.data?.id?.let { saveLastSessionId(it) } }
-                .onEach { cs ->
-                    if (cs.isCompleted()) {
-                        stopProgress()
-                        getAccount(useCached = false)
-                    }
-                }
+                .onEach { cs -> if (cs.isCompleted()) stopProgress() }
                 .onEach { cs ->
                     val coveredByFlexaAccount = cs.data?.coveredByFlexaAccount() == true
                     val selectedAssetId = selectedAsset.value?.asset?.assetId ?: ""
@@ -510,6 +516,9 @@ class SpendViewModel(
                 val updatedSessionEvent = CommerceSession(
                     data = cs?.copy(isLegacy = isLegacy(cs))
                 )
+                if (updatedSessionEvent.isClosed()) {
+                    getAccount(useCached = false)
+                }
                 if (updatedSessionEvent.data?.isLegacy == false && updatedSessionEvent.isCompleted()) {
                     _commerceSession.emit(null)
                 } else {

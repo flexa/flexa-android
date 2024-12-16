@@ -12,11 +12,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -24,6 +27,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,11 +48,11 @@ import com.flexa.core.theme.FlexaTheme
 @Composable
 fun ScanScreen(
     modifier: Modifier = Modifier,
-    close: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
     var points by remember { mutableStateOf(RectF(0f, 0f, 0f, 0f)) }
     val holder by remember { mutableStateOf(Holder(scope)) }
+    val flashEnabled = rememberSaveable { mutableStateOf(false) }
 
     Box(
         modifier = modifier
@@ -56,9 +60,9 @@ fun ScanScreen(
         if (!LocalInspectionMode.current) {
             KeepScreenOn()
             FlexaScanner(
-                modifier = Modifier
-                    .fillMaxSize(),
+                modifier = Modifier.fillMaxSize(),
                 points,
+                flashLight = flashEnabled.value,
                 onQrCode = {
                     holder.setCodes(it) // debug code
                 },
@@ -89,15 +93,10 @@ fun ScanScreen(
             }
             AnimatedVisibility(
                 visible = visibility,
-                enter = fadeIn(
-                    animationSpec = tween(
-                        delayMillis = 300, durationMillis = 300
-                    )
-                ),
+                enter = fadeIn(animationSpec = tween(delayMillis = 300)),
             ) {
                 Column(
-                    modifier = Modifier
-                        .width(200.dp),
+                    modifier = Modifier.width(200.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
@@ -123,7 +122,7 @@ fun ScanScreen(
                 }
 
             }
-            Box(// bottom
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .weight(1f)
@@ -153,6 +152,19 @@ fun ScanScreen(
                 points = coordinates.toRectF()
             }
         )
+        FloatingActionButton(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .offset(x = (-32).dp, y = (-32).dp),
+            onClick = {
+                flashEnabled.value = !flashEnabled.value
+            }
+        ) {
+            FlashButton(
+                modifier = Modifier.size(40.dp),
+                enabled = flashEnabled.value
+            )
+        }
     }
 }
 
@@ -164,8 +176,6 @@ fun ScanScreen(
 @Composable
 fun ScanScreenPreview() {
     FlexaTheme {
-        ScanScreen {
-
-        }
+        ScanScreen(modifier = Modifier.fillMaxSize())
     }
 }

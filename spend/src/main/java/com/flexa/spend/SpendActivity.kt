@@ -1,6 +1,5 @@
 package com.flexa.spend
 
-import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -30,7 +29,7 @@ import kotlinx.coroutines.launch
 
 class SpendActivity : ComponentActivity(), ImageLoaderFactory {
 
-    private val broadcastReceiver = SpendBroadcastReceiver(this)
+    private val broadcastReceiver = SpendBroadcastReceiver()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -96,9 +95,7 @@ class SpendActivity : ComponentActivity(), ImageLoaderFactory {
         internal const val KEY_DEEP_LINK = "deep_link"
     }
 
-    private class SpendBroadcastReceiver(
-        private val activity: Activity
-    ) : BroadcastReceiver() {
+    private class SpendBroadcastReceiver: BroadcastReceiver() {
 
         private var job: Job? = null
 
@@ -107,11 +104,6 @@ class SpendActivity : ComponentActivity(), ImageLoaderFactory {
                 intent.hasExtra(FlexaConstants.TOKEN) -> {
                     val valid = intent.getBooleanExtra(FlexaConstants.TOKEN, false)
                     updateTokenState(valid)
-                }
-
-                intent.hasExtra(FlexaConstants.RESTRICTED_REGION) -> {
-                    val restricted = intent.getBooleanExtra(FlexaConstants.RESTRICTED_REGION, false)
-                    if (restricted) activity.finish()
                 }
             }
         }

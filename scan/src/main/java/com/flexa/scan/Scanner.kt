@@ -2,7 +2,6 @@ package com.flexa.scan
 
 import android.graphics.Bitmap
 import android.graphics.RectF
-import android.util.Log
 import android.util.Rational
 import android.util.Size
 import androidx.camera.core.CameraSelector
@@ -23,8 +22,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -35,6 +32,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionStatus
@@ -48,19 +47,30 @@ import java.util.concurrent.Executors
 fun FlexaScanner(
     modifier: Modifier = Modifier,
     pointsOfInterest: RectF,
+    flashLight: Boolean = false,
     onQrCode: (List<String>) -> Unit = {},
     onBitmap: (Bitmap) -> Unit = {}
 ) {
-    val lifecycleOwner by rememberUpdatedState(LocalLifecycleOwner.current)
+    val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
     val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
     val cameraPermissionState = rememberPermissionState(
         android.Manifest.permission.CAMERA
     )
 
-
-    DisposableEffect(Unit) {
-        onDispose { cameraProviderFuture.get().unbindAll() }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when(event) {
+                Lifecycle.Event.ON_PAUSE -> {
+                    cameraProviderFuture.get().unbindAll()
+                }
+                else -> { }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
     when (cameraPermissionState.status) {
@@ -73,7 +83,6 @@ fun FlexaScanner(
                     }
                 },
                 update = { view ->
-                    val viewSize = Size(view.width, view.height)
                     val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
                     val cameraExecutor: ExecutorService = Executors.newSingleThreadExecutor()
                     cameraProviderFuture.addListener({
@@ -90,9 +99,7 @@ fun FlexaScanner(
                         val preview = Preview.Builder()
                             .setResolutionSelector(resolutionSelector)
                             .build()
-                            .also {
-                                it.setSurfaceProvider(view.surfaceProvider)
-                            }
+                            .also { it.setSurfaceProvider(view.surfaceProvider)  }
 
                         val cameraProvider = cameraProviderFuture.get()
                         val analyzer = QRCodeImageAnalyzer(
@@ -122,21 +129,20 @@ fun FlexaScanner(
                             .setViewPort(viewPort)
                             .build()
 
-
-                        try {
+                        runCatching {
                             cameraProvider?.unbindAll()
-                            cameraProvider?.bindToLifecycle(
+                            val camera = cameraProvider?.bindToLifecycle(
                                 lifecycleOwner,
                                 cameraSelector,
                                 useCaseGroup
                             )
-                        } catch (e: Exception) {
-                            Log.e("", e.message, e)
+                            if (camera?.cameraInfo?.hasFlashUnit() == true) {
+                                camera.cameraControl.enableTorch(flashLight)
+                            }
                         }
                     }, ContextCompat.getMainExecutor(context))
                 }
             )
-
         }
 
         is PermissionStatus.Denied -> {

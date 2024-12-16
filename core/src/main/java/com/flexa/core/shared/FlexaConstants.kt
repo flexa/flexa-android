@@ -17,6 +17,5 @@ class FlexaConstants {
         const val TOKEN_ID = "token.id"
         const val EMAIL = "email"
         const val EMPTY = ""
-        const val RESTRICTED_REGION = "restricted.region"
     }
 }

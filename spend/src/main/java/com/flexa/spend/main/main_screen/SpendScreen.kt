@@ -51,11 +51,11 @@ import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -113,6 +113,7 @@ import com.flexa.spend.main.settings_popup.SettingsPopup
 import com.flexa.spend.merchants.BrandsViewModel
 import com.flexa.spend.nextGenNeedsClose
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -138,7 +139,7 @@ fun SpendScreen(
         val isPreview = LocalInspectionMode.current
         val assetsState by if (!isPreview) assetsViewModel.assetsState.collectAsStateWithLifecycle() else MutableStateFlow(
             AssetsState.Fine(emptyList())
-        ).collectAsState()
+        ).collectAsStateWithLifecycle()
         val isAssetsState by remember { derivedStateOf { assetsState !is AssetsState.NoAssets } }
         val scrollBehavior = if (isAssetsState)
             TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
@@ -155,6 +156,7 @@ fun SpendScreen(
         val showLegacyFlexcode by viewModel.openLegacyCard.collectAsStateWithLifecycle()
         val showNextGenCard by remember {
             derivedStateOf {
+                viewModel.updateAccountData()
                 commerceSession?.data?.isLegacy == false &&
                         !showLegacyFlexcode
             }
@@ -210,12 +212,14 @@ fun SpendScreen(
                         .fillMaxWidth()
                         .weight(.5F)
                 )
+                val scope = rememberCoroutineScope()
                 LegacyFlexcode(
                     modifier = Modifier
                         .fillMaxWidth()
                         .navigationBarsPadding(),
                     viewModel = viewModel,
                     toBack = { commerceSessionId, containsAuthorization ->
+                        scope.launch { viewModel.getAccount(useCached = false) }
                         viewModel.deleteCommerceSessionData()
                         commerceSessionId?.let { id ->
                             if (!containsAuthorization)
@@ -288,7 +292,9 @@ fun SpendScreen(
             }
 
             val interactionSource = remember { MutableInteractionSource() }
+            val scope = rememberCoroutineScope()
             val close = {
+                scope.launch { viewModel.getAccount(useCached = false) }
                 commerceSession?.data?.let { session ->
                     if (session.nextGenNeedsClose()) {
                         viewModel.closeCommerceSession(context, session.id)
@@ -459,15 +465,20 @@ fun SpendScreen(
                 brandsViewModel = brandsViewModel,
                 sheetStateVisible = showBottomSheet,
                 toAssets = {
+                    viewModel.updateAccountData()
                     assetsViewModel.setScreen(AssetsScreen.Assets)
                     openBottomSheet(SheetScreen.Assets())
                 },
                 toAddAssets = { toBack() },
                 toAssetInfo = { asset ->
+                    viewModel.updateAccountData()
                     openBottomSheet(SheetScreen.AssetDetails(asset))
                 },
                 toEdit = { toEdit.invoke() },
-                toInputAmount = { toInputAmount() },
+                toInputAmount = {
+                    viewModel.updateAccountData()
+                    toInputAmount()
+                },
                 toLinkRoute = { linkRoute ->
                     when (linkRoute) {
                         LinkRoute.Account -> {
@@ -591,7 +602,7 @@ fun SpendScreen(
     val tokenState by if (!previewMode) Spend.tokenState.collectAsStateWithLifecycle()
     else remember { mutableStateOf(TokenState.Fine) }
     val lifecycleOwner = LocalLifecycleOwner.current
-    val lifecycleState by lifecycleOwner.lifecycle.currentStateFlow.collectAsState()
+    val lifecycleState by lifecycleOwner.lifecycle.currentStateFlow.collectAsStateWithLifecycle()
 
     LaunchedEffect(lifecycleState) {
         if (lifecycleState == Lifecycle.State.RESUMED) {

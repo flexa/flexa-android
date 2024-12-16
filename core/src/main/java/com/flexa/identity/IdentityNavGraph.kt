@@ -11,8 +11,11 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
@@ -20,12 +23,13 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import androidx.navigation.navArgument
+import com.flexa.core.Flexa
 import com.flexa.core.toNavArgument
 import com.flexa.identity.coppa.CoppaScreen
 import com.flexa.identity.create_id.CreateId
-import com.flexa.identity.main.InDevelopmentScreen
 import com.flexa.identity.main.LoginScreen
 import com.flexa.identity.main.WebView
+import com.flexa.identity.restricted_region.RestrictedRegion
 import com.flexa.identity.secret_code.SecretCodeScreen
 import com.flexa.identity.secret_code.SecretCodeViewModel
 import com.flexa.identity.terms_of_use.TermsOfUse
@@ -34,7 +38,7 @@ import com.flexa.identity.verify_email.VerifyEmail
 const val AUTH_ROUTE = "com.flexa.identity"
 
 sealed class Route(val name: String) {
-    data object InDev : Route("$AUTH_ROUTE.dev")
+    data object RestrictedRegion : Route("$AUTH_ROUTE.restricted_region")
     data object Entrance : Route("$AUTH_ROUTE.entrance")
     data object Main : Route("$AUTH_ROUTE.main")
     data object CreateId : Route("$AUTH_ROUTE.create_id")
@@ -77,10 +81,13 @@ fun NavGraphBuilder.identityNavGraph(
     navController: NavHostController,
     deepLink: String? = null
 ) {
-    navigation(startDestination = Route.Entrance.name, route = AUTH_ROUTE) {
-        composable(Route.InDev.name) {
-            InDevelopmentScreen(modifier = modifier)
+    composable(Route.RestrictedRegion.name) {
+        val context = LocalContext.current
+        RestrictedRegion(modifier = modifier) {
+            close(context, navController)
         }
+    }
+    navigation(startDestination = Route.Entrance.name, route = AUTH_ROUTE) {
         composable(
             Route.Entrance.name,
         ) {
@@ -89,7 +96,9 @@ fun NavGraphBuilder.identityNavGraph(
                     popUpTo(navController.graph.id) { inclusive = true }
                 }
             } else
-                navController.navigate(Route.Main.name)
+                navController.navigate(Route.Main.name) {
+                    popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                }
         }
         composable(
             Route.Main.name,
@@ -99,6 +108,16 @@ fun NavGraphBuilder.identityNavGraph(
             popExitTransition = { popExitTransition }
         ) {
             val context = LocalContext.current
+            val canSpend by Flexa.canSpend.collectAsStateWithLifecycle()
+
+            LaunchedEffect(canSpend) {
+                if (!canSpend) {
+                    navController.navigate(Route.RestrictedRegion.name) {
+                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
+            }
             LoginScreen(
                 modifier = modifier,
                 viewModel = viewModel(),

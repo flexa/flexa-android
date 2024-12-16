@@ -41,7 +41,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -101,7 +100,7 @@ fun Spend(
         val previewMode = LocalInspectionMode.current
         val assetsState by if (!previewMode) assetsViewModel.assetsState.collectAsStateWithLifecycle() else MutableStateFlow(
             AssetsState.Fine(emptyList())
-        ).collectAsState()
+        ).collectAsStateWithLifecycle()
         val hasAssets by remember {
             derivedStateOf { assetsState !is AssetsState.NoAssets }
         }

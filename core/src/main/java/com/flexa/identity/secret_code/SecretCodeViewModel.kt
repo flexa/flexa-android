@@ -8,7 +8,6 @@ import com.flexa.core.entity.AppAccount
 import com.flexa.core.entity.ExchangeRate
 import com.flexa.core.getAssetIds
 import com.flexa.core.shared.ApiErrorHandler
-import com.flexa.core.shared.Asset
 import com.flexa.core.shared.FlexaConstants.Companion.RETRY_COUNT
 import com.flexa.core.shared.FlexaConstants.Companion.RETRY_DELAY
 import com.flexa.identity.domain.IIdentityInteractor
@@ -97,13 +96,6 @@ internal class SecretCodeViewModel(
         brands.await()
         exchangeRates.await()
         acc.accounts
-    }
-
-    private suspend fun getAndSaveAssets(): List<Asset> {
-        val assets = interactor.getAllAssets(ASSETS_PAGE_SIZE)
-        interactor.deleteAssets()
-        interactor.saveAssets(assets)
-        return assets
     }
 
     private suspend fun getAndSaveBrands() {

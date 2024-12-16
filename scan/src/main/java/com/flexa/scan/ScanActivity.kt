@@ -15,7 +15,6 @@ class ScanActivity : ComponentActivity() {
             FlexaTheme {
                 ScanScreen(
                     modifier = Modifier.fillMaxSize(),
-                    close = { finish() }
                 )
             }
         }

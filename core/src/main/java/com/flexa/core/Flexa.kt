@@ -43,7 +43,7 @@ object Flexa {
                 throw SDKInitializationError()
             return context!!
         }
-    internal val _canSpend = MutableStateFlow(false)
+    internal val _canSpend = MutableStateFlow(true)
     val canSpend = _canSpend.asStateFlow()
     private val _selectedAsset = MutableStateFlow<SelectedAsset?>(null)
     val selectedAsset: StateFlow<SelectedAsset?> = _selectedAsset

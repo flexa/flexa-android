@@ -63,4 +63,6 @@
     <string name="get_started">Get Started</string>
     <string name="report">Report</string>
     <string name="close">Close</string>
+    <string name="restricted_region_title">Pay with Flexa is not available in your region.</string>
+    <string name="restricted_region_copy">Federal law prevents Flexa from making its services available in some regions. For more information, please contact Flexa support.</string>
 </resources>
