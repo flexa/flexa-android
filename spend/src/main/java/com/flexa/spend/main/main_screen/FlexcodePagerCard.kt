@@ -42,6 +42,7 @@ import com.flexa.core.shared.SelectedAsset
 import com.flexa.core.theme.FlexaTheme
 import com.flexa.spend.BuildConfig
 import com.flexa.spend.MockFactory
+import com.flexa.spend.containsLetters
 import com.flexa.spend.domain.FakeInteractor
 import com.flexa.spend.main.assets.AssetsViewModel
 import com.flexa.spend.main.flexcode.FlexcodeLayout
@@ -156,6 +157,7 @@ fun FlexcodePagerCard(
             val alpha by animateFloatAsState(
                 if (assetKey == null) .03F else 1F, label = "alpha"
             )
+            val complexCode by remember { mutableStateOf(code.value.containsLetters()) }
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
                 val blur by animateDpAsState(
                     if (codeProgress.value || assetKey == null) 2.dp else 0.dp, label = "blur",
@@ -163,7 +165,7 @@ fun FlexcodePagerCard(
                 FlexcodeLayout(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .aspectRatio(1.14f)
+                        .aspectRatio(if (complexCode) 1.14f else 1.1F)
                         .alpha(alpha)
                         .blur(blur, BlurredEdgeTreatment.Rectangle)
                         .padding(2.dp),
@@ -178,7 +180,7 @@ fun FlexcodePagerCard(
                     FlexcodeLayout(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .aspectRatio(1.14f)
+                            .aspectRatio(if (complexCode) 1.14f else 1.1F)
                             .alpha(alpha),
                         code = codeString,
                         color = asset?.asset?.assetData?.color?.toColor() ?: Color.Magenta

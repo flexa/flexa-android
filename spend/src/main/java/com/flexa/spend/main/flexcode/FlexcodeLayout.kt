@@ -39,6 +39,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -51,6 +52,7 @@ import com.flexa.core.theme.FlexaTheme
 import com.flexa.spend.R
 import com.flexa.spend.containsLetters
 import com.flexa.spend.shiftHue
+import kotlin.math.roundToInt
 
 
 @Composable
@@ -68,18 +70,28 @@ fun FlexcodeLayout(
             .fillMaxSize()
             .clip(
                 RoundedCornerShape(
-                    topStart = with(density) { (rootSize.width * 0.10f).toDp() },
-                    bottomStart = with(density) { (rootSize.width * 0.10f).toDp() },
+                    topStart = with(density) {
+                        (rootSize.width * 0.10f)
+                            .roundToInt()
+                            .toDp()
+                    },
+                    bottomStart = with(density) {
+                        (rootSize.width * 0.10f)
+                            .roundToInt()
+                            .toDp()
+                    },
                     topEnd = with(density) { rootCorner.toDp() },
-                    bottomEnd = with(density) { rootCorner.toDp() }
+                    bottomEnd = with(density) {
+                        rootCorner.roundToInt().toDp()
+                    }
                 )
             )
             .background(Color.Black)
-            .onGloballyPositioned {
-                rootSize = IntSize(it.size.width, it.size.height)
-            }
+            .onSizeChanged { if (rootSize != it) rootSize = it }
     ) {
-        val height128 by remember { derivedStateOf { with(density) { (rootSize.width * 0.2f).toDp() } } }
+        val height128 by remember {
+            derivedStateOf { with(density) { (rootSize.width * 0.2f).roundToInt().toDp() } }
+        }
         val paddingStart128 by remember { derivedStateOf { rootSize.width * 0.206f } }
         val paddingEnd128 by remember { derivedStateOf { rootSize.width * 0.14f } }
         Code128(
@@ -87,8 +99,16 @@ fun FlexcodeLayout(
                 .fillMaxWidth()
                 .height(height128)
                 .padding(
-                    start = with(density) { paddingStart128.toDp() },
-                    end = with(density) { paddingEnd128.toDp() }
+                    start = with(density) {
+                        paddingStart128
+                            .roundToInt()
+                            .toDp()
+                    },
+                    end = with(density) {
+                        paddingEnd128
+                            .roundToInt()
+                            .toDp()
+                    }
                 )
                 .background(Color.White)
                 .align(Alignment.TopEnd),
@@ -99,8 +119,16 @@ fun FlexcodeLayout(
                 .height(height128)
                 .fillMaxWidth()
                 .padding(
-                    start = with(density) { paddingStart128.toDp() },
-                    end = with(density) { paddingEnd128.toDp() }
+                    start = with(density) {
+                        paddingStart128
+                            .roundToInt()
+                            .toDp()
+                    },
+                    end = with(density) {
+                        paddingEnd128
+                            .roundToInt()
+                            .toDp()
+                    }
                 )
                 .background(Color.White)
                 .align(Alignment.BottomEnd)
@@ -110,7 +138,11 @@ fun FlexcodeLayout(
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(with(density) { (rootSize.width * 0.09f).toDp() })
+                .padding(with(density) {
+                    (rootSize.width * 0.09f)
+                        .roundToInt()
+                        .toDp()
+                })
         ) {
             drawRoundRect(
                 color = Color.White,
@@ -123,19 +155,43 @@ fun FlexcodeLayout(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(with(density) { (rootSize.width * 0.074f).toDp() })
+                .padding(with(density) {
+                    (rootSize.width * 0.074f)
+                        .roundToInt()
+                        .toDp()
+                })
                 .clip(
                     RoundedCornerShape(
-                        topEnd = with(density) { (rootCorner * 0.64f).toDp() },
-                        bottomEnd = with(density) { (rootCorner * 0.64f).toDp() }
+                        topEnd = with(density) {
+                            (rootCorner * 0.64f)
+                                .roundToInt()
+                                .toDp()
+                        },
+                        bottomEnd = with(density) {
+                            (rootCorner * 0.64f)
+                                .roundToInt()
+                                .toDp()
+                        }
                     )
                 )
                 .border(
-                    width = with(density) { (rootSize.width * 0.024f).toDp() },
+                    width = with(density) {
+                        (rootSize.width * 0.024f)
+                            .roundToInt()
+                            .toDp()
+                    },
                     color = Color.Black,
                     shape = RoundedCornerShape(
-                        topEnd = with(density) { (rootCorner * 0.64f).toDp() },
-                        bottomEnd = with(density) { (rootCorner * 0.64f).toDp() }
+                        topEnd = with(density) {
+                            (rootCorner * 0.64f)
+                                .roundToInt()
+                                .toDp()
+                        },
+                        bottomEnd = with(density) {
+                            (rootCorner * 0.64f)
+                                .roundToInt()
+                                .toDp()
+                        }
                     )
                 )
         ) {
@@ -148,14 +204,34 @@ fun FlexcodeLayout(
                     .align(Alignment.Center)
                     .fillMaxSize()
                     .padding(
-                        end = with(density) { pdfBoxPadding.toDp() },
-                        top = with(density) { pdfBoxPadding.toDp() },
-                        bottom = with(density) { pdfBoxPadding.toDp() }
+                        end = with(density) {
+                            pdfBoxPadding
+                                .roundToInt()
+                                .toDp()
+                        },
+                        top = with(density) {
+                            pdfBoxPadding
+                                .roundToInt()
+                                .toDp()
+                        },
+                        bottom = with(density) {
+                            pdfBoxPadding
+                                .roundToInt()
+                                .toDp()
+                        }
                     )
                     .clip(
                         RoundedCornerShape(
-                            topEnd = with(density) { (rootCorner * 0.35f).toDp() },
-                            bottomEnd = with(density) { (rootCorner * 0.35f).toDp() }
+                            topEnd = with(density) {
+                                (rootCorner * 0.35f)
+                                    .roundToInt()
+                                    .toDp()
+                            },
+                            bottomEnd = with(density) {
+                                (rootCorner * 0.35f)
+                                    .roundToInt()
+                                    .toDp()
+                            }
                         )
                     )
                     .onGloballyPositioned {
@@ -178,32 +254,40 @@ fun FlexcodeLayout(
                             IntOffset(x = (offset - pdfOffset).toInt(), y = 0)
                         },
                     code = code,
-                    rows = if(complexCode) 23 else 23,
+                    rows = if (complexCode) 23 else 17,
                     columns = if (complexCode) 3 else 1
                 )
-                if (complexCode) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .width(with(density) {
-                                (pdfBoxPadding + pdfBoxPadding * .5f).toDp()
-                            })
-                            .background(Color.Black)
-                            .align(Alignment.CenterEnd)
-                    ) { }
-                }
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .width(with(density) {
+                            (pdfBoxPadding + pdfBoxPadding * .5f)
+                                .roundToInt()
+                                .toDp()
+                        })
+                        .align(Alignment.CenterEnd)
+                ) { drawRect(color = Color.Black) }
             }
             val imgWidth by remember {
                 derivedStateOf {
-                    with(density) { (rootSize.width * (if (complexCode) 0.438F else 0.42F)).toDp() }
+                    with(density) {
+                        (rootSize.width * (if (complexCode) 0.438F else 0.401F)).roundToInt()
+                            .toDp()
+                    }
                 }
             }
             val imgOffset by remember {
-                derivedStateOf { ((rootSize.width * 0.141f) - offset).toInt() }
+                derivedStateOf {
+                    if (complexCode)
+                        ((rootSize.width * 0.141f) - offset).toInt()
+                    else
+                        ((rootSize.width * 0.137f) - offset).toInt()
+                }
             }
             val imgHeight by remember {
-                derivedStateOf { with(density) { (rootSize.height * 0.056f).toDp() } }
+                derivedStateOf { with(density) { (rootSize.height * 0.056f).roundToInt().toDp() } }
             }
+            val multiplier by remember { mutableFloatStateOf(if (complexCode) 0.028f else 0.025f) }
             Image(
                 modifier = Modifier
                     .align(Alignment.TopStart)
@@ -212,7 +296,7 @@ fun FlexcodeLayout(
                     .offset {
                         IntOffset(
                             x = imgOffset,
-                            y = (rootSize.height * 0.028f).toInt()
+                            y = (rootSize.height * multiplier).roundToInt()
                         )
                     }
                     .animateContentSize(),
@@ -228,7 +312,7 @@ fun FlexcodeLayout(
                     .offset {
                         IntOffset(
                             x = imgOffset,
-                            y = (rootSize.height * (-0.028f)).toInt()
+                            y = (rootSize.height * (-multiplier)).roundToInt()
                         )
                     }
                     .animateContentSize(),
@@ -240,14 +324,22 @@ fun FlexcodeLayout(
         Canvas(
             modifier = Modifier
                 .fillMaxHeight()
-                .width(with(density) { (rootSize.width * 0.2f).toDp() })
+                .width(with(density) {
+                    (rootSize.width * 0.2f)
+                        .roundToInt()
+                        .toDp()
+                })
         ) {
             drawRect(color = Color.Black)
         }
         Canvas(
             modifier = Modifier
                 .fillMaxHeight()
-                .width(with(density) { (rootSize.width * 0.02f).toDp() })
+                .width(with(density) {
+                    (rootSize.width * 0.02f)
+                        .roundToInt()
+                        .toDp()
+                })
                 .offset { IntOffset(x = (rootSize.width * 0.189f).toInt(), y = 0) }
         ) {
             drawRect(
@@ -315,8 +407,12 @@ private fun FlexcodeLayoutPreview() {
             ) {
                 FlexcodeLayout(
                     modifier = Modifier
-                        .width(with(d) { (sliderPosition * 1000F).toDp() })
-                        .aspectRatio(1.14f),
+                        .width(with(d) {
+                            (sliderPosition * 1000F)
+                                .roundToInt()
+                                .toDp()
+                        })
+                        .aspectRatio(1.1f),
                     code = "123456789012",
                     color = Color.Magenta
                 )

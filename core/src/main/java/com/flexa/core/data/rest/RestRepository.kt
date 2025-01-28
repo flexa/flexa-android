@@ -1,5 +1,6 @@
 package com.flexa.core.data.rest
 
+import android.os.Build
 import android.util.Log
 import com.flexa.BuildConfig
 import com.flexa.core.data.storage.SecuredPreferences
@@ -81,7 +82,7 @@ internal class RestRepository(
                     preferences.getStringSynchronously(FlexaConstants.UNIQUE_IDENTIFIER) ?: ""
                 put("challenge", challenge)
                 put("device_id", deviceId)
-                put("device_model", "Android")
+                put("device_model", "${Build.MANUFACTURER} ${Build.MODEL}")
                 put("email", email)
             }.run { toString().toRequestBody(mediaType) }
 

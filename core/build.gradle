@@ -4,9 +4,9 @@ plugins {
     id 'com.android.library'
     id 'org.jetbrains.kotlin.android'
     id 'kotlin-parcelize'
-    id 'maven-publish'
     id 'org.jetbrains.kotlin.plugin.serialization'
     id 'kotlin-kapt'
+    id 'maven-publish'
 }
 
 android {
@@ -30,7 +30,7 @@ android {
             it.buildConfigField 'String', 'DEBUG_API_HOST', 'null'
         }
         debug {
-            it.buildConfigField 'String', 'DEBUG_API_HOST', "\"${localProperties['debug.api.host']?:""}\""
+            it.buildConfigField 'String', 'DEBUG_API_HOST', "\"${localProperties['debug.api.host'] ?: ""}\""
         }
     }
     def date = new SimpleDateFormat("yyyy-MM-dd").format(new Date())
@@ -47,16 +47,10 @@ android {
     }
     buildFeatures {
         compose true
+        buildConfig true
     }
     composeOptions {
         kotlinCompilerExtensionVersion kotlin_compiler_version
-    }
-    sourceSets {
-        main {
-            kotlin {
-                srcDir("$buildDir/generated/api")
-            }
-        }
     }
     gradle.taskGraph.whenReady {
         def task = it.getAllTasks().find { t -> t.name.contains('bundle') }
@@ -105,7 +99,6 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-runtime-compose:$lifecycle_version"
     implementation "androidx.lifecycle:lifecycle-viewmodel-compose:$lifecycle_version"
 
-
     /*AppCompat*/
     implementation 'androidx.appcompat:appcompat:1.7.0'
 
@@ -137,6 +130,8 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
     testImplementation 'org.robolectric:robolectric:4.13'
 }
+
+def module_description = 'The core module is required by all other modules in the Flexa SDK. The Flexa SDK is a suite of prebuilt functionality that enables your wallet app to interface directly with Flexa-powered payment systems in-person and online'
 
 project.afterEvaluate {
     publishing {
@@ -171,19 +166,6 @@ project.afterEvaluate {
                             }
                         }
                     }
-                }
-            }
-        }
-        repositories {
-            maven {
-                name = "GitHubPackages"
-                url = uri("https://maven.pkg.github.com/flexa/flexa-android")
-                credentials {
-                    def propertiesFile = rootProject.file("local.properties")
-                    def localProperties = new Properties()
-                    localProperties.load(new FileInputStream(propertiesFile))
-                    username = localProperties['gpr.user'] ?: ""
-                    password = localProperties['gpr.key'] ?: ""
                 }
             }
         }

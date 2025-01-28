@@ -20,14 +20,14 @@ internal abstract class FlexaInterceptor: Interceptor {
             Flexa.context?.run { AppInfoProvider.getAppName(this) } ?: "Inaccessible"
         val appVersion =
             Flexa.context?.run { AppInfoProvider.getAppVersion(this) } ?: "Inaccessible"
+        val appBuildNumber =
+            Flexa.context?.run { AppInfoProvider.getAppBuildNumber(this) } ?: "Inaccessible"
         val appPackageName =
             Flexa.context?.run { AppInfoProvider.getAppPackageName(this) } ?: "Inaccessible"
-        val deviceModel = Build.MODEL
-        val deviceManufacturer = Build.MANUFACTURER
-        val userAgent =
-            "$deviceManufacturer $deviceModel/${Build.VERSION.SDK_INT}(${Build.VERSION.RELEASE}) " +
+        val sdkVersion = "${Build.VERSION.RELEASE} (${Build.VERSION.SDK_INT})"
+        val userAgent = "Android/$sdkVersion " +
                     "Spend/${BuildConfig.SPEND_SDK_VERSION} " +
-                    "$appPackageName/$appVersion"
+                    "$appPackageName/$appVersion ($appBuildNumber)"
         HeadersBundle(
             appName = appName,
             version = releaseDate,

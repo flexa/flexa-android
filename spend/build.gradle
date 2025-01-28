@@ -34,6 +34,7 @@ android {
     }
     buildFeatures {
         compose true
+        buildConfig true
     }
     composeOptions {
         kotlinCompilerExtensionVersion kotlin_compiler_version
@@ -105,12 +106,22 @@ dependencies {
     /*Worker*/
     implementation "androidx.work:work-runtime-ktx:2.9.1"
 
+    /*Serialization*/
+    implementation 'com.google.code.gson:gson:2.11.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3'
+
+    /*Security*/
+    implementation 'androidx.security:security-crypto:1.0.0'
+    implementation "com.google.crypto.tink:tink-android:1.8.0"
+
     testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1'
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
     androidTestImplementation "androidx.compose.ui:ui-test-junit4:$compose_version"
     testImplementation 'org.robolectric:robolectric:4.13'
 }
+
+def module_description = 'The spend module of the Flexa SDK enables instant retail payments. The Flexa SDK is a suite of prebuilt functionality that enables your wallet app to interface directly with Flexa-powered payment systems in-person and online'
 
 project.afterEvaluate {
     publishing {
@@ -163,3 +174,4 @@ project.afterEvaluate {
         }
     }
 }
+

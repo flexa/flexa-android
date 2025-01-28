@@ -48,17 +48,14 @@ fun PDF417(
     }
     var code417Size by remember { mutableStateOf(IntSize.Zero) }
     LaunchedEffect(code417Size, code) {
-        val writer = if (complexCode) PDF417Writer() else FlexaPDF417Writer(2F / 1)
+        val writer = if (complexCode) PDF417Writer() else FlexaPDF417Writer(3F)
         runCatching {
             val matrix = writer.encode(
                     code, BarcodeFormat.PDF_417,
                     code417Size.width, code417Size.height,
                     mapOf(
-                        EncodeHintType.CHARACTER_SET to "utf-8",
                         EncodeHintType.PDF417_COMPACT to true,
-                        EncodeHintType.MARGIN to 0,
                         EncodeHintType.PDF417_COMPACTION to Compaction.AUTO,
-                        EncodeHintType.PDF417_AUTO_ECI to true,
                         EncodeHintType.PDF417_DIMENSIONS to Dimensions(
                             columns,
                             columns,
@@ -152,8 +149,8 @@ private fun LocalFlexcodePreview() {
                 .fillMaxSize()
                 .background(Color.White)
                 .rotate(180F),
-            rows = 18,
-            columns = 2,
+            rows = 17,
+            columns = 1,
             code = code,
         )
     }

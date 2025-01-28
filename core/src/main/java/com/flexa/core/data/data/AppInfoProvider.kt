@@ -43,6 +43,28 @@ internal class AppInfoProvider {
                 "Inaccessible"
             }
 
+        fun getAppBuildNumber(application: Context): String =
+            try {
+                val packageInfo = when {
+                    Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ->
+                        application.packageManager
+                            .getPackageInfo(application.packageName, 0)
+
+                    else -> application.packageManager
+                        .getPackageInfo(
+                            application.packageName,
+                            PackageManager.PackageInfoFlags.of(0)
+                        )
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    packageInfo.longVersionCode.toString()
+                } else {
+                    packageInfo.versionCode.toString()
+                }
+            } catch (e: Exception) {
+                "Inaccessible"
+            }
+
         fun getAppPackageName(context: Context): String =
             try {
                 val packageInfo = when {
