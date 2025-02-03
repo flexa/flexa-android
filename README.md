@@ -53,19 +53,19 @@ dependencyResolutionManagement {
 **Identity** module:
 
 ```groovy
-implementation "com.flexa:core:1.0.9"
+implementation "com.flexa:core:1.0.11"
 ```
 
 **Scan** module:
 
 ```groovy
-implementation "com.flexa:scan:1.0.9"
+implementation "com.flexa:scan:1.0.11"
 ```
 
 **Spend** module:
 
 ```groovy
-implementation "com.flexa:spend:1.0.9"
+implementation "com.flexa:spend:1.0.11"
 ```
 
 ### Remote repository
@@ -107,19 +107,19 @@ implementation "com.flexa:spend:1.0.9"
     **Identity** module:
 
     ```groovy
-    implementation "com.flexa:core:1.0.9"
+    implementation "com.flexa:core:1.0.11"
     ```
 
     **Scan** module:
 
     ```groovy
-    implementation "com.flexa:scan:1.0.9"
+    implementation "com.flexa:scan:1.0.11"
     ```
 
     **Spend** module:
 
     ```groovy
-    implementation "com.flexa:spend:1.0.9"
+    implementation "com.flexa:spend:1.0.11"
     ```
 
 
