@@ -33,7 +33,7 @@ internal class HeadersInterceptor(
         val request = newRequestWithAccessToken(chain.request(), token)
         var response = chain.proceed(request)
 
-        checkResponse(response)
+        if (!keepAlive) checkResponse(response)
 
         if (response.code == HttpURLConnection.HTTP_FORBIDDEN ||
             response.code == HttpURLConnection.HTTP_UNAUTHORIZED
