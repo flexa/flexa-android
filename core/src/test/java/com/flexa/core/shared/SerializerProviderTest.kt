@@ -1,11 +1,14 @@
 package com.flexa.core.shared
 
+import android.graphics.Color
 import com.flexa.core.data.rest.RestRepository
 import com.flexa.core.entity.AppAccount
 import com.flexa.core.toJsonObject
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertFalse
+import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertTrue
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -13,7 +16,13 @@ import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonObject
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import kotlin.intArrayOf
 
+@Config(sdk = [26])
+@RunWith(RobolectricTestRunner::class)
 class SerializerProviderTest {
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -65,7 +74,7 @@ class SerializerProviderTest {
     @Test
     fun testDoubleToStringConversion() {
         val clazz = com.flexa.core.shared.AssetAccount(
-            assetAccountHash = "123", custodyModel = CustodyModel.LOCAL,  availableAssets = listOf(
+            assetAccountHash = "123", custodyModel = CustodyModel.LOCAL, availableAssets = listOf(
                 AvailableAsset(assetId = "4567", balance = 0.034)
             )
         )
@@ -108,11 +117,82 @@ class SerializerProviderTest {
         val data = jsonElement.jsonObject["data"]
         val accData = if (data !is JsonNull) {
             data!!
-        } else buildJsonArray {  }
+        } else buildJsonArray { }
         val dto =
             RestRepository.json.decodeFromJsonElement<List<com.flexa.core.entity.AppAccount>>(
                 accData
             )
         println(dto)
+    }
+
+    @Test
+    fun `color serialization`() {
+        val colorInt = Color.parseColor("#FF00FF") // magenta
+        val color = Color.valueOf(colorInt)
+        val a = color.alpha()
+        val r = color.red()
+        val g = color.green()
+        val b = color.blue()
+        println("colorInt: $colorInt a: $a, r: $r, g: $g, b: $b")
+
+        val asset = AvailableAsset(
+            assetId = "",
+            balance = 0.0,
+            accentColor = color
+        )
+
+        val jsonString = json.encodeToString<AvailableAsset>(asset)
+        println(jsonString)
+        val deserialized = json.decodeFromString<AvailableAsset>(jsonString)
+        val deserializedColor = deserialized.accentColor
+        assertNotNull(deserializedColor)
+        assertEquals(a, deserializedColor?.alpha())
+        assertEquals(r, deserializedColor?.red())
+        assertEquals(g, deserializedColor?.green())
+        assertEquals(b, deserializedColor?.blue())
+        assertEquals(colorInt, deserializedColor?.toArgb())
+    }
+
+    @Test
+    fun `color with alpha serialization`() {
+        val colorInt = Color.parseColor("#FF00FF80") // 50% alpha magenta
+        val color = Color.valueOf(colorInt)
+        val a = color.alpha()
+        val r = color.red()
+        val g = color.green()
+        val b = color.blue()
+        println("colorInt: $colorInt a: $a, r: $r, g: $g, b: $b")
+
+        val asset = AvailableAsset(
+            assetId = "",
+            balance = 0.0,
+            accentColor = color
+        )
+
+        val jsonString = json.encodeToString<AvailableAsset>(asset)
+        println(jsonString)
+        val deserialized = json.decodeFromString<AvailableAsset>(jsonString)
+        val deserializedColor = deserialized.accentColor
+        assertNotNull(deserializedColor)
+        assertEquals(a, deserializedColor?.alpha())
+        assertEquals(r, deserializedColor?.red())
+        assertEquals(g, deserializedColor?.green())
+        assertEquals(b, deserializedColor?.blue())
+        assertEquals(colorInt, deserializedColor?.toArgb())
+    }
+
+    @Test
+    fun `asset account serialization`() {
+        val assetAccount = com.flexa.core.shared.AssetAccount(
+            assetAccountHash = "123",
+            custodyModel = CustodyModel.MANAGED,
+            availableAssets = listOf(
+                AvailableAsset(assetId = "eip20:1234", balance = 0.034, accentColor = Color.valueOf(Color.MAGENTA))
+            )
+        )
+        val jsonString = json.encodeToString<com.flexa.core.shared.AssetAccount>(assetAccount)
+        println(jsonString)
+        val deserialized = json.decodeFromString<com.flexa.core.shared.AssetAccount>(jsonString)
+        assertEquals(assetAccount, deserialized)
     }
 }

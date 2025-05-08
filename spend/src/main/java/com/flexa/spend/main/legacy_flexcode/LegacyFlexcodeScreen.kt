@@ -36,9 +36,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,11 +53,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.flexa.core.shared.Brand
 import com.flexa.core.shared.Promotion
 import com.flexa.core.theme.FlexaTheme
 import com.flexa.core.view.FlexaLogo
 import com.flexa.spend.MockFactory
 import com.flexa.spend.containsAuthorization
+import com.flexa.spend.containsLetters
 import com.flexa.spend.domain.FakeInteractor
 import com.flexa.spend.getAmount
 import com.flexa.spend.getAmountLabel
@@ -65,6 +69,7 @@ import com.flexa.spend.main.main_screen.ZERO
 import com.flexa.spend.main.ui_utils.MarkdownText
 import com.flexa.spend.main.ui_utils.SpendAsyncImage
 import com.flexa.spend.main.ui_utils.rememberSelectedAsset
+import com.flexa.spend.shiftHue
 import com.flexa.spend.toColor
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -77,7 +82,7 @@ fun LegacyFlexcode(
     val previewMode = LocalInspectionMode.current
     val commerceSession by if (!previewMode) viewModel.commerceSession.collectAsStateWithLifecycle()
     else MutableStateFlow(MockFactory.getMockCommerceSessionCompleted()).collectAsState()
-    val brand by remember { derivedStateOf { commerceSession?.data?.brand } }
+    val brand = remember { mutableStateOf<Brand?>(null) }
     val containsAuthorization by remember {
         derivedStateOf { commerceSession?.containsAuthorization() == true }
     }
@@ -85,6 +90,13 @@ fun LegacyFlexcode(
     BackHandler {
         toBack.invoke(commerceSession?.data?.id, containsAuthorization)
     }
+
+    LaunchedEffect(commerceSession) {
+        commerceSession?.let {
+            brand.value = it.data?.brand
+        }
+    }
+
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(
@@ -94,21 +106,26 @@ fun LegacyFlexcode(
     ) {
         Row(// Toolbar
             modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = 4.dp)
+                .padding(start = 16.dp, end = 6.dp, top = 4.dp, bottom = 4.dp)
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                val color by remember {
+                    derivedStateOf {
+                        brand.value?.color?.toColor() ?: Color.Magenta
+                    }
+                }
                 FlexaLogo(
                     modifier = Modifier.size(22.dp),
                     shape = RoundedCornerShape(3.dp),
-                    colors = listOf(Color.White, MaterialTheme.colorScheme.primary)
+                    colors = listOf(Color.White, color, color.shiftHue(10f))
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "flexa",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold)
+                    text = "Flexa",
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
                 )
             }
             IconButton(onClick = { toBack(commerceSession?.data?.id, containsAuthorization) }) {
@@ -122,7 +139,7 @@ fun LegacyFlexcode(
                     .align(Alignment.CenterHorizontally)
                     .clip(RoundedCornerShape(8.dp))
                     .size(54.dp),
-                imageUrl = brand?.logoUrl,
+                imageUrl = brand.value?.logoUrl,
             )
         } else {
             Box(
@@ -141,8 +158,11 @@ fun LegacyFlexcode(
         }
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            modifier = Modifier.align(Alignment.CenterHorizontally),
-            text = brand?.name?.let { "Pay $it" } ?: "",
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .padding(horizontal = 16.dp),
+            text = brand.value?.name?.let { "Pay $it" } ?: "",
+            textAlign = TextAlign.Center,
             style = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.outline)
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -152,12 +172,14 @@ fun LegacyFlexcode(
             transitionSpec = {
                 if (commerceSession.getAmount() > initialState) {
                     (slideInVertically { width -> width } +
-                            fadeIn()).togetherWith(slideOutVertically()
-                    { width -> -width } + fadeOut())
+                            fadeIn()).togetherWith(
+                        slideOutVertically()
+                        { width -> -width } + fadeOut())
                 } else {
                     (slideInVertically { width -> -width } +
-                            fadeIn()).togetherWith(slideOutVertically()
-                    { width -> width } + fadeOut())
+                            fadeIn()).togetherWith(
+                        slideOutVertically()
+                        { width -> width } + fadeOut())
                 }.using(SizeTransform(clip = false))
             }, label = "price_animation"
         ) { state ->
@@ -179,6 +201,7 @@ fun LegacyFlexcode(
                     commerceSession?.data?.authorization?.number?.ifBlank { ZERO } ?: ZERO
                 }
             }
+            val complexCode by remember { mutableStateOf(code.containsLetters()) }
             AnimatedContent(
                 containsAuthorization, label = "",
                 transitionSpec = {
@@ -190,7 +213,7 @@ fun LegacyFlexcode(
                     FlexcodeLayout(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .aspectRatio(1.14f),
+                            .aspectRatio(if (complexCode) 1.14f else 1.1f),
                         code = code,
                         color = asset?.asset?.assetData?.color?.toColor() ?: Color.Magenta
                     )
@@ -204,7 +227,7 @@ fun LegacyFlexcode(
                         FlexcodeLayout(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .aspectRatio(1.14f)
+                                .aspectRatio(if (complexCode) 1.14f else 1.1f)
                                 .alpha(.02F),
                             code = code,
                             color = MaterialTheme.colorScheme.primary

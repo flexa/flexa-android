@@ -151,8 +151,8 @@ fun CommerceSession.Data?.isCompleted(): Boolean {
     return this?.status == "completed"
 }
 
-fun CommerceSession?.isCurrent(id: String?): Boolean {
-    return this?.data?.id == id
+fun CommerceSession?.isCurrent(session: CommerceSession?): Boolean {
+    return this?.data?.id == session?.data?.id
 }
 
 fun CommerceSession?.isClosed(): Boolean {
@@ -473,7 +473,7 @@ internal fun Promotion.getPercentAmount(amount: String): BigDecimal {
     val amountValue = amount.getAmount()
     val percent = percentOff?.toBigDecimalOrNull()?.coerceAtLeast(BigDecimal.ZERO)
         ?.coerceAtMost(BigDecimal(100)) ?: BigDecimal.ZERO
-    return amountValue.multiply(percent).setScale(2)
+    return amountValue.multiply(percent).setScale(2, RoundingMode.DOWN)
 }
 
 @Suppress(names = ["ModifierFactoryUnreferencedReceiver"])

@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -21,6 +22,7 @@ import coil.ImageLoaderFactory
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import com.flexa.core.Flexa
+import com.flexa.core.shared.AssetAccount
 import com.flexa.core.shared.FlexaConstants
 import com.flexa.core.theme.FlexaTheme
 import kotlinx.coroutines.Job
@@ -33,6 +35,10 @@ class SpendActivity : ComponentActivity(), ImageLoaderFactory {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_SECURE,
+            WindowManager.LayoutParams.FLAG_SECURE
+        )
         registerReceiver()
         restoreSDKContext()
         setContent {
@@ -45,6 +51,11 @@ class SpendActivity : ComponentActivity(), ImageLoaderFactory {
                 )
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        restoreAssetsAccounts()
     }
 
     override fun onDestroy() {
@@ -66,6 +77,18 @@ class SpendActivity : ComponentActivity(), ImageLoaderFactory {
                     .build()
             }
             .build()
+    }
+
+    private fun restoreAssetsAccounts() {
+        if (Flexa.appAccounts.value.isEmpty()) {
+            Flexa.scope.launch {
+                Spend.interactor.getLocalAssetsAccounts()
+                    ?.takeIf { it.isNotEmpty() }
+                    ?.let { accounts ->
+                        Flexa.updateAssetAccounts(accounts as ArrayList<AssetAccount>)
+                    }
+            }
+        }
     }
 
     private fun restoreSDKContext() {
@@ -95,7 +118,7 @@ class SpendActivity : ComponentActivity(), ImageLoaderFactory {
         internal const val KEY_DEEP_LINK = "deep_link"
     }
 
-    private class SpendBroadcastReceiver: BroadcastReceiver() {
+    private class SpendBroadcastReceiver : BroadcastReceiver() {
 
         private var job: Job? = null
 

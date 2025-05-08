@@ -15,6 +15,7 @@ import com.flexa.core.entity.PutAppAccountsResponse
 import com.flexa.core.entity.SseEvent
 import com.flexa.core.entity.TransactionFee
 import com.flexa.core.shared.Asset
+import com.flexa.core.shared.AssetAccount
 import com.flexa.core.shared.AssetsResponse
 import com.flexa.core.shared.Brand
 import com.flexa.core.shared.ConnectionState
@@ -40,6 +41,10 @@ internal class SpendInteractor(
 ) : ISpendInteractor {
 
     override suspend fun getConnectionListener(): Flow<ConnectionState>? = connectionListener
+    override suspend fun getLocalAssetsAccounts(): List<AssetAccount>? = withContext(Dispatchers.IO) {
+        val rawAccounts = preferences.getString(FlexaConstants.ASSET_ACCOUNTS)
+        rawAccounts?.let { json.decodeFromString<List<AssetAccount>>(it) }
+    }
 
     override suspend fun getLocalAppAccounts(): List<AppAccount> = withContext(Dispatchers.IO) {
         val data = preferences.getString(FlexaConstants.APP_ACCOUNTS)
@@ -67,7 +72,7 @@ internal class SpendInteractor(
         val oneTimeKeys = async {
             runCatching {
                 if (assetIds.isNotEmpty())
-                    getOneTimeKeys(assetIds).data.apply {
+                    getOneTimeKeysSmart(assetIds).apply {
                         saveOneTimeKeys(this)
                     }
                 else emptyList()
@@ -369,26 +374,38 @@ internal class SpendInteractor(
     override suspend fun getOneTimeKeysSmart(assetIds: List<String>): List<OneTimeKey> =
         withContext(Dispatchers.IO) {
             when {
-                dbInteractor.hasOutdatedOneTimeKeys() ||
-                        !dbInteractor.containsAllOneTimeKeys(assetIds) -> {
+                !assetsAreEquals(assetIds) -> {
+                    getOneTimeKeys(assetIds).data.apply {
+                        preferences.saveSet(SpendConstants.ASSET_IDS, assetIds.toSet())
+                        saveOneTimeKeys(this)
+                    }
+                }
+
+                dbInteractor.hasOutdatedOneTimeKeys() -> {
                     getOneTimeKeys(assetIds).data.apply {
                         saveOneTimeKeys(this)
                     }
                 }
 
                 else -> {
-                    dbInteractor.getOneTimeKeys()
-                        .ifEmpty {
-                            getOneTimeKeys(assetIds).data.apply {
-                                saveOneTimeKeys(this)
-                            }
+                    dbInteractor.getOneTimeKeys().ifEmpty {
+                        getOneTimeKeys(assetIds).data.apply {
+                            saveOneTimeKeys(this)
                         }
+                    }
                 }
             }
         }
 
+    private suspend fun assetsAreEquals(assetIds: List<String>): Boolean {
+        val storedAssetIds = preferences.getSet(SpendConstants.ASSET_IDS).toList()
+        val res = storedAssetIds == assetIds
+        return res
+    }
+
     override suspend fun saveOneTimeKeys(items: List<OneTimeKey>) =
         withContext(Dispatchers.IO) {
+            dbInteractor.deleteOneTimeKeys()
             dbInteractor.saveOneTimeKeys(items)
         }
 

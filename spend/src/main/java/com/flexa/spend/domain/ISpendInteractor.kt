@@ -12,6 +12,7 @@ import com.flexa.core.entity.PutAppAccountsResponse
 import com.flexa.core.entity.SseEvent
 import com.flexa.core.entity.TransactionFee
 import com.flexa.core.shared.Asset
+import com.flexa.core.shared.AssetAccount
 import com.flexa.core.shared.AssetsResponse
 import com.flexa.core.shared.Brand
 import com.flexa.core.shared.ConnectionState
@@ -20,6 +21,7 @@ import kotlinx.coroutines.flow.Flow
 interface ISpendInteractor {
 
     suspend fun getConnectionListener(): Flow<ConnectionState>?
+    suspend fun getLocalAssetsAccounts(): List<AssetAccount>?
     suspend fun getLocalAppAccounts(): List<AppAccount>
     suspend fun getAllAssets(pageSize: Int = 100): List<Asset>
     suspend fun getAssets(pageSize: Int, nextPageToken: String? = null): AssetsResponse

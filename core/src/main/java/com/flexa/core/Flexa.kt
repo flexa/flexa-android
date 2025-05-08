@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
 import java.util.UUID
 
 
@@ -76,7 +77,7 @@ object Flexa {
     fun init(config: FlexaClientConfiguration) {
         context = config.context.applicationContext
         themeConfig = config.theme
-        setAppAccounts(config.assetAccounts)
+        setAssetAccounts(config.assetAccounts)
         setUniqueIdentifier()
         saveApiKeys(
             publishableKey = config.publishableKey,
@@ -85,7 +86,8 @@ object Flexa {
     }
 
     fun updateAssetAccounts(assetAccounts: ArrayList<AssetAccount>) {
-        setAppAccounts(assetAccounts)
+        setAssetAccounts(assetAccounts)
+        storeAssetAccounts(assetAccounts)
     }
 
     fun selectedAsset(appAccountId: String, assetId: String) {
@@ -122,9 +124,22 @@ object Flexa {
         }
     }
 
-    private fun setAppAccounts(appAccounts: List<AssetAccount>?) {
+    private fun setAssetAccounts(appAccounts: List<AssetAccount>?) {
         scope.launch {
-            appAccounts?.let { _appAccounts.emit(it) }
+            appAccounts?.let {
+                _appAccounts.emit(it)
+                storeAssetAccounts(it)
+            }
+        }
+    }
+
+    private fun storeAssetAccounts(appAccounts: List<AssetAccount>) {
+        scope.launch {
+            runCatching {
+                json.encodeToString<List<AssetAccount>>(appAccounts)
+            }.getOrNull()?.let { accountsJson ->
+                preferences.saveString(FlexaConstants.ASSET_ACCOUNTS, accountsJson)
+            }
         }
     }
 

@@ -373,7 +373,7 @@ class AssetsViewModel(
                 }.onSuccess { items ->
                     eventFlow.emit(Event.OneTimeKeysUpdate(items))
                     val diff = items.map { it.expiresAt }
-                        .getExpireTimeMills(Instant.now().toEpochMilli())
+                        .getExpireTimeMills(Instant.now().toEpochMilli(), 5 * 60 * 1000)
                         .coerceAtLeast(minimumUpdateTime)
                     delay(diff)
                 }.onFailure {

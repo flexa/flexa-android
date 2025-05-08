@@ -287,18 +287,14 @@ class SpendViewModel(
                 .flowOn(Dispatchers.IO)
                 .retryWhen { _, attempt ->
                     delay(RETRY_DELAY)
-                    attempt < RETRY_COUNT
+                    isActive
                 }
-                .catch {
-                    Log.e(null, "listenEvents: ", it)
-                    delay(3000)
-                    listenEvents()
-                }
+                .catch { Log.e(null, "listenEvents: ", it) }
                 .filter { event -> // filter current session
                     when (event) {
                         is SseEvent.Session -> {
                             val cs = event.session
-                            val isCurrent = _commerceSession.value?.isCurrent(cs.data?.id) ?: true
+                            val isCurrent = _commerceSession.value?.isCurrent(cs) ?: true
                             isCurrent
                         }
 
@@ -327,7 +323,7 @@ class SpendViewModel(
                                     event.session.data?.let { emitCommerceSession(it) }
 
                                 event.session.isClosed() &&
-                                        event.session.isCurrent(commerceSession.value?.id) -> {
+                                        event.session.isCurrent(commerceSession.value) -> {
                                     stopProgress()
                                     cancelTimeout()
                                     deleteCommerceSessionData()

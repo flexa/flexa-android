@@ -6,69 +6,25 @@ In the current release, Flexa offers a privacy-focused payments experience for i
 
 ## Modules structure
 
-```mermaid
-flowchart BT
-direction RL
-core([Flexa])
-direction TB
-scan([Scan])
-spend([Spend])
-scan---core
-spend---core
-```
-
 | Module        | Description                                            |
 | ------------- | ------------------------------------------------------ |
 | Flexa   | Core functionality required by all other modules       |
-| Scan  | Camera-based parsing of QR codes for payments and more |
 | Spend | Instant retail payments, powered by Flexa              |
 
 ## Installation
 
-Flexa can be integrated **locally** or using **package repository**
+Flexa can be integrated using **package repository** or **locally**
 
-### Local repository
+### Package repository
 
-1. Run the next buildScript from the SDK root folder:
+#### Maven Central
 
+Add module dependency in your project [module-level build.gradle](https://developer.android.com/studio/build#module-level) file:
 ```groovy
-./gradlew core:assembleDebug && ./gradlew core:publishToMavenLocal && ./gradlew scan:assembleDebug && ./gradlew scan:publishToMavenLocal && ./gradlew spend:assembleDebug && ./gradlew spend:publishToMavenLocal
-
+implementation 'co.flexa:core:1.0.13'
+implementation 'co.flexa:spend:1.0.13' // includes core library
 ```
 
-2. Add `mavenLocal()` repository to `settings.gradle`:
-
-```groovy
-dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-    repositories {
-        ...
-        mavenLocal() <---
-    }
-}
-```
-
-3.  Add module dependency in your project [module-level build.gradle](https://developer.android.com/studio/build#module-level) file:
-
-**Identity** module:
-
-```groovy
-implementation "com.flexa:core:1.0.12"
-```
-
-**Scan** module:
-
-```groovy
-implementation "com.flexa:scan:1.0.12"
-```
-
-**Spend** module:
-
-```groovy
-implementation "com.flexa:spend:1.0.12"
-```
-
-### Remote repository
 
 #### GitHub Package Registry
 
@@ -101,27 +57,55 @@ implementation "com.flexa:spend:1.0.12"
         }
     }
     ```
-    
+
 3. Add module dependency in your project [module-level build.gradle](https://developer.android.com/studio/build#module-level) file:
 
     **Identity** module:
 
     ```groovy
-    implementation "com.flexa:core:1.0.12"
-    ```
-
-    **Scan** module:
-
-    ```groovy
-    implementation "com.flexa:scan:1.0.12"
+    implementation "com.flexa:core:1.0.13"
     ```
 
     **Spend** module:
 
     ```groovy
-    implementation "com.flexa:spend:1.0.12"
+    implementation "com.flexa:spend:1.0.13"
     ```
 
+### Local repository
+
+1. Run the next buildScript from the SDK root folder:
+
+```groovy
+./gradlew core:assembleDebug && ./gradlew core:publishToMavenLocal && ./gradlew spend:assembleDebug && ./gradlew spend:publishToMavenLocal
+
+```
+
+2. Add `mavenLocal()` repository to `settings.gradle`:
+
+```groovy
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        ...
+        mavenLocal() <---
+    }
+}
+```
+
+3.  Add module dependency in your project [module-level build.gradle](https://developer.android.com/studio/build#module-level) file:
+
+**Identity** module:
+
+```groovy
+implementation "com.flexa:core:1.0.13"
+```
+
+**Spend** module:
+
+```groovy
+implementation "com.flexa:spend:1.0.13"
+```
 
 ## Usage
 

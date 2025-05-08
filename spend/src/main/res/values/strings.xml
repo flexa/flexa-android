@@ -108,4 +108,5 @@
     <string name="signing">Signing</string>
     <string name="sending">Sending</string>
     <string name="fee_less_than">Less than %1$s0.01</string>
+    <string name="connection_lost">Connection lost</string>
 </resources>

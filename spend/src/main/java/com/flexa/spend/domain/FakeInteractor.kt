@@ -13,6 +13,7 @@ import com.flexa.core.entity.PutAppAccountsResponse
 import com.flexa.core.entity.SseEvent
 import com.flexa.core.entity.TransactionFee
 import com.flexa.core.shared.Asset
+import com.flexa.core.shared.AssetAccount
 import com.flexa.core.shared.AssetsResponse
 import com.flexa.core.shared.Brand
 import com.flexa.core.shared.ConnectionState
@@ -24,6 +25,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 internal class FakeInteractor : ISpendInteractor {
     override suspend fun getConnectionListener(): Flow<ConnectionState>? {
         return MutableStateFlow(ConnectionState.Available)
+    }
+
+    override suspend fun getLocalAssetsAccounts(): List<AssetAccount>? {
+        TODO("Not yet implemented")
     }
 
     override suspend fun getLocalAppAccounts(): List<AppAccount> {

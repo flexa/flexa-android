@@ -8,7 +8,9 @@ import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColor
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.EaseOutBack
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateDp
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
@@ -33,6 +35,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -66,6 +69,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
@@ -91,8 +95,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.decode.SvgDecoder
 import coil.request.ImageRequest
+import com.flexa.core.Flexa
 import com.flexa.core.entity.CommerceSession
+import com.flexa.core.shared.ConnectionState
 import com.flexa.core.shared.ErrorDialog
+import com.flexa.core.shared.connectionState
 import com.flexa.core.theme.FlexaTheme
 import com.flexa.core.view.FlexaLogo
 import com.flexa.spend.MockFactory
@@ -141,6 +148,8 @@ internal fun ConfirmCard(
         derivedStateOf { session?.coveredByFlexaAccount() == true }
     }
     val previewMode = LocalInspectionMode.current
+    val connectionState by connectionState()
+    val connected by remember { derivedStateOf { connectionState == ConnectionState.Available } }
 
     val completed by viewModel.completed.collectAsStateWithLifecycle()
 
@@ -171,11 +180,30 @@ internal fun ConfirmCard(
         elevation = CardDefaults.cardElevation(elevation),
         colors = CardDefaults.cardColors(containerColor = containerColor)
     ) {
-        val color by remember {
-            derivedStateOf {
-                session?.data?.brand?.color?.toColor() ?: Color.Magenta
+        val context = LocalContext.current
+        val color = remember { mutableStateOf<Color>(Color.Magenta) }
+        val imageUrl = remember { mutableStateOf<String?>(null) }
+        val merchantName = remember { mutableStateOf<String?>(null) }
+        val amountLabel = remember { mutableStateOf<String?>(null) }
+        LaunchedEffect(session) {
+            session?.let {
+                imageUrl.value = it.data?.brand?.logoUrl
+                color.value = it.data?.brand?.color?.toColor() ?: Color.Magenta
+                val pay = context.getString(R.string.pay)
+                val name = it.data?.brand?.name.orEmpty()
+                merchantName.value = if (name.startsWith(pay, true) == true)
+                    name else "$pay $name"
+                amountLabel.value = it.getAmountLabel()
             }
         }
+        val offset by animateDpAsState(
+            if (session != null) 0.dp else 100.dp,
+            animationSpec = tween(durationMillis = 500, easing = LinearOutSlowInEasing)
+        )
+        val alpha by animateFloatAsState(
+            if (session != null) 1f else 0f,
+            animationSpec = tween(durationMillis = 300, easing = LinearOutSlowInEasing)
+        )
         Row(// Toolbar
             modifier = Modifier
                 .fillMaxWidth()
@@ -187,14 +215,14 @@ internal fun ConfirmCard(
                 FlexaLogo(
                     modifier = Modifier.size(22.dp),
                     shape = RoundedCornerShape(3.dp),
-                    colors = listOf(Color.White, color, color.shiftHue(10f))
+                    colors = listOf(Color.White, color.value, color.value.shiftHue(10f))
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "flexa",
+                    text = "Flexa",
                     style = MaterialTheme.typography.titleLarge
                         .copy(
-                            fontWeight = FontWeight.ExtraBold,
+                            fontWeight = FontWeight.Bold,
                             color = palette.onSurface
                         ),
                 )
@@ -243,9 +271,11 @@ internal fun ConfirmCard(
                 if (!previewMode) {
                     SpendAsyncImage(
                         modifier = Modifier
+                            .offset(-offset)
+                            .alpha(alpha)
                             .fillMaxSize()
                             .clip(RoundedCornerShape(8.dp)),
-                        imageUrl = session?.data?.brand?.logoUrl,
+                        imageUrl = imageUrl.value,
                         crossfadeDuration = 1000
                     )
                 } else {
@@ -265,8 +295,10 @@ internal fun ConfirmCard(
             }
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = stringResource(id = R.string.pay) +
-                        " ${session?.data?.brand?.name ?: ""}",
+                modifier = Modifier
+                    .offset(offset)
+                    .alpha(alpha),
+                text = merchantName.value.orEmpty(),
                 style = TextStyle(
                     fontSize = 18.sp,
                     fontWeight = FontWeight.W600,
@@ -275,10 +307,11 @@ internal fun ConfirmCard(
                 textAlign = TextAlign.Center
             )
             Spacer(modifier = Modifier.height(8.dp))
-            Box {
-                val text by remember {
-                    derivedStateOf { session.getAmountLabel() }
-                }
+            Box(
+                modifier = Modifier
+                    .offset(-offset)
+                    .alpha(alpha)
+            ) {
                 AnimatedContent(
                     targetState = session.getAmount(),
                     transitionSpec = {
@@ -295,7 +328,7 @@ internal fun ConfirmCard(
                 ) { state ->
                     state
                     Text(
-                        text = text,
+                        text = amountLabel.value.orEmpty(),
                         style = TextStyle(
                             fontSize = 45.sp,
                             fontWeight = FontWeight.W500,
@@ -310,7 +343,7 @@ internal fun ConfirmCard(
                 visible = !completed,
                 exit = shrinkVertically() + fadeOut(),
             ) {
-                val selectedAsset by if (!previewMode) Spend.selectedAsset.collectAsStateWithLifecycle()
+                val selectedAsset by if (!previewMode) Flexa.selectedAsset.collectAsStateWithLifecycle()
                 else remember { mutableStateOf(MockFactory.getMockSelectedAsset()) }
                 ListItem(
                     modifier = Modifier
@@ -399,24 +432,29 @@ internal fun ConfirmCard(
             Spacer(modifier = Modifier.height(1.dp))
             val completeButtonHeight by remember { mutableIntStateOf(34) }
             val transition = updateTransition(completed, label = "complete button state")
-            val topRadius by transition.animateDp(label = "topRadius",
+            val topRadius by transition.animateDp(
+                label = "topRadius",
                 transitionSpec = { tween(500) }
             ) { state ->
                 if (!state) 4.dp else (completeButtonHeight / 2).dp
             }
-            val bottomRadius by transition.animateDp(label = "bottomRadius",
+            val bottomRadius by transition.animateDp(
+                label = "bottomRadius",
                 transitionSpec = { tween(500) }) { state ->
                 if (!state) 16.dp else (completeButtonHeight / 2).dp
             }
-            val height by transition.animateDp(label = "height",
+            val height by transition.animateDp(
+                label = "height",
                 transitionSpec = { tween(500) }) { state ->
                 if (!state) 50.dp else completeButtonHeight.dp
             }
-            val width by transition.animateDp(label = "height",
+            val width by transition.animateDp(
+                label = "height",
                 transitionSpec = { tween(500) }) { state ->
                 if (!state) maxWidth else 100.dp
             }
-            val bottomPadding by transition.animateDp(label = "bottomPadding",
+            val bottomPadding by transition.animateDp(
+                label = "bottomPadding",
                 transitionSpec = { tween(500) }) { state ->
                 if (!state) 0.dp else (42 - 18).dp
             }
@@ -470,13 +508,13 @@ internal fun ConfirmCard(
                     derivedStateOf { !availableBalanceEnough && hasBalanceRestrictions && totalBalanceEnough }
                 }
                 val buttonColor1 by transition.animateColor(label = "buttonColor1") { state ->
-                    if (!state) color.shiftHue(10F) else Color(0xFF8ABCFF)
+                    if (!state) color.value.shiftHue(10F) else Color(0xFF8ABCFF)
                 }
                 val buttonColor2 by transition.animateColor(label = "buttonColor1") { state ->
-                    if (!state) color else Color(0xFFBEB2FF)
+                    if (!state) color.value else Color(0xFFBEB2FF)
                 }
                 val buttonColor3 by transition.animateColor(label = "buttonColor1") { state ->
-                    if (!state) color.shiftHue(-10F) else Color(0xFFF8D0FF)
+                    if (!state) color.value.shiftHue(-10F) else Color(0xFFF8D0FF)
                 }
                 TextButton(
                     modifier = Modifier
@@ -504,7 +542,10 @@ internal fun ConfirmCard(
                     contentPadding = PaddingValues(0.dp),
                     onClick = {
                         when {
-                            completed -> { onClose() }
+                            completed -> {
+                                onClose()
+                            }
+
                             requiresApproval -> session?.data?.id?.let { id ->
                                 viewModel.startProgress()
                                 spendViewModel.approveCommerceSession(id)
@@ -521,10 +562,11 @@ internal fun ConfirmCard(
                         derivedStateOf {
                             when {
                                 completed -> context.resources.getString(R.string.done)
-                                payProgress -> context.resources.getString(R.string.processing) + "..."
+                                payProgress -> context.resources.getString(com.flexa.R.string.processing) + "..."
                                 patchProgress -> context.resources.getString(R.string.updating) + "..."
                                 !totalBalanceEnough -> "Not enough ${selectedAsset?.asset?.assetData?.displayName}"
                                 !availableBalanceEnough -> context.getString(R.string.balance_not_yet_available)
+                                !connected -> context.getString(R.string.connection_lost)
                                 else -> context.resources.getString(R.string.pay_now)
                             }
                         }

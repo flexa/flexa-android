@@ -643,6 +643,7 @@ fun SpendScreen(
             dismissButton = {
                 TextButton(onClick = {
                     Spend.tokenState.value = TokenState.Fine
+                    toBack()
                 }) {
                     Text(text = stringResource(id = android.R.string.cancel))
                 }

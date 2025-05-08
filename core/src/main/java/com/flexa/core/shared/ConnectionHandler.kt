@@ -5,7 +5,6 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
-import android.os.Build
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
@@ -22,7 +21,7 @@ sealed class ConnectionState {
     data object Unavailable : ConnectionState()
 }
 
-val Context.currentConnectivityState: ConnectionState
+private val Context.currentConnectivityState: ConnectionState
     get() {
         val connectivityManager =
             getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -32,18 +31,10 @@ val Context.currentConnectivityState: ConnectionState
 private fun getCurrentConnectionState(
     connectivityManager: ConnectivityManager
 ): ConnectionState {
+    val network = connectivityManager.activeNetwork
+    val actNetwork = runCatching { connectivityManager.getNetworkCapabilities(network) }
     val connected =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val network = connectivityManager.activeNetwork
-            val actNetwork = runCatching { connectivityManager.getNetworkCapabilities(network) }
-            actNetwork.getOrNull()?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
-        } else {
-            @Suppress("DEPRECATION")
-            connectivityManager.allNetworks.any { network ->
-                connectivityManager.getNetworkCapabilities(network)
-                    ?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
-            }
-        }
+        actNetwork.getOrNull()?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
     return if (connected) ConnectionState.Available else ConnectionState.Unavailable
 }
 
@@ -56,19 +47,20 @@ fun Context.observeConnectionAsFlow() = callbackFlow {
         .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
         .build()
     connectivityManager.registerNetworkCallback(networkRequest, callback)
-    val currentState = getCurrentConnectionState(connectivityManager)
-    trySend(currentState)
     awaitClose { connectivityManager.unregisterNetworkCallback(callback) }
 }
 
+private val typesSet = HashSet<String>(2)
 fun networkCallback(callback: (ConnectionState) -> Unit): ConnectivityManager.NetworkCallback {
     return object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) {
+            typesSet.add(network.toString())
             callback(ConnectionState.Available)
         }
 
         override fun onLost(network: Network) {
-            callback(ConnectionState.Unavailable)
+            typesSet.remove(network.toString())
+            if (typesSet.isEmpty()) callback(ConnectionState.Unavailable)
         }
     }
 }
