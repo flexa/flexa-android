@@ -592,7 +592,7 @@ internal class RestRepository(
             }
     }
 
-    override suspend fun closeCommerceSession(commerceSessionId: String): String =
+    override suspend fun closeCommerceSession(commerceSessionId: String): CommerceSession.Data =
         suspendCancellableCoroutine {
             val url = HttpUrl.Builder()
                 .scheme(SCHEME).host(host)
@@ -607,13 +607,24 @@ internal class RestRepository(
             runCatching { okHttpProvider.client.newCall(request).execute() }
                 .fold(
                     onSuccess = { response ->
-                        runCatching {
-                            val raw = response.body?.string().toString()
-                            raw
-                        }.fold(
-                            onSuccess = { dto -> it.resume(dto) },
-                            onFailure = { ex -> it.resumeWithException(ex) }
-                        )
+                        if (response.isSuccessful) {
+                            runCatching {
+                                val raw = response.body?.string().toString()
+                                json.decodeFromString<CommerceSession.Data>(raw)
+                            }.onSuccess { dto -> it.resume(dto) }
+                                .onFailure { e ->
+                                    Log.e(null, "closeCommerceSession: ", e)
+                                    it.resumeWithException(
+                                        ApiException(
+                                            message = "Can't parse the commerce session data",
+                                            traceId = response.header("client-trace-id")
+                                        )
+                                    )
+                                }
+                        } else {
+                            val e = response.toApiException()
+                            it.resumeWithException(e)
+                        }
                     },
                     onFailure = { ex -> it.resumeWithException(ex) }
                 )

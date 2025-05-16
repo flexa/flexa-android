@@ -220,13 +220,16 @@ fun Greeting() {
                 onClick = {
                     activity?.let {
                         Flexa.buildSpend()
+                            .onPaymentAuthorization { pa ->
+                                Log.d(null, "onPaymentAuthorization: $pa")
+                            }
                             .onTransactionRequest { result ->
                                 when {
                                     result.isSuccess -> {
                                         Log.d(null, "onTransactionRequest: ${result.getOrNull()}")
                                     }
                                     result.isFailure -> {
-                                        Log.e(null, "onTransactionRequest:", result.exceptionOrNull())
+                                        Log.d(null, "onTransactionRequest:", result.exceptionOrNull())
                                     }
                                 }
                             }

@@ -8,8 +8,8 @@ import com.flexa.core.shared.ApiErrorHandler
 import com.flexa.core.shared.FlexaConstants.Companion.RETRY_COUNT
 import com.flexa.core.shared.FlexaConstants.Companion.RETRY_DELAY
 import com.flexa.core.shared.SelectedAsset
+import com.flexa.core.shared.Transaction
 import com.flexa.spend.Spend
-import com.flexa.spend.Transaction
 import com.flexa.spend.coveredByFlexaAccount
 import com.flexa.spend.domain.ISpendInteractor
 import com.flexa.spend.isCompleted

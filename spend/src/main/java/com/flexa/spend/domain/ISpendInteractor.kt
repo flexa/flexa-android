@@ -58,7 +58,7 @@ interface ISpendInteractor {
         brandId: String, amount: String, assetId: String, paymentAssetId: String
     ): CommerceSession.Data
     suspend fun approveCommerceSession(commerceSessionId: String): Int
-    suspend fun closeCommerceSession(commerceSessionId: String): String
+    suspend fun closeCommerceSession(commerceSessionId: String): CommerceSession.Data
     suspend fun confirmTransaction(
         commerceSessionId: String, txSignature: String
     ): String

@@ -11,9 +11,13 @@ import androidx.work.OneTimeWorkRequest
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.flexa.core.Flexa
+import com.flexa.core.entity.CommerceSession
+import com.flexa.core.shared.PaymentAuthorization
 import com.flexa.spend.Spend
 import com.flexa.spend.SpendConstants
 import com.flexa.spend.main.confirm.TransactionError
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class CommerceSessionWorker(
     appContext: Context, params: WorkerParameters
@@ -25,7 +29,8 @@ class CommerceSessionWorker(
         inputData.getString(SpendConstants.COMMERCE_SESSION_KEY)?.let { id ->
             return try {
                 Log.d(null, "CommerceSessionWorker doWork: Id > $id")
-                Spend.interactor.closeCommerceSession(id)
+                val session = Spend.interactor.closeCommerceSession(id)
+                checkSessionAuthorizationStatus(session)
                 Spend.onTransactionRequest?.invoke(kotlin.Result.failure(TransactionError(id)))
                 Log.d(null, "CommerceSessionWorker success: Id > $id")
                 Result.success()
@@ -36,6 +41,33 @@ class CommerceSessionWorker(
         }
         Log.d(null, "CommerceSessionWorker retry: ")
         return Result.retry()
+    }
+
+    private fun checkSessionAuthorizationStatus(session: CommerceSession.Data) {
+        Flexa.scope.launch(Dispatchers.Main) {
+            when (session.authorization?.status) {
+                "succeeded" -> {
+                    Spend.onPaymentAuthorization?.invoke(
+                        PaymentAuthorization.Success(
+                            commerceSessionId = session.id,
+                            brandName = session.brand?.name?:"",
+                            brandLogoUrl = session.brand?.logoUrl
+                        )
+                    )
+                }
+
+                "failed" -> {
+                    Spend.onPaymentAuthorization?.invoke(
+                        PaymentAuthorization.Failed(
+                            commerceSessionId = session.id,
+                            brandName = session.brand?.name?:"",
+                            brandLogoUrl = session.brand?.logoUrl
+                        )
+                    )
+                }
+                else -> {}
+            }
+        }
     }
 
     private fun restoreContext(context: Context) {

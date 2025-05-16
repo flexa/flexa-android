@@ -34,6 +34,7 @@ import com.flexa.core.entity.TransactionFee
 import com.flexa.core.shared.Brand
 import com.flexa.core.shared.Promotion
 import com.flexa.core.shared.SelectedAsset
+import com.flexa.core.shared.Transaction
 import com.flexa.core.toCurrencySign
 import com.flexa.identity.getActivity
 import com.flexa.spend.data.totp.HmacAlgorithm

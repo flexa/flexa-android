@@ -282,7 +282,7 @@ internal class SpendInteractor(
             interactor.approveCommerceSession(commerceSessionId)
         }
 
-    override suspend fun closeCommerceSession(commerceSessionId: String): String =
+    override suspend fun closeCommerceSession(commerceSessionId: String): CommerceSession.Data =
         withContext(Dispatchers.IO) {
             interactor.closeCommerceSession(commerceSessionId)
         }

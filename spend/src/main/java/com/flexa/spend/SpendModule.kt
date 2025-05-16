@@ -3,6 +3,8 @@ package com.flexa.spend
 import android.app.Activity
 import android.content.Intent
 import com.flexa.core.Flexa
+import com.flexa.core.shared.PaymentAuthorization
+import com.flexa.core.shared.Transaction
 import com.flexa.spend.domain.CommerceSessionWorker
 
 class SpendConfig private constructor() {
@@ -17,6 +19,10 @@ class SpendConfig private constructor() {
 
         fun onTransactionRequest(callback: (Result<Transaction>) -> Unit) = apply {
             Spend.onTransactionRequest = callback
+        }
+
+        fun onPaymentAuthorization(callback: (PaymentAuthorization) -> Unit) = apply {
+            Spend.onPaymentAuthorization = callback
         }
 
         fun transactionSent(commerceSessionId: String, txSignature: String) {

@@ -222,8 +222,7 @@ fun SpendScreen(
                         scope.launch { viewModel.getAccount(useCached = false) }
                         viewModel.deleteCommerceSessionData()
                         commerceSessionId?.let { id ->
-                            if (!containsAuthorization)
-                                CommerceSessionWorker.execute(context, id)
+                            CommerceSessionWorker.execute(context, id)
                         }
                         viewModel.openLegacyCard.value = false
                         viewModel.setBrand(null)

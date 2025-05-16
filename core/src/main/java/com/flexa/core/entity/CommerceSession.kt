@@ -88,7 +88,9 @@ data class CommerceSession(
             @SerialName("instructions")
             val instructions: String? = null,
             @SerialName("number")
-            val number: String? = null
+            val number: String? = null,
+            @SerialName("status")
+            val status: String? = null
         )
 
         @Serializable

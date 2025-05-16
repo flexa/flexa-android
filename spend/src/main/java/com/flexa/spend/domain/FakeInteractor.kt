@@ -215,7 +215,7 @@ internal class FakeInteractor : ISpendInteractor {
         TODO("Not yet implemented")
     }
 
-    override suspend fun closeCommerceSession(commerceSessionId: String): String {
+    override suspend fun closeCommerceSession(commerceSessionId: String): CommerceSession.Data {
         TODO("Not yet implemented")
     }
 

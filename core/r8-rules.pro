@@ -30,3 +30,7 @@
 -keep class com.flexa.core.shared.ConnectionState$Unavailable { public *; }
 -keep class com.flexa.core.ExtensionsKt { public *; }
 -keep class com.flexa.core.shared.SelectedAsset { public *; }
+-keep class com.flexa.core.shared.Transaction { public *; }
+-keep class com.flexa.core.shared.PaymentAuthorization { public *; }
+-keep class com.flexa.core.shared.PaymentAuthorization$Success { public *; }
+-keep class com.flexa.core.shared.PaymentAuthorization$Failed { public *; }

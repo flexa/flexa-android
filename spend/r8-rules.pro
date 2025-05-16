@@ -6,7 +6,6 @@
 -keep class com.flexa.spend.SpendModuleKt { public *; }
 -keep class com.flexa.spend.SpendConfig { public *; }
 -keep class com.flexa.spend.SpendConfig$Builder { public *; }
--keep class com.flexa.spend.Transaction { public *; }
 -keep class com.flexa.spend.PaymentErrorCallback { public *; }
 -keep class com.flexa.spend.SpendNavGraphKt { public *; }
 -keep class com.flexa.spend.main.main_screen.SpendScreenKt { public *; }
