@@ -10,6 +10,9 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -303,14 +306,18 @@ private fun Entrance(
     toPay: () -> Unit,
     toDeepLink: (@ParameterName("link") String) -> Unit,
 ) {
+    var hasNavigated by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(deepLink) {
-        if (deepLink != null) {
-            toDeepLink.invoke(deepLink)
-        } else {
-            Flexa.buildIdentity().build().collect {
-                when (it) {
-                    is ConnectResult.Connected -> toPay.invoke()
-                    else -> toLogin.invoke()
+        if (!hasNavigated) {
+            hasNavigated = true
+            if (deepLink != null) {
+                toDeepLink.invoke(deepLink)
+            } else {
+                Flexa.buildIdentity().build().collect {
+                    when (it) {
+                        is ConnectResult.Connected -> toPay.invoke()
+                        else -> toLogin.invoke()
+                    }
                 }
             }
         }
