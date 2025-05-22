@@ -91,14 +91,16 @@ fun NavGraphBuilder.identityNavGraph(
         composable(
             Route.Entrance.name,
         ) {
-            if (deepLink != null) {
-                navController.navigate(Route.SecretCode.createRoute(deepLink)) {
-                    popUpTo(navController.graph.id) { inclusive = true }
-                }
-            } else
-                navController.navigate(Route.Main.name) {
-                    popUpTo(navController.graph.startDestinationId) { inclusive = true }
-                }
+            LaunchedEffect(Unit) {
+                if (deepLink != null) {
+                    navController.navigate(Route.SecretCode.createRoute(deepLink)) {
+                        popUpTo(navController.graph.id) { inclusive = true }
+                    }
+                } else
+                    navController.navigate(Route.Main.name) {
+                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                    }
+            }
         }
         composable(
             Route.Main.name,
