@@ -1,0 +1,66 @@
+name: Flexa SDK CI
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+
+env:
+  MODULES: "core spend"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_ACTOR: ${{ github.actor }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+      ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.OSSRH_USERNAME }}
+      ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.OSSRH_PASSWORD }}
+      ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
+      ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - name: Check tag format
+        id: check_tag
+        run: |
+          if [[ ! "${GITHUB_REF_NAME}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "Tag ${GITHUB_REF_NAME} is not a semantic version, skipping..."
+          exit 1
+          fi
+      - uses: actions/checkout@v5
+      - name: Set up JDK 17
+        if: success()
+        uses: actions/setup-java@v5
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          body_path: release_notes.txt
+          draft: false
+          prerelease: false
+      - name: Publish to GitHub Packages
+        run: |
+          MODULES_ARRAY=($MODULES)
+          for module in "${MODULES_ARRAY[@]}"; do
+            echo "Testing and linting $module..."
+            ./gradlew :$module:test :$module:lint --no-daemon --max-workers=2 --parallel
+            
+            echo "Cleaning and publishing $module to GitHub Packages..."
+            ./gradlew :$module:clean :$module:publishMavenPublicationToGitHubPackagesRepository --no-daemon
+          done
+      - name: Publish to Maven Central
+        run: |
+          MODULES_ARRAY=($MODULES)
+          for module in "${MODULES_ARRAY[@]}"; do
+            echo "Publishing $module to Maven Central..."
+            ./gradlew :$module:clean :$module:publishToMavenCentral --no-configuration-cache --no-daemon
+          done

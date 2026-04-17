@@ -20,9 +20,11 @@ internal class AppInfoProvider {
                             PackageManager.PackageInfoFlags.of(0)
                         )
                 }
-                application.getString(packageInfo.applicationInfo.labelRes)
+                packageInfo.applicationInfo
+                        ?.loadLabel(application.packageManager)
+                    ?.toString().orEmpty()
             } catch (e: Exception) {
-                "Inaccessible"
+                ""
             }
 
         fun getAppVersion(application: Context): String =
@@ -38,7 +40,7 @@ internal class AppInfoProvider {
                             PackageManager.PackageInfoFlags.of(0)
                         )
                 }
-                packageInfo.versionName
+                packageInfo.versionName ?: "Inaccessible"
             } catch (e: Exception) {
                 "Inaccessible"
             }
@@ -78,7 +80,7 @@ internal class AppInfoProvider {
                             PackageManager.PackageInfoFlags.of(0)
                         )
                 }
-                packageInfo.applicationInfo.packageName
+                packageInfo.applicationInfo?.packageName ?: "Inaccessible"
             } catch (e: Exception) {
                 "Inaccessible"
             }

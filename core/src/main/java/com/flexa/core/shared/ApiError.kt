@@ -52,7 +52,9 @@ sealed class ApiError(
                                 PackageManager.PackageInfoFlags.of(0)
                             )
                     }
-                    val appName = getString(packageInfo.applicationInfo.labelRes)
+                    val appName =  packageInfo.applicationInfo
+                        ?.loadLabel(packageManager)
+                        ?.toString().orEmpty()
                     val appCode = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
                         packageInfo.versionCode
                     } else {

@@ -21,8 +21,8 @@ Flexa can be integrated using **package repository** or **locally**
 
 Add module dependency in your project [module-level build.gradle](https://developer.android.com/studio/build#module-level) file:
 ```groovy
-implementation 'co.flexa:core:1.1.2'
-implementation 'co.flexa:spend:1.1.2' // includes core library
+implementation 'co.flexa:core:1.1.3'
+implementation 'co.flexa:spend:1.1.3' // includes core library
 ```
 
 
@@ -63,13 +63,13 @@ implementation 'co.flexa:spend:1.1.2' // includes core library
     **Identity** module:
 
     ```groovy
-    implementation "com.flexa:core:1.1.2"
+    implementation "com.flexa:core:1.1.3"
     ```
 
     **Spend** module:
 
     ```groovy
-    implementation "com.flexa:spend:1.1.2"
+    implementation "com.flexa:spend:1.1.3"
     ```
 
 ### Local repository
@@ -77,8 +77,7 @@ implementation 'co.flexa:spend:1.1.2' // includes core library
 1. Run the next buildScript from the SDK root folder:
 
 ```groovy
-./gradlew core:assembleDebug && ./gradlew core:publishToMavenLocal && ./gradlew spend:assembleDebug && ./gradlew spend:publishToMavenLocal
-
+./gradlew core:assembleRelease ./gradlew core:publishToMavenLocal && ./gradlew spend:assembleRelease spend:publishToMavenLocal
 ```
 
 2. Add `mavenLocal()` repository to `settings.gradle`:
@@ -98,13 +97,13 @@ dependencyResolutionManagement {
 **Identity** module:
 
 ```groovy
-implementation "com.flexa:core:1.1.2"
+implementation "com.flexa:core:1.1.3"
 ```
 
 **Spend** module:
 
 ```groovy
-implementation "com.flexa:spend:1.1.2"
+implementation "com.flexa:spend:1.1.3"
 ```
 
 ## Usage

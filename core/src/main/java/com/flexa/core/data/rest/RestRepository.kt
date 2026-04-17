@@ -44,7 +44,6 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
-import okhttp3.internal.EMPTY_REQUEST
 import okhttp3.logging.HttpLoggingInterceptor
 import okhttp3.sse.EventSource
 import okhttp3.sse.EventSourceListener
@@ -66,6 +65,7 @@ internal class RestRepository(
             "api.flexa.co"
         }
         val mediaType = "application/json; charset=utf-8".toMediaType()
+        val EMPTY_REQUEST = ByteArray(0).toRequestBody()
         val json = Json { ignoreUnknownKeys = true }
     }
 

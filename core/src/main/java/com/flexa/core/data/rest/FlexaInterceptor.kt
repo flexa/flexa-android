@@ -15,7 +15,7 @@ import okhttp3.Response
 internal abstract class FlexaInterceptor: Interceptor {
 
     open val headersBundle by lazy(LazyThreadSafetyMode.NONE) {
-        val releaseDate = BuildConfig.RELEASE_DATE
+        val releaseDate = "2025-05-22"
         val appName =
             Flexa.context?.run { AppInfoProvider.getAppName(this) } ?: "Inaccessible"
         val appVersion =

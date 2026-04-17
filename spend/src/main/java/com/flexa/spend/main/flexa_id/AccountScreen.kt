@@ -140,6 +140,7 @@ fun ManageAccount(
         ) {
             Column(
                 modifier = Modifier
+                    .fillMaxWidth()
                     .graphicsLayer {
                         scaleX = min(1f, (1 - (scrollState.value * 0.001F)).coerceAtLeast(.8F))
                         scaleY = min(1f, (1 - scrollState.value * 0.001F).coerceAtLeast(.8F))
@@ -166,7 +167,6 @@ fun ManageAccount(
                 Spacer(modifier = Modifier.height(20.dp))
                 AutoSizeText(
                     modifier = Modifier
-                        .fillMaxWidth()
                         .padding(horizontal = 16.dp),
                     text = account?.name ?: "",
                     textStyle = TextStyle(fontSize = 32.sp, textAlign = TextAlign.Center),

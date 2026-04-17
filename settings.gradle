@@ -1,3 +1,6 @@
+import org.gradle.api.credentials.HttpHeaderCredentials
+import org.gradle.authentication.http.HttpHeaderAuthentication
+
 pluginManagement {
     repositories {
         gradlePluginPortal()
@@ -14,13 +17,53 @@ dependencyResolutionManagement {
         mavenLocal()
         maven {
             name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/flexa/layers-android")
+            url = uri("https://maven.pkg.github.com/" + (System.getenv("GITHUB_REPOSITORY") ?: "flexa/flexa-android"))
             credentials {
                 def propertiesFile = file("local.properties")
-                def localProperties = new Properties()
-                localProperties.load(new FileInputStream(propertiesFile))
-                username = localProperties['gpr.user'] ?: ""
-                password = localProperties['gpr.key'] ?: ""
+                if (propertiesFile.exists()) {
+                    def localProperties = new Properties()
+                    propertiesFile.withInputStream { localProperties.load(it) }
+                    username = localProperties.getProperty('gpr.user', '')
+                    password = localProperties.getProperty('gpr.key', '')
+                } else {
+                    username = System.getenv("GITHUB_ACTOR") ?: ''
+                    password = System.getenv("GITHUB_TOKEN") ?: ''
+                }
+            }
+        }
+        def localPropertiesFile = file("local.properties")
+        if (localPropertiesFile.exists()) {
+            def properties = new Properties()
+            localPropertiesFile.withInputStream { properties.load(it) }
+            def gitlabUrl = properties.getProperty("gitlab.url")
+            def gitlabToken = properties.getProperty("gitlab.token")
+            if (gitlabUrl && gitlabToken) {
+                maven {
+                    name = "GitLab"
+                    url = uri(gitlabUrl)
+                    credentials(HttpHeaderCredentials) {
+                        name = "Private-Token"
+                        value = gitlabToken
+                    }
+                    authentication {
+                        header(HttpHeaderAuthentication)
+                    }
+                }
+            }
+        }
+        if (System.getenv("CI_JOB_TOKEN")) {
+            maven {
+                name = "GitLab-CI"
+                def apiUrl = System.getenv("CI_API_V4_URL")
+                def projectId = System.getenv("CI_PROJECT_ID")
+                url = uri("${apiUrl}/projects/${projectId}/packages/maven")
+                credentials(HttpHeaderCredentials) {
+                    name = "Job-Token"
+                    value = System.getenv("CI_JOB_TOKEN")
+                }
+                authentication {
+                    header(HttpHeaderAuthentication)
+                }
             }
         }
     }

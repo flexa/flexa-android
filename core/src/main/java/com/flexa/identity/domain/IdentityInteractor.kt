@@ -125,8 +125,8 @@ internal class IdentityInteractor(
             country = country,
             dateOfBirth = birthday,
             email = email,
-            familyName = firstName,
-            givenName = lastName,
+            familyName = lastName,
+            givenName = firstName,
         )
         val res = restInteractor.accounts(request)
         res

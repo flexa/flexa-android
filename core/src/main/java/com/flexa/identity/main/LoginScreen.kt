@@ -141,9 +141,11 @@ internal fun LoginScreen(
                                 PackageManager.PackageInfoFlags.of(0)
                             )
                     }
-                    context.getString(packageInfo.applicationInfo.labelRes)
+                    packageInfo.applicationInfo
+                        ?.loadLabel(context.packageManager)
+                        ?.toString().orEmpty().ifBlank { "Unknown App" }
                 } catch (e: Exception) {
-                    "Flexa"
+                    "Unknown App"
                 }
             )
         } else {
@@ -509,7 +511,7 @@ private fun LoginPreview() {
     FlexaTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
             LoginScreen(
-                viewModel = MainViewModel(FakeInteractor()),
+                viewModel = viewModel { MainViewModel(FakeInteractor()) },
                 toBack = {},
                 toContinue = {},
                 toSignIn = {},

@@ -391,7 +391,7 @@ internal fun Context.getAppName(): String {
                     PackageManager.PackageInfoFlags.of(0)
                 )
         }
-        application.getString(packageInfo.applicationInfo.labelRes)
+        packageInfo.applicationInfo?.let { getString(it.labelRes) } ?: "Inaccessible"
     } catch (e: Exception) {
         "Inaccessible"
     }

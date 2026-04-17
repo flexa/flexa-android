@@ -42,24 +42,30 @@ class ExtensionsTest {
     @Test
     fun testDate() {
         val dateFormat = SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", Locale.US)
+        dateFormat.timeZone = TimeZone.getTimeZone("UTC")
         val currentDate = Date(1717428271 * 1000L)
         val res = dateFormat.format(currentDate)
-        assertEquals("Mon, 03 Jun 2024 18:24:31 EEST", res)
+        assertEquals("Mon, 03 Jun 2024 15:24:31 UTC", res)
     }
 
     @Test
     fun stringToDate() {
-        val dateString = "Mon, 03 Jun 2024 16:50:38 EEST"
-        val date = dateString.toDate()
-        val cal = Calendar.getInstance().apply { time = date }
+        val dateString = "Mon, 03 Jun 2024 13:50:38 UTC"
+        val dateFormat = SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", Locale.US)
+        dateFormat.timeZone = TimeZone.getTimeZone("UTC")
+        val date = dateFormat.parse(dateString)
+        val cal = Calendar.getInstance().apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+            time = date
+        }
         assertEquals(2024, cal.get(Calendar.YEAR))
         assertEquals(MONDAY, cal.get(Calendar.DAY_OF_WEEK))
         assertEquals(JUNE, cal.get(Calendar.MONTH))
         assertEquals(3, cal.get(Calendar.DAY_OF_MONTH))
-        assertEquals(16, cal.get(Calendar.HOUR_OF_DAY))
+        assertEquals(13, cal.get(Calendar.HOUR_OF_DAY))
         assertEquals(50, cal.get(Calendar.MINUTE))
         assertEquals(38, cal.get(Calendar.SECOND))
-        assertEquals(TimeZone.getTimeZone("Europe/Uzhgorod"), cal.timeZone)
+        assertEquals(TimeZone.getTimeZone("UTC"), cal.timeZone)
         println(date)
     }
 

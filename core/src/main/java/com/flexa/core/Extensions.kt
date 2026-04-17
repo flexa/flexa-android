@@ -185,7 +185,9 @@ fun Activity?.sendFlexaReport(data: String? = null) {
                         PackageManager.PackageInfoFlags.of(0)
                     )
             }
-            val appName = getString(packageInfo.applicationInfo.labelRes)
+            val appName = packageInfo.applicationInfo
+                ?.loadLabel(packageManager)
+                ?.toString().orEmpty().ifBlank { "Unknown App" }
             val appCode = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
                 packageInfo.versionCode
             } else {

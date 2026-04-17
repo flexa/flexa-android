@@ -1,7 +1,6 @@
 package com.flexa.core.view
 
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -33,7 +32,8 @@ fun AutoSizeText(
         textAlign = TextAlign.Center
     )
 ) {
-    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+    BoxWithConstraints(modifier = modifier) {
+        this.maxWidth
         var shrunkFontSize = textStyle.fontSize
         val calculateIntrinsics = @Composable {
             ParagraphIntrinsics(
@@ -63,14 +63,14 @@ fun AutoSizeText(
         when {
             text != null ->
                 Text(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier,
                     text = text,
                     maxLines = maxLines,
                     style = textStyle.copy(fontSize = shrunkFontSize),
                 )
             annotatedText != null ->
                 Text(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier,
                     text = annotatedText,
                     maxLines = maxLines,
                     style = textStyle.copy(fontSize = shrunkFontSize),

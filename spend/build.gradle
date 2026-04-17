@@ -1,12 +1,17 @@
+import com.vanniktech.maven.publish.AndroidSingleVariantLibrary
+import org.gradle.api.credentials.HttpHeaderCredentials
+import org.gradle.authentication.http.HttpHeaderAuthentication
+
 plugins {
     id 'com.android.library'
     id 'org.jetbrains.kotlin.android'
-    id 'maven-publish'
+    id 'org.jetbrains.kotlin.plugin.compose'
+    id 'com.vanniktech.maven.publish'
 }
 
 android {
     namespace 'com.flexa.spend'
-    compileSdk rootProject.compileSdk
+    compileSdkVersion rootProject.compileSdk
 
     defaultConfig {
         minSdk rootProject.minSdk
@@ -15,13 +20,6 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles 'r8-rules.pro', 'kotlin-serializer-rules.pro', 'joda-rules.pro'
     }
-    buildTypes {
-        release {
-            debuggable false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'),
-                    'r8-rules.pro', 'kotlin-serializer-rules.pro', 'joda-rules.pro'
-        }
-    }
     buildTypes.each {
         it.buildConfigField 'String', 'SPEND_VERSION', "\"${rootProject.spend_version}\""
     }
@@ -29,17 +27,34 @@ android {
         sourceCompatibility rootProject.sourceCompatibility
         targetCompatibility rootProject.targetCompatibility
     }
-    kotlinOptions {
-        jvmTarget = rootProject.jvmTarget
+    kotlin {
+        jvmToolchain(Integer.parseInt(rootProject.jvmTarget))
     }
     buildFeatures {
         compose true
         buildConfig true
     }
-    composeOptions {
-        kotlinCompilerExtensionVersion kotlin_compiler_version
+    def tasks = project.gradle.startParameter.taskNames
+    def isReleasePublish = tasks.any {
+        it.endsWith("publishToMavenCentral") ||
+                it.endsWith("publishMavenPublicationToGitHubPackagesRepository") ||
+                it.endsWith("publishMavenPublicationToGitLabRepository")
+    }
+    def isLocalPublish = tasks.any { it.endsWith("publishToMavenLocal") }
+    ext.isGitLabPublish = tasks.any { it.endsWith("publishMavenPublicationToGitLabRepository") }
+    def releaseBuild = false
+    if (isReleasePublish) {
+        releaseBuild = true
+    } else if (isLocalPublish) {
+        releaseBuild = tasks.any { it.endsWith("assembleRelease") }
     }
 
+    ext.buildVariant = releaseBuild ? "release" : "debug"
+
+    composeCompiler {
+        reportsDestination = layout.buildDirectory.dir("compose_compiler")
+        stabilityConfigurationFile = rootProject.layout.projectDirectory.file("stability_config.conf")
+    }
     gradle.taskGraph.whenReady {
         def task = it.getAllTasks().find { t -> t.name.contains('bundle') }
         if (task && task.name && (
@@ -73,26 +88,26 @@ dependencies {
     implementation "androidx.core:core-ktx:$core_ktx"
 
     /*Flexa Core*/
-    api "com.flexa:core:$core_version"
+    api "${groupId}:core:$core_version"
 
     /*Compose*/
-    implementation "androidx.compose.ui:ui:$compose_version"
-    implementation "androidx.compose.ui:ui-util:$compose_version"
-    implementation "androidx.compose.ui:ui-tooling-preview:$compose_version"
-    implementation "androidx.compose.material:material-icons-extended:$material_version"
-    implementation "androidx.compose.material3:material3:$material3_version"
+    implementation platform("androidx.compose:compose-bom:$compose_bom")
+    implementation "androidx.compose.ui:ui"
+    implementation "androidx.compose.ui:ui-util"
+    implementation "androidx.compose.ui:ui-tooling-preview"
+    implementation "androidx.compose.material:material-icons-extended"
+    implementation "androidx.compose.material3:material3"
     implementation "androidx.activity:activity-compose:$activity_compose_version"
     implementation "androidx.lifecycle:lifecycle-viewmodel-compose:$lifecycle_version"
     implementation "androidx.navigation:navigation-compose:$navigation_compose_version"
-    implementation "androidx.compose.runtime:runtime-livedata:$compose_version"
+    implementation "androidx.compose.runtime:runtime-livedata"
     implementation "androidx.webkit:webkit:$webkit_version"
     debugImplementation "androidx.customview:customview-poolingcontainer:$customview_poolingcontainer_version"
     debugImplementation "androidx.customview:customview:$customview_version"
-    debugImplementation "androidx.compose.ui:ui-tooling:$compose_version"
-    debugImplementation "androidx.compose.ui:ui-test-manifest:$compose_version"
+    debugImplementation "androidx.compose.ui:ui-tooling"
+    debugImplementation "androidx.compose.ui:ui-test-manifest"
 
     /*Image*/
-    def coil_version = '2.7.0'
     implementation "io.coil-kt:coil-compose:$coil_version"
     implementation "io.coil-kt:coil-svg:$coil_version"
 
@@ -104,74 +119,69 @@ dependencies {
     implementation 'commons-codec:commons-codec:1.15'
 
     /*Worker*/
-    implementation "androidx.work:work-runtime-ktx:2.9.1"
+    implementation 'androidx.work:work-runtime-ktx:2.10.3'
 
     /*Serialization*/
     implementation 'com.google.code.gson:gson:2.11.0'
-    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3'
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinx_serialization"
 
     /*Security*/
-    implementation 'androidx.security:security-crypto:1.0.0'
-    implementation "com.google.crypto.tink:tink-android:1.8.0"
+    implementation 'androidx.security:security-crypto:1.1.0'
+    implementation 'com.google.crypto.tink:tink-android:1.18.0'
 
     testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1'
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
-    androidTestImplementation "androidx.compose.ui:ui-test-junit4:$compose_version"
+    androidTestImplementation platform("androidx.compose:compose-bom:$compose_bom")
+    androidTestImplementation "androidx.compose.ui:ui-test-junit4"
     testImplementation 'org.robolectric:robolectric:4.13'
 }
 
-def module_description = 'The spend module of the Flexa SDK enables instant retail payments. The Flexa SDK is a suite of prebuilt functionality that enables your wallet app to interface directly with Flexa-powered payment systems in-person and online'
+mavenPublishing {
+    configure(new AndroidSingleVariantLibrary(android.buildVariant, true, false))
+    publishToMavenCentral(false)
+    if (android.buildVariant == "release" && !android.isGitLabPublish) {
+        signAllPublications()
+    }
 
-project.afterEvaluate {
-    publishing {
-        publications {
-            def artifactName = project.name
-            library(MavenPublication) {
-                groupId rootProject.groupId
-                artifactId artifactName
-                version rootProject.spend_version
-                def propertiesFile = file('build_type.properties')
-                if (!propertiesFile.canRead()) {
-                    throw new FileNotFoundException("Could not read " + propertiesFile.name)
-                }
-                Properties properties = new Properties()
-                properties.load(new FileInputStream(propertiesFile))
-                def type = properties['BUILD_TYPE']
-                println '<<<--- Building library --->>> ' + type
-                artifact "$buildDir/outputs/aar/${artifactName}-${type}.aar"
-                pom.withXml {
-                    def dependenciesNode = asNode().appendNode("dependencies")
-                    configurations.each {
-                        if (it.name == 'api' || it.name == 'implementation') {
-                            configurations[it.name].allDependencies.forEach {
-                                if (it.group != null && (it.name != null || "unspecified" == it.name)
-                                        && it.version != null && "unspecified" != it.version) {
-                                    println 'dep -->>> ' + it.group + ':' + it.name + ':' + it.version
-                                    def dependencyNode = dependenciesNode.appendNode("dependency")
-                                    dependencyNode.appendNode("groupId", it.group)
-                                    dependencyNode.appendNode("artifactId", it.name)
-                                    dependencyNode.appendNode("version", it.version)
-                                }
-                            }
-                        }
-                    }
-                }
+    def module_description = 'The spend module of the Flexa SDK enables instant retail payments. The Flexa SDK is a suite of prebuilt functionality that enables your wallet app to interface directly with Flexa-powered payment systems in-person and online'
+    def artifactName = project.name
+    coordinates(rootProject.groupId, artifactName, rootProject.spend_version)
+
+    pom {
+        name = artifactName
+        description = module_description
+        inceptionYear = "2025"
+        url = "https://github.com/flexa/flexa-android"
+        licenses {
+            license {
+                name = "MIT License"
+                url = "https://github.com/flexa/flexa-android/blob/main/LICENSE.md"
+                distribution = "repo"
             }
         }
-        repositories {
-            maven {
-                name = "GitHubPackages"
-                url = uri("https://maven.pkg.github.com/flexa/flexa-android")
-                credentials {
-                    def propertiesFile = rootProject.file("local.properties")
-                    def localProperties = new Properties()
-                    localProperties.load(new FileInputStream(propertiesFile))
-                    username = localProperties['gpr.user'] ?: ""
-                    password = localProperties['gpr.key'] ?: ""
-                }
+        developers {
+            developer {
+                name = "Flexa Inc."
             }
+        }
+        scm {
+            url = "https://github.com/flexa/flexa-android/"
+            connection = "scm:git:git://github.com/flexa/flexa-android.git"
+            developerConnection = "scm:git:ssh://git@github.com/flexa/flexa-android.git"
         }
     }
 }
 
+publishing {
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/" + (System.getenv("GITHUB_REPOSITORY") ?: "flexa/flexa-android"))
+            credentials {
+                username = System.getenv("GITHUB_ACTOR")
+                password = System.getenv("GITHUB_TOKEN")
+            }
+        }
+    }
+}

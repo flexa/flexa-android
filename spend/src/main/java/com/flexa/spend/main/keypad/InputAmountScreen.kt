@@ -404,9 +404,10 @@ internal fun InputAmountScreen(
         }
         AmountText(
             modifier = Modifier
-                .fillMaxWidth()
+                .height(if (smallScreen) 56.dp else 100.dp)
                 .offset { IntOffset(x = shake.value.roundToInt(), y = 0) }
-                .padding(horizontal = 32.dp),
+                .padding(horizontal = 32.dp)
+                .animateContentSize(),
             formatter = viewModel.formatter,
             accentColor = accentColor,
         )
@@ -850,43 +851,44 @@ fun AmountText(
             }
         }, label = "animatedColor"
     )
-    AutoSizeText(
-        modifier = modifier,
-        annotatedText = buildAnnotatedString {
-            withStyle(
-                SpanStyle(
-                    fontFeatureSettings = "tnum",
-                    brush = when {
-                        text.isNullOrEmpty() -> SolidColor(animatedColor)
-                        dark && accentColor.isDark(.2f) -> SolidColor(animatedColor)
-                        else -> {
-                            Brush.linearGradient(
-                                listOf(
-                                    animatedColor.shiftHue(10F),
-                                    animatedColor,
-                                    animatedColor.shiftHue(-10F),
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        AutoSizeText(
+            annotatedText = buildAnnotatedString {
+                withStyle(
+                    SpanStyle(
+                        fontFeatureSettings = "tnum",
+                        brush = when {
+                            text.isNullOrEmpty() -> SolidColor(animatedColor)
+                            dark && accentColor.isDark(.2f) -> SolidColor(animatedColor)
+                            else -> {
+                                Brush.linearGradient(
+                                    listOf(
+                                        animatedColor.shiftHue(10F),
+                                        animatedColor,
+                                        animatedColor.shiftHue(-10F),
+                                    )
                                 )
-                            )
+                            }
                         }
-                    }
-                )
-            ) {
-                append(formatter.getPrefix())
-                if (text != null) append(text)
-            }
-            withStyle(
-                SpanStyle(
-                    fontFeatureSettings = "tnum",
-                    color = grayColor
-                )
-            ) { append(formatter.getSuffix()) }
-        },
-        textStyle = TextStyle(
-            fontSize = if (smallScreen) 40.sp else 84.sp,
-            fontWeight = FontWeight.W600,
-            textAlign = TextAlign.Center,
+                    )
+                ) {
+                    append(formatter.getPrefix())
+                    if (text != null) append(text)
+                }
+                withStyle(
+                    SpanStyle(
+                        fontFeatureSettings = "tnum",
+                        color = grayColor
+                    )
+                ) { append(formatter.getSuffix()) }
+            },
+            textStyle = TextStyle(
+                fontSize = if (smallScreen) 40.sp else 84.sp,
+                fontWeight = FontWeight.W600,
+                textAlign = TextAlign.Center,
+            )
         )
-    )
+    }
 }
 
 @Preview

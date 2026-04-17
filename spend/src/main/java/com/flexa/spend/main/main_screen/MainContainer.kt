@@ -291,43 +291,22 @@ fun Spend(
                     }
                     AnimatedVisibility(visible = notifications.size > 1) {
                         val palette = MaterialTheme.colorScheme
-                        LazyRow(
-                            modifier = Modifier
-                                .height(14.dp)
-                                .padding(top = 12.dp),
-                            userScrollEnabled = false,
-                        ) {
-                            repeat(pagerState.pageCount) { page ->
-                                item(key = notifications[page].id) {
-                                    Canvas(
-                                        modifier = Modifier
-                                            .animateItem()
-                                            .width(20.dp)
-                                            .graphicsLayer {
-                                                val pageOffset =
-                                                    (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
-                                                alpha =
-                                                    (1.2F - pageOffset.absoluteValue).coerceAtLeast(
-                                                        .3F
-                                                    )
-                                                scaleX =
-                                                    (1.2F - pageOffset.absoluteValue / 5).coerceAtLeast(
-                                                        1.0F
-                                                    )
-                                                scaleY =
-                                                    (1.2F - pageOffset.absoluteValue / 5).coerceAtLeast(
-                                                        1.0F
-                                                    )
-                                            }
-                                    ) { drawCircle(color = palette.primary, radius = 3.dp.toPx()) }
-                                }
-                            }
-                        }
+                        PagerDots(
+                            modifier = Modifier.padding(vertical = 10.dp).height(8.dp).animateContentSize(),
+                            pagerState = pagerState,
+                            count = notifications.size,
+                            activeColor = MaterialTheme.colorScheme.primary,
+                            inactiveColor = MaterialTheme.colorScheme.primary,
+                            dotSize = 4.dp,
+                            spacing = 8.dp
+                        )
+                    }
+                    AnimatedVisibility(notifications.size == 1) {
+                        Spacer(modifier = Modifier.height(10.dp))
                     }
                 }
             }
         }
-        Spacer(modifier = Modifier.height(10.dp))
         AnimatedVisibility(visible = hasAssets) {
             BrandsRow(
                 modifier = Modifier
